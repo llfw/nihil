@@ -1,0 +1,207 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * spawn(): fork and execute a child process.
+ */
+
+#include <algorithm>
+#include <cerrno>
+#include <iterator>
+#include <string>
+#include <utility>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+export module nihil:spawn;
+
+import :argv;
+import :exec;
+import :fd;
+import :process;
+
+namespace nihil {
+
+// Useful constants
+export inline int constexpr stdin_fileno = STDIN_FILENO;
+export inline int constexpr stdout_fileno = STDOUT_FILENO;
+export inline int constexpr stderr_fileno = STDERR_FILENO;
+
+/*
+ * fd_pipe: create a pipe for the given fd.  The first end of the pipe will
+ * be returned in the given fd object, and the second will be set to the
+ * given fd number in the child.
+ */
+export struct fd_pipe final {
+	fd_pipe(int fdno, fd &ret) : _fdno(fdno), _fd(&ret) {
+		auto fds = pipe();
+		if (!fds)
+			throw exec_error("pipe: {}", fds.error().message());
+		std::tie(_parent_fd, _child_fd) = std::move(*fds);
+	}
+
+	auto run_in_child(process &) -> void {
+		_parent_fd.close();
+
+		::dup2(_child_fd.get(), _fdno);
+		_child_fd.close();
+	}
+
+	auto run_in_parent(process &) -> void {
+		_child_fd.close();
+		*_fd = std::move(_parent_fd);
+	}
+
+private:
+	int _fdno;
+	fd *_fd;
+	fd _parent_fd;
+	fd _child_fd;
+};
+
+/*
+ * fd_file: open the given file in the child as the given fd.
+ * open_flags and open_mode are as for ::open().
+ */
+export struct fd_file final {
+	fd_file(int fdno,
+		std::string path,
+		int open_flags,
+		int open_mode = 0777)
+		: _fdno(fdno)
+		, _path(std::move(path))
+		, _open_flags(open_flags)
+		, _open_mode(open_mode)
+	{ }
+
+	auto run_in_parent(process &) -> void {}
+
+	auto run_in_child(process &) -> void {
+		int newfd = ::open(_path.c_str(), _open_flags, _open_mode);
+		if (newfd != -1) {
+			::dup2(newfd, _fdno);
+			::close(newfd);
+		}
+	}
+
+private:
+	int _fdno;
+	std::string _path;
+	int _open_flags;
+	int _open_mode;
+};
+
+/*
+ * Shorthand for fd_file with /dev/null as the file.
+ */
+
+export inline auto stdin_devnull() -> fd_file
+{
+	return {STDIN_FILENO, "/dev/null", O_RDONLY, 0777};
+}
+
+export inline auto stdout_devnull() -> fd_file
+{
+	return {STDOUT_FILENO, "/dev/null", O_WRONLY, 0777};
+}
+
+export inline auto stderr_devnull() -> fd_file
+{
+	return {STDERR_FILENO, "/dev/null", O_WRONLY, 0777};
+}
+
+/*
+ * Capture the output of a given file descriptor and write it to the given
+ * output iterator.
+ */
+export template<std::output_iterator<char> Iterator>
+struct capture final {
+	capture(int fdno, Iterator it)
+		: _fdno(fdno)
+		, _iterator(std::move(it))
+	{
+		auto fds = pipe();
+		if (!fds)
+			throw exec_error("pipe: {}", fds.error().message());
+
+		std::tie(_parent_fd, _child_fd) = std::move(*fds);
+	}
+
+	capture(int fdno, std::string &str)
+		: capture(fdno, std::back_inserter(str))
+	{}
+
+	auto run_in_child(process &) -> void
+	{
+		_parent_fd.close();
+
+		::dup2(_child_fd.get(), _fdno);
+		_child_fd.close();
+	}
+
+	auto run_in_parent(process &) -> void
+	{
+		_child_fd.close();
+
+		constexpr std::size_t bufsize = 1024;
+		std::array<char, bufsize> buffer;
+		auto ret = ssize_t{};
+
+		while ((ret = ::read(_parent_fd.get(),
+				     buffer.data(),
+				     buffer.size())) > 0) {
+			auto data = std::span(buffer).subspan(0, ret);
+			std::ranges::copy(data, _iterator);
+		}
+
+		// We probably want to handle errors here somehow,
+		// but it's not clear what would be useful behaviour.
+	}
+
+private:
+	int _fdno;
+	fd *_fd;
+	fd _parent_fd;
+	fd _child_fd;
+	Iterator _iterator;
+};
+
+capture(int, std::string) -> capture<std::back_insert_iterator<std::string>>;
+
+/*
+ * Spawn a new process with the given arguments and return a struct process.
+ * Throws exec_error() on failure.
+ */
+export auto spawn(executor auto &&executor, auto &&...actions) -> process
+{
+	auto const pid = ::fork();
+	if (pid == -1)
+		throw exec_error("fork: {}", std::strerror(errno));
+
+	auto proc = process(pid);
+
+	if (pid == 0) {
+		// We are in the child.  Release the process so we don't
+		// try to wait for ourselves, then run child handlers and
+		// exec the process.
+
+		std::move(proc).release();
+		(actions.run_in_child(proc), ...);
+
+		executor.exec();
+		_exit(1);
+	}
+
+	(actions.run_in_parent(proc), ...);
+
+	return proc;
+}
+
+} // namespace nihil

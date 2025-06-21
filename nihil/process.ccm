@@ -1,0 +1,137 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cerrno>
+#include <cstring>
+#include <optional>
+#include <utility>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+
+export module nihil:process;
+
+import :generic_error;
+
+namespace nihil {
+
+/*
+ * wait_result: the exit status of a process.
+ */
+struct wait_result final {
+	// Return true if the process exited normally with an exit code of
+	// zero, otherwise false.
+	auto okay(this wait_result const &self) -> bool
+	{
+		return self.status() == 0;
+	}
+
+	explicit operator bool(this wait_result const &self)
+	{
+		return self.okay();
+	}
+
+	// Return the exit status, if any.
+	auto status(this wait_result const &self) -> std::optional<int>
+	{
+		if (WIFEXITED(self._status))
+			return WEXITSTATUS(self._status);
+		return {};
+	}
+
+	// Return the exit signal, if any.
+	auto signal(this wait_result const &self) -> std::optional<int>
+	{
+		if (WIFSIGNALED(self._status))
+			return WTERMSIG(self._status);
+		return {};
+	}
+
+private:
+	friend struct process;
+
+	int _status;
+
+	// Construct a new wait_result from the output of waitpid().
+	wait_result(int status)
+		: _status(status)
+	{}
+};
+
+/*
+ * process: represents a process we created, which can be waited for.
+ */
+struct process final {
+	process() = delete;
+
+	/*
+	 * Create a new process from a pid, which must be a child of the
+	 * current process.
+	 */
+	process(::pid_t pid)
+		: _pid(pid)
+	{}
+
+	// When destroyed, we automatically wait for the process to
+	// avoid creating zombie processes.
+	~process() {
+		if (_pid == -1)
+			return;
+
+		auto status = int{};
+		std::ignore = waitpid(_pid, &status, WEXITED);
+	}
+
+	// Movable.
+	process(process &&) noexcept = default;
+	auto operator=(process &&) noexcept -> process& = default;
+
+	// Not copyable.
+	process(process const &) = delete;
+	auto operator=(process const &) -> process& = delete;
+
+	// Get the child's process id.
+	auto pid(this process const &self) noexcept -> ::pid_t;
+
+	/*
+	 * Wait for this process to exit (by calling waitpid()) and return
+	 * its exit status.  This destroys the process state, leaving this
+	 * object in a moved-from state.
+	 */
+	auto wait(this process &&self) -> wait_result
+	{
+		auto status = int{};
+		auto ret = waitpid(self._pid, &status, WEXITED);
+
+		self._pid = -1;
+
+		switch (ret) {
+		case -1:
+			throw generic_error("waitpid({}): failed: {}",
+					    self._pid, strerror(errno));
+		case 0:
+			throw generic_error("waitpid({}): no child to wait",
+					    self._pid);
+		}
+
+		return wait_result(status);
+	}
+
+	/*
+	 * Release this process so we won't try to wait for it when
+	 * destroying this object.
+	 */
+	auto release(this process &&self) -> ::pid_t {
+		auto const ret = self._pid;
+		self._pid = -1;
+		return ret;
+	}
+
+private:
+	::pid_t _pid;
+};
+
+} // namespace nihil

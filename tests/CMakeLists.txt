@@ -10,6 +10,7 @@ add_executable(nihil.test
 	guard.cc
 	next_word.cc
 	skipws.cc
+	spawn.cc
 	tabulate.cc)
 
 target_link_libraries(nihil.test PRIVATE

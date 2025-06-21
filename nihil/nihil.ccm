@@ -6,14 +6,19 @@ module;
 
 export module nihil;
 
+export import :argv;
 export import :command_map;
 export import :ctype;
+export import :exec;
+export import :fd;
+export import :find_in_path;
 export import :generator;
 export import :generic_error;
 export import :getenv;
 export import :guard;
-export import :fd;
 export import :next_word;
+export import :process;
 export import :skipws;
+export import :spawn;
 export import :tabulate;
 export import :usage_error;

@@ -1,0 +1,154 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * Exec providers, mostly used for spawn().
+ */
+
+#include <format>
+#include <string>
+#include <utility>
+
+#include <err.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+extern char **environ;
+
+export module nihil:exec;
+
+import :argv;
+import :fd;
+import :find_in_path;
+import :generic_error;
+
+namespace nihil {
+
+/*
+ * Generic error, what() should be descriptive.
+ */
+export struct exec_error : generic_error {
+	template<typename... Args>
+	exec_error(std::format_string<Args...> fmt, Args &&...args)
+		: generic_error(fmt, std::forward<Args>(args)...)
+	{}
+};
+
+/*
+ * We tried to execute a path or filename and the file was not found.
+ */
+export struct executable_not_found : exec_error {
+	std::string executable;
+
+	executable_not_found(std::string_view executable_)
+		: exec_error("{}: command not found", executable_)
+		, executable(executable_)
+	{}
+};
+
+/*
+ * A concept to mark spawn executors.
+ */
+
+export struct exec_tag{};
+
+export template<typename T>
+concept executor =
+	requires (T e) {
+		std::same_as<exec_tag, typename T::tag>;
+		{ e.exec() };
+	};
+
+/*
+ * fexecv: use a file descriptor and an argument vector to call ::fexecve().
+ * This is the lowest-level executor which all others are implemented
+ * in terms of.
+ *
+ * TODO: Should have a way to pass the environment (envp).
+ */
+export struct fexecv final {
+	using tag = exec_tag;
+
+	fexecv(fd &&execfd, argv &&args) noexcept
+		: _execfd(std::move(execfd))
+		, _args(std::move(args))
+	{}
+
+	[[noreturn]] auto exec(this fexecv &self) noexcept -> void
+	{
+		::fexecve(self._execfd.get(), self._args.data(), environ);
+		::err(1, "fexecve");
+	}
+	
+	// Movable
+	fexecv(fexecv &&) noexcept = default;
+	auto operator=(this fexecv &, fexecv &&) noexcept -> fexecv& = default;
+	
+	// Not copyable (because we hold the open fd object)
+	fexecv(fexecv const &) = delete;
+	auto operator=(this fexecv &, fexecv const &) -> fexecv& = delete;
+
+private:
+	fd _execfd;
+	argv _args;
+};
+
+static_assert(executor<fexecv>);
+
+/*
+ * execv: equivalent to fexecv(), except the command is passed as
+ * a pathname instead of a file descriptor.  Does not search $PATH.
+ */
+export auto execv(std::string_view path, argv &&argv) -> fexecv
+{
+	auto cpath = std::string(path);
+	auto const ret = ::open(cpath.c_str(), O_EXEC);
+	if (ret == -1)
+		throw executable_not_found(path);
+	return {fd(ret), std::move(argv)};
+}
+
+/*
+ * execvp: equivalent to fexecv(), except the command is passed as
+ * a filename instead of a file descriptor.  If the filename is not
+ * an absolute path, it will be searched for in $PATH.
+ */
+export auto execvp(std::string_view file, argv &&argv) -> fexecv
+{
+	auto execfd = find_in_path(file);
+	if (!execfd)
+		throw executable_not_found(file);
+	return {std::move(*execfd), std::move(argv)};
+}
+
+/*
+ * execl: equivalent to execv, except the arguments are passed as a
+ * variadic pack of string-like objects.
+ */
+export auto execl(std::string_view path, auto &&...args) -> fexecv
+{
+	return execv(path, argv::from_args({std::string_view(args)...}));
+}
+
+/*
+ * execlp: equivalent to execvp, except the arguments are passed as a
+ * variadic pack of string-like objects.
+ */
+export auto execlp(std::string_view file, auto &&...args) -> fexecv
+{
+	return execvp(file, argv::from_args({std::string_view(args)...}));
+}
+
+/*
+ * shell: run the process by invoking /bin/sh -c with the single argument,
+ * equivalent to system(3).
+ */
+export auto shell(std::string_view const &command) -> fexecv
+{
+	return execl("/bin/sh", "sh", "-c", command);
+}
+
+} // namespace nihil
