@@ -1,0 +1,282 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <algorithm>
+#include <cstdlib>
+#include <format>
+#include <ranges>
+#include <iterator>
+#include <vector>
+
+export module nihil:tabulate;
+
+import :ctype;
+import :generic_error;
+
+namespace nihil {
+
+/*
+ * tabulate: format the given range in an ASCII table and write the output
+ * to the given output iterator.  The range's values will be converted to
+ * strings as if by std::format.
+ *
+ * tabulate is implemented by copying the range; this allows it to work on
+ * input/forward ranges at the cost of slightly increased memory use.
+ *
+ * The table spec is a string consisting of zero or more field formats,
+ * formatted as {flags:fieldname}; both flags and fieldname are optional.
+ * If there are fewer field formats than fields, the remaining fields
+ * are formatted as if by {:}.
+ *
+ * The following flags are supported:
+ *
+ * 	<	left-align this column (default)
+ * 	>	right-align this column
+ */
+
+// Exception thrown when a table spec is invalid.
+export struct table_spec_error : generic_error {
+	template<typename... Args>
+	table_spec_error(std::format_string<Args...> fmt, Args &&...args)
+		: generic_error(fmt, std::forward<Args>(args)...)
+	{}
+};
+
+/*
+ * The specification for a single field.
+ */
+template<typename Char>
+struct field_spec {
+	std::basic_string_view<Char> name;
+	std::size_t width = 0;
+	enum { left, right } align = left;
+
+	// Ensure the length of this field is at least the given width.
+	auto ensure_width(std::size_t newwidth) -> void
+	{
+		width = std::max(width, newwidth);
+	}
+
+	// Format an object to a string based on our field spec.
+	auto format(auto &&obj) const -> std::basic_string<Char>
+	{
+		std::basic_string<Char> format_string{'{', '}'};
+		return std::format(std::runtime_format(format_string), obj);
+	}
+
+	// Print a column value to an output iterator according to our field
+	// spec.  If is_last is true, this is the last field on the line, so
+	// we won't output any trailling padding.
+	auto print(std::basic_string_view<Char> value,
+		   std::output_iterator<Char> auto &out,
+		   bool is_last)
+		const
+	{
+		auto padding = width - value.size();
+
+		if (align == right)
+			for (std::size_t i = 0; i < padding; ++i)
+				*out++ = ' ';
+
+		std::ranges::copy(value, out);
+
+		if (!is_last && align == left)
+			for (std::size_t i = 0; i < padding; ++i)
+				*out++ = ' ';
+	}
+};
+
+/*
+ * The specification for an entire table.
+ */
+template<typename Char>
+struct table_spec {
+	// Add a new field spec to this table.
+	auto add(field_spec<Char> field)
+	{
+		_fields.emplace_back(std::move(field));
+	}
+
+	// Return the field spec for a given field.  If the field doesn't
+	// exist, this field and any intermediate fields will be created.
+	auto field(std::size_t fieldnr) -> field_spec<Char>&
+	{
+		if (_fields.size() < fieldnr + 1)
+			_fields.resize(fieldnr + 1);
+		return _fields.at(fieldnr);
+	}
+
+	// The number of columns in this table.
+	auto columns() const -> std::size_t
+	{
+		return _fields.size();
+	}
+
+	// Return all the fields in this table.
+	auto fields() const
+	{
+		return _fields;
+	}
+
+private:
+	std::vector<field_spec<Char>> _fields;
+};
+
+// Parse the field flags, e.g. '<'.
+template<typename Char,
+	 std::input_iterator Iterator, std::sentinel_for<Iterator> Sentinel>
+auto parse_field_flags(field_spec<Char> &field, Iterator &pos, Sentinel end)
+	-> void
+{
+	while (pos < end) {
+		switch (*pos) {
+		case '<':
+			field.align = field_spec<Char>::left;
+			break;
+		case '>':
+			field.align = field_spec<Char>::right;
+			break;
+		case ':':
+			++pos;
+			/*FALLTHROUGH*/
+		case '}':
+			return;
+		default:
+			throw table_spec_error(
+				"Invalid table spec: unknown flag character");
+		}
+
+		if (++pos == end)
+			throw table_spec_error("Invalid table spec: "
+					       "unterminated field");
+	}
+}
+
+// Parse a complete field spec, e.g. "{<:NAME}".
+template<typename Char,
+	std::input_iterator Iterator, std::sentinel_for<Iterator> Sentinel>
+auto parse_field(Iterator &pos, Sentinel end)
+	-> field_spec<Char>
+{
+	auto field = field_spec<Char>{};
+
+	if (pos == end)
+		throw table_spec_error("Invalid table spec: empty field");
+
+	// The field spec should start with a '{'.
+	if (*pos != '{')
+		throw table_spec_error("Invalid table spec: expected '{{'");
+
+	if (++pos == end)
+		throw table_spec_error("Invalid table spec: unterminated field");
+
+	// This consumes 'pos' up to and including the ':'.
+	parse_field_flags(field, pos, end);
+
+	auto brace = std::ranges::find(pos, end, '}');
+	if (brace == end)
+		throw table_spec_error("Invalid table spec: expected '}}'");
+
+	field.name = std::basic_string_view<Char>(pos, brace);
+	pos = std::next(brace);
+
+	// The field must be at least as wide as its header.
+	field.width = field.name.size();
+
+	return field;
+}
+
+template<typename Char>
+auto parse_table_spec(std::basic_string_view<Char> spec) -> table_spec<Char>
+{
+	auto table = table_spec<Char>();
+
+	auto pos = std::ranges::begin(spec);
+	auto end = std::ranges::end(spec);
+
+	for (;;) {
+		// Skip leading whitespace
+		while (pos < end && is_c_space(*pos))
+			++pos;
+
+		if (pos == end)
+			break;
+
+		table.add(parse_field<Char>(pos, end));
+	}
+
+	return table;
+}
+
+export template<typename Char,
+		std::ranges::range Range,
+		std::output_iterator<Char> Iterator>
+auto basic_tabulate(std::basic_string_view<Char> table_spec,
+			   Range &&range,
+			   Iterator &&out)
+	-> void
+{
+	// Parse the table spec.
+	auto table = parse_table_spec(table_spec);
+
+	// Create our copy of the input data.
+	auto data = std::vector<std::vector<std::basic_string<Char>>>();
+	// Reserve the first row for the header.
+	data.resize(1);
+
+	// Find the required length of each field.
+	for (auto &&row : range) {
+		// LLVM doesn't have std::enumerate_view yet
+		auto i = std::size_t{0};
+		auto &this_row = data.emplace_back();
+
+		for (auto &&column : row) {
+			auto &field = table.field(i);
+			auto &str = this_row.emplace_back(field.format(column));
+			field.ensure_width(str.size());
+			++i;
+		}
+	}
+
+	// Add the header row.
+	for (auto &&field : table.fields())
+		data.at(0).emplace_back(std::from_range, field.name);
+
+	// Print the values.
+	for (auto &&row : data) {
+		for (std::size_t i = 0; i < row.size(); ++i) {
+			auto &field = table.field(i);
+			bool is_last = (i == row.size() - 1);
+
+			field.print(row[i], out, is_last);
+
+			if (!is_last)
+				*out++ = ' ';
+		}
+
+		*out++ = '\n';
+	}
+}
+
+export auto tabulate(std::string_view table_spec,
+		     std::ranges::range auto &&range,
+		     std::output_iterator<char> auto &&out)
+{
+	return basic_tabulate<char>(table_spec,
+				    std::forward<decltype(range)>(range),
+				    std::forward<decltype(out)>(out));
+}
+
+export auto wtabulate(std::wstring_view table_spec,
+		      std::ranges::range auto &&range,
+		      std::output_iterator<wchar_t> auto &&out)
+{
+	return basic_tabulate<wchar_t>(table_spec,
+				       std::forward<decltype(range)>(range),
+				       std::forward<decltype(out)>(out));
+}
+
+} // namespace nihil

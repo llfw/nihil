@@ -1,0 +1,26 @@
+nihil: C++ utility library
+==========================
+
+nihil is a C++ library which provides various utilities that might be useful
+in a C++ program.  many of the utilities are specific to FreeBSD.
+
+i wrote this primarily for my own programs, but you're welcome to use it too.
+
+license
+-------
+
+all of nihil is in the public domain, with the exception of:
+
+- modules/generator.ccm
+
+requirements
+------------
+
++ FreeBSD
++ a modern C++ compiler.  nihil is tested using LLVM 19.x with -std=c++26.
+
+usage
+-----
+
+nihil is intended to be consumed as a CMake subdirectory.  better install
+options might be added later.

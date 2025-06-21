@@ -1,0 +1,26 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <format>
+#include <stdexcept>
+
+export module nihil:generic_error;
+
+namespace nihil {
+
+/*
+ * generic_error is the base class that all other exceptions derive from.
+ * It is an std::runtime_error, and what() should always be informative.
+ */
+
+export struct generic_error : std::runtime_error {
+	template<typename... Args>
+	generic_error(std::format_string<Args...> fmt, Args &&...args)
+		: std::runtime_error(std::format(fmt, std::forward<Args>(args)...))
+	{}
+};
+
+} // namespace nihil 
