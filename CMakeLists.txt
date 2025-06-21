@@ -12,7 +12,7 @@ add_compile_options(-Wextra)
 add_compile_options(-Werror)
 add_compile_options(-Wpedantic)
 
-add_subdirectory(modules)
+add_subdirectory(nihil)
 add_subdirectory(tests)
 
 enable_testing()
