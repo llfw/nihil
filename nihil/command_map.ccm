@@ -1,0 +1,153 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <functional>
+#include <iostream>
+#include <map>
+#include <string>
+#include <utility>
+
+export module nihil:command_map;
+
+import :next_word;
+import :usage_error;
+
+/*
+ * command_map represents a hierarchical list of commands.  At each level,
+ * a command is mapped to a handler, which can either be a function, in
+ * which case we execute the function, or another command_map, in which
+ * case we invoke the new map
+ */
+
+namespace nihil {
+
+template<typename Context>
+struct node;
+
+template<typename Context>
+auto get_root_node() noexcept -> node<Context> &;
+
+// Declare a global command and add it to the root node.
+export template<typename Context>
+struct command final {
+	template<typename F>
+	command(std::string_view path, F fn)
+	try : _func(std::move(fn))
+	{
+		auto &node = get_root_node<Context>().create_node(path);
+		node.handler = this;
+	} catch (std::exception const &exc) {
+		std::cerr << "ERROR: failed to initialise command "
+			<< path << ": " << exc.what() << "\n";
+		std::abort();
+	}
+
+	auto invoke(Context const &ctx, int argc, char **argv) -> int
+	{
+		return std::invoke(_func, ctx, argc, argv);
+	}
+
+private:
+	std::function<int (Context const &, int, char **)> _func;
+};
+
+// A node in the command hierarchy.
+template<typename Context>
+struct node {
+	// The command name of this node.
+	std::string name;
+
+	// Handler for this node.  May be null, which means this node has
+	// sub-commands but isn't a command itself.
+	command<Context> *handler = nullptr;
+
+	node(std::string name_)
+		: name(std::move(name_))
+	{}
+
+	// Run the handler for this node.
+	auto invoke(Context const &ctx, int argc, char **argv) const -> int
+	{
+		// Look for a subcommand with argv[0].
+		auto it = commands.find(argv[0]);
+		if (it == commands.end())
+			throw usage_error("unknown command");
+
+		auto const &child = it->second;
+
+		// If the child has a handler, invoke it.
+		if (child.handler != nullptr)
+			return child.handler->invoke(ctx, argc, argv);
+
+		--argc;
+		++argv;
+
+		if (argc == 0)
+			throw usage_error("incomplete command");
+
+		// Otherwise, continue recursing.
+		return child.invoke(ctx, argc, argv);
+	}
+
+
+	// Create a new node under this one, or return it if it already exists.
+	// If path is empty, return this node.
+	auto create_node(std::string_view path) -> node&
+	{
+		auto child = next_word(&path);
+		if (child.empty())
+			return *this;
+
+		// If the child node doesn't exist, insert an empty node.
+		auto it = commands.find(child);
+		if (it == commands.end()) {
+			std::tie(it, std::ignore) =
+				commands.insert(std::pair{child,
+					node(std::string(child))});
+		}
+
+		if (path.empty())
+			return it->second;
+
+		return it->second.create_node(path);
+	}
+
+
+	void print_usage(std::string prefix) const {
+		if (handler != nullptr)
+			std::print("{}{}\n", prefix, name);
+
+		for (auto const &it : commands)
+			it.second.print_usage(prefix + name + " ");
+	}
+
+private:
+	std::map<std::string_view, node> commands;
+};
+
+// This may be called before main(), so catch any exceptions.
+template<typename Context>
+auto get_root_node() noexcept -> node<Context> & try {
+	static auto root_node = node<Context>("");
+	return root_node;
+} catch (std::exception const &exc) {
+	std::cerr << "ERROR: get_root_node: " << exc.what() << "\n";
+	std::exit(1);
+}
+
+export template<typename Context>
+auto dispatch_command(Context const &ctx, int argc, char **argv) -> int
+{
+	return get_root_node<Context>().invoke(ctx, argc, argv);
+}
+
+export template<typename Context>
+void print_usage(std::string_view prefix)
+{
+	get_root_node<Context>().print_usage(std::string(prefix));
+}
+
+} // namespace nihil
