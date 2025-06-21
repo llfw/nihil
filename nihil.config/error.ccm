@@ -1,0 +1,26 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <format>
+#include <utility>
+
+export module nihil.config:error;
+
+import nihil;
+
+namespace nihil::config {
+
+/*
+ * Exception thrown when an issue occurs with the configuration.
+ */
+export struct error : generic_error {
+	template<typename... Args>
+	error(std::format_string<Args...> fmt, Args &&...args)
+		: generic_error(fmt, std::forward<Args>(args)...)
+	{}
+};
+
+} // namespace nihil::config

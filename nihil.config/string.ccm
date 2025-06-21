@@ -1,0 +1,54 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <stdexcept>
+#include <string>
+
+#include <ucl++.h>
+
+export module nihil.config:string;
+
+import nihil;
+import :option;
+import :store;
+
+namespace nihil::config {
+
+struct string final : option
+{
+	string(std::string &storage,
+	       std::string_view name,
+	       std::string_view description) noexcept
+		: option(name, description)
+		, _storage(storage)
+	{
+		store::get().register_option(this);
+	}
+
+	auto get_string() const -> std::string override
+	{
+		return _storage;
+	};
+
+	auto set_string(std::string_view new_value) -> void override
+	{
+		_storage = new_value;
+	}
+
+	auto add_to_ucl(ucl_object_t *ucl) const -> void override
+	{
+		auto ucl_value = ucl_object_fromstring_common(
+					_storage.data(), _storage.size(),
+					UCL_STRING_RAW);
+		ucl_object_insert_key(ucl, ucl_value,
+				      name().data(), name().size(), true);
+	}
+
+private:
+	std::string &_storage;
+};
+
+} // namespace nihil::config

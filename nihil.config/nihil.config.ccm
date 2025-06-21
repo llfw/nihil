@@ -1,0 +1,12 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+export module nihil.config;
+
+export import :error;
+export import :option;
+export import :store;
+export import :string;

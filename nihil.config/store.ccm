@@ -1,0 +1,183 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * The configuration store.  There should only be one of these.
+ */
+
+#include <coroutine>
+#include <format>
+#include <map>
+
+export module nihil.config:store;
+
+import nihil;
+import :error;
+import :option;
+
+namespace nihil::config {
+
+// Exception thrown on an attempt to fetch an undefined option.
+export struct unknown_option final : error {
+	std::string varname;
+
+	unknown_option(std::string_view varname_)
+		: error("unknown configuration variable '{}'", varname_)
+		, varname(varname_)
+	{}
+};
+
+export struct store final {
+	/*
+	 * Get the global config store.
+	 */
+	static auto get() -> store& {
+		if (instance == nullptr)
+			instance = new store;
+
+		return *instance;
+	}
+
+	/*
+	 * Initialise the global config store.
+	 */
+#if 0
+	void init(context const &ctx) {
+		std::string config_text;
+
+		// Load the configuration text.
+		auto config_path = ctx.dbdir / "config.ucl";
+		try {
+			read_file(config_path, std::back_inserter(config_text));
+		} catch (io_error const &exc) {
+			// Ignore ENOENT, it simply means we haven't created the
+			// config file yet, so default values will be used.
+			if (exc.error == std::errc::no_such_file_or_directory)
+				return;
+			throw;
+		}
+
+		// Parse the UCL.
+
+		std::string err;
+		auto uclconfig = ucl::Ucl::parse(config_text, err);
+
+		if (!uclconfig)
+			throw error("{0}: {1}", config_path, err);
+
+		auto const &cfg = get();
+		for (auto const &uclvalue : uclconfig) {
+			auto &value = cfg.fetch(uclvalue.key());
+
+			switch (uclvalue.type()) {
+			case UCL_INT:
+				value.integer(uclvalue.int_value());
+				break;
+			case UCL_STRING:
+				value.string(uclvalue.string_value());
+				break;
+			default:
+				throw error(
+					"INTERNAL ERROR: unknown value type {0}",
+					static_cast<int>(uclvalue.type()));
+			}
+		}
+	}
+#endif
+
+	/*
+	 * Register a new value with the config store.
+	 */
+	auto register_option(this store &self, option *object) -> void
+	{
+		auto [it, okay] = self.options.insert(
+					std::pair{object->name(), object});
+
+		if (okay)
+			return;
+
+		throw error("INTERNAL ERROR: attempt to register "
+			    "duplicate config value '{0}'",
+			    object->name());
+	}
+
+	/*
+	 * Fetch an existing value in the config store.
+	 */
+	auto fetch(this store const &self, std::string_view name)
+		-> option &
+	{
+		if (auto it = self.options.find(name); it != self.options.end())
+			return *it->second;
+
+		throw unknown_option(name);
+	}
+
+	/*
+	 * Fetch all values in the configuration store.
+	 */
+	auto all(this auto &&self) -> nihil::generator<option const &>
+	{
+		for (auto &&it : self.options)
+			co_yield *it.second;
+	}
+
+	/*
+	 * Write all config values (except defaults) to disk.
+	 */
+#if 0
+	void store::write_all(this store const &self, context const &ctx) {
+		// The UCL C++ API doesn't seem to support creating new objects
+		// from scratch, so we use the C API here.  We should probably
+		// provider a better wrapper for this.
+
+		auto ucl = ::ucl_object_typed_new(UCL_OBJECT);
+		auto ucl_guard = guard([ucl] { ::ucl_object_unref(ucl); });
+
+		// Add all the options to the UCL object.
+		for (auto const &option : self.fetch_all()) {
+			if (option.is_default)
+				continue;
+
+			option.add_to_ucl(ucl);
+		}
+
+		// Dump the UCL object to a string.
+		auto *ucl_c_text = reinterpret_cast<char *>(
+					::ucl_object_emit(ucl, UCL_EMIT_CONFIG));
+		//NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
+		auto ucl_text_guard = guard([ucl_c_text] { ::free(ucl_c_text); });
+		std::string ucl_text(ucl_c_text);
+
+		// Write the object to a file.
+		auto config_path = ctx.dbdir / "config.ucl";
+
+		try {
+			safe_write_file(config_path, ucl_text);
+		} catch (io_error const &exc) {
+			throw error("{}", exc.what());
+		}
+	}
+#endif
+
+	// Not movable or copyable.
+	store(store const &) = delete;
+	store(store &&) = delete;
+	store& operator=(store const &) = delete;
+	store& operator=(store &&) = delete;
+
+private:
+	/*
+	 * The global configuration store, created by init() and accessed via
+	 * get().
+	 */
+	inline static store *instance = nullptr;
+
+	std::map<std::string_view, option *> options;
+	store() = default;
+};
+
+} // namespace nihil::config

@@ -20,3 +20,8 @@ target_sources(nihil PUBLIC
 	spawn.ccm
 	tabulate.ccm
 	usage_error.ccm)
+
+if(NIHIL_TESTS)
+	add_subdirectory(tests)
+	enable_testing()
+endif()

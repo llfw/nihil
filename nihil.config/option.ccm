@@ -1,0 +1,84 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <string>
+
+#include <ucl++.h>
+
+export module nihil.config:option;
+
+import nihil;
+import :error;
+
+namespace nihil::config {
+
+/*
+ * Base class for options; this is what config_store interacts with.
+ */
+
+export struct option
+{
+	// Short name of this option.
+	auto name(this option const &self) noexcept -> std::string_view
+	{
+		return self._name;
+	}
+
+	// Human-readable description of this option.
+	auto description(this option const &self) noexcept -> std::string_view
+	{
+		return self._description;
+	}
+
+	// If true, this option is set to its default value.
+	auto is_default(this option const &self) noexcept -> bool
+	{
+		return self._is_default;
+	}
+
+	// Get or set this option as a string.
+	auto string(this option const &self) -> std::string
+	{
+		return self.get_string();
+	}
+
+	void string(this option &self, std::string_view value)
+	{
+		self.set_string(value);
+		self._is_default = false;
+	}
+
+	/*
+	 * Add this option to a UCL object.  This is used when writing the
+	 * configuration file.
+	 */
+	virtual void add_to_ucl(ucl_object_t *) const = 0;
+
+	// Not copyable or movable.
+	option(option const &) = delete;
+	auto operator=(option const &) -> option& = delete;
+
+protected:
+	option(std::string_view name,
+	       std::string_view description)
+		: _name(name)
+		, _description(description)
+	{
+	}
+
+	/*
+	 * Get or set this option as a string.
+	 */
+	virtual auto get_string() const -> std::string = 0;
+	virtual auto set_string(std::string_view) -> void = 0;
+
+private:
+	std::string _name;
+	std::string _description;
+	bool _is_default = true;
+};
+
+} // namespace nihil

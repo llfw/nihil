@@ -1,0 +1,9 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+export module nihil.ucl;
+
+// TODO: Implement.
