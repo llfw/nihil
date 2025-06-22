@@ -15,5 +15,6 @@ export import :type;
 export import :array;
 export import :boolean;
 export import :integer;
+export import :map;
 export import :real;
 export import :string;

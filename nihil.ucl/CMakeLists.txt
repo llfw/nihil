@@ -17,6 +17,7 @@ target_sources(nihil.ucl PUBLIC
 	array.ccm
 	boolean.ccm
 	integer.ccm
+	map.ccm
 	real.ccm
 	string.ccm
 )

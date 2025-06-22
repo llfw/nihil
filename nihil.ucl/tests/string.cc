@@ -108,12 +108,10 @@ TEST_CASE("ucl: string: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto input = "value = \"str\""sv;
-	auto obj = nihil::ucl::parse(input);
-	auto v = obj.lookup("value");
-	REQUIRE(v);
-	REQUIRE(v->key() == "value");
-	REQUIRE(object_cast<nihil::ucl::string>(*v).value() == "str");
+	auto obj = nihil::ucl::parse("value = \"str\""sv);
+	auto v = obj["value"];
+	REQUIRE(v.key() == "value");
+	REQUIRE(object_cast<nihil::ucl::string>(v) == "str");
 }
 
 TEST_CASE("ucl: string: emit", "[ucl]")

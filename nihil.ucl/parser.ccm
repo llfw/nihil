@@ -17,6 +17,7 @@ export module nihil.ucl:parser;
 import nihil;
 import :error;
 import :object;
+import :map;
 
 namespace nihil::ucl {
 
@@ -138,7 +139,7 @@ export struct parser {
 	}
 
 	// Return the top object of this parser.
-	auto top(this parser &self) -> object
+	auto top(this parser &self) -> map<object>
 	{
 		if (self._parser == nullptr)
 			throw error("attempt to call top() on an empty parser");
@@ -161,8 +162,8 @@ private:
 	std::vector<std::unique_ptr<macro_handler>> _macros;
 };
 
-// Utility function to parse something and return the object.
-export auto parse(std::ranges::range auto &&data) -> object {
+// Utility function to parse something and return the top-level object.
+export auto parse(std::ranges::range auto &&data) -> map<object> {
 	auto p = parser();
 	p.add(std::forward<decltype(data)>(data));
 	return p.top();

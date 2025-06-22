@@ -133,19 +133,6 @@ export struct object {
 		return {dptr, dlen};
 	}
 
-	// Return a sub-object of this one.
-	auto lookup(this object const &self, std::string_view key)
-		-> std::optional<object>
-	{
-		auto const *obj = ::ucl_object_lookup_any(
-					self.get_ucl_object(),
-					key.data(), key.size());
-		if (obj == nullptr)
-			return {};
-
-		return {object(nihil::ucl::ref, obj)};
-	}
-
 protected:
 	// The object we're wrapping.
 	::ucl_object_t *_object = nullptr;

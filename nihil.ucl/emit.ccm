@@ -156,8 +156,8 @@ export auto operator<<(std::ostream &stream, object const &o)
 /*
  * Specialisation of std::formatter<> for object.
  */
-template<>
-struct std::formatter<nihil::ucl::object, char>
+template<std::derived_from<nihil::ucl::object> T>
+struct std::formatter<T, char>
 {
 	nihil::ucl::emitter emitter = nihil::ucl::emitter::json;
 

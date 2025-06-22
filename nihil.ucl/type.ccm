@@ -76,12 +76,14 @@ export struct type_mismatch : error {
 	{}
 
 	// The type we expected.
-	auto expected_type(this type_mismatch const &self) -> object_type {
+	auto expected_type(this type_mismatch const &self) -> object_type
+	{
 		return self._expected_type;
 	}
 
 	// The type we got.
-	auto actual_type(this type_mismatch const &self) -> object_type {
+	auto actual_type(this type_mismatch const &self) -> object_type
+	{
 		return self._actual_type;
 	}
 	

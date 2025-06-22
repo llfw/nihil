@@ -46,13 +46,10 @@ TEST_CASE("ucl: boolean: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto input = "value = true"sv;
-	auto obj = nihil::ucl::parse(input);
-
-	auto v = obj.lookup("value");
-	REQUIRE(v);
-	REQUIRE(v->key() == "value");
-	REQUIRE(object_cast<nihil::ucl::boolean>(*v).value() == true);
+	auto obj = nihil::ucl::parse("value = true"sv);
+	auto v = obj["value"];
+	REQUIRE(v.key() == "value");
+	REQUIRE(object_cast<nihil::ucl::boolean>(v) == true);
 }
 
 TEST_CASE("ucl: boolean: emit", "[ucl]")

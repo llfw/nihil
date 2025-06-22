@@ -8,6 +8,7 @@ add_executable(nihil.ucl.test
 	array.cc
 	boolean.cc
 	integer.cc
+	map.cc
 	real.cc
 	string.cc
 )

@@ -46,12 +46,10 @@ TEST_CASE("ucl: parse: integer", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto input = "value = 42"sv;
-	auto obj = nihil::ucl::parse(input);
-	auto v = obj.lookup("value");
-	REQUIRE(v);
-	REQUIRE(v->key() == "value");
-	REQUIRE(object_cast<nihil::ucl::integer>(*v).value() == 42);
+	auto obj = nihil::ucl::parse("value = 42"sv);
+	auto v = obj["value"];
+	REQUIRE(v.key() == "value");
+	REQUIRE(object_cast<nihil::ucl::integer>(v) == 42);
 }
 
 TEST_CASE("ucl: integer: emit", "[ucl]")

@@ -1,0 +1,258 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <optional>
+#include <string>
+
+#include <ucl.h>
+
+export module nihil.ucl:map;
+
+import :object;
+
+namespace nihil::ucl {
+
+// Exception thrown when map::operator[] does not find the key.
+export struct key_not_found : error {
+	key_not_found(std::string_view key)
+		: error("key '{}' not found in map", key)
+		, _key(key)
+	{}
+
+	auto key(this key_not_found const &self) -> std::string_view
+	{
+		return self._key;
+	}
+	
+private:
+	std::string _key;
+};
+
+export template<datatype T>
+struct map;
+
+template<datatype T>
+struct map_iterator {
+	using difference_type = std::ptrdiff_t;
+	using value_type = std::pair<std::string_view, T>;
+	using reference = value_type &;
+	using const_reference = value_type const &;
+	using pointer = value_type *;
+	using const_pointer = value_type const *;
+
+	struct sentinel{};
+
+	auto operator==(this map_iterator const &self, sentinel) -> bool
+	{
+		return (self._state->cur == nullptr);
+	}
+
+	auto operator++(this map_iterator &self) -> map_iterator &
+	{
+		self._state->next();
+		return self;
+	}
+
+	auto operator++(this map_iterator &self, int) -> map_iterator &
+	{
+		self._state->next();
+		return self;
+	}
+
+	auto operator*(this map_iterator const &self) -> value_type {
+		auto obj = T(ref, self._state->cur);
+		return {obj.key(), std::move(obj)};
+	}
+
+private:
+	friend struct map<T>;
+
+	map_iterator(::ucl_object_t const *obj)
+	{
+		_state = std::make_shared<state>(obj);
+		++(*this);
+	}
+
+	struct state {
+		state(::ucl_object_t const *obj)
+		{
+			if ((iter = ::ucl_object_iterate_new(obj)) == nullptr)
+				throw error("failed to create UCL iterator");
+		}
+
+		state(state const &) = delete;
+		auto operator=(this state &, state const &) -> state& = delete;
+
+		~state() {
+			if (iter != nullptr)
+				::ucl_object_iterate_free(iter);
+		}
+
+		auto next() -> void {
+			cur = ::ucl_object_iterate_safe(iter, true);
+		}
+
+		ucl_object_iter_t iter = nullptr;
+		ucl_object_t const *cur = nullptr;
+	};
+
+	std::shared_ptr<state> _state;
+};
+
+export template<datatype T = object>
+struct map final : object {
+	inline static constexpr object_type ucl_type = object_type::object;
+
+	using value_type = std::pair<std::string_view, T>;
+	using size_type = std::size_t;
+	using difference_type = std::ptrdiff_t;
+	using iterator = map_iterator<T>;
+
+	// Create an empty map
+	map() : object(noref, ::ucl_object_typed_new(UCL_OBJECT))
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+	}
+
+	// Create a new map from a UCL object.
+	map(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	map(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	/*
+	 * Create a map from an iterator pair.
+	 */
+	template<std::input_iterator Iterator>
+	requires(std::convertible_to<std::iter_value_t<Iterator>, value_type>)
+	map(Iterator first, Iterator last)
+		 : map()
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+
+		// This is exception safe, because if we throw here the
+		// base class destructor will free the map.
+		while (first != last) {
+			insert(*first);
+			++first;
+		}
+	}
+
+	/*
+	 * Create a map from a range.
+	 */
+	template<std::ranges::range Range>
+	requires(std::convertible_to<std::ranges::range_value_t<Range>,
+		 		     value_type>)
+	map(std::from_range_t, Range &&range)
+		 : map(std::ranges::begin(range),
+			 std::ranges::end(range))
+	{
+	}
+
+	/*
+	 * Create a map from an initializer_list.
+	 */
+	map(std::initializer_list<value_type> const &list)
+		 : map(std::ranges::begin(list), std::ranges::end(list))
+	{
+	}
+
+	/*
+	 * Map iterator access.
+	 */
+
+	auto begin(this map const &self) -> iterator
+	{
+		return {self.get_ucl_object()};
+	}
+
+	auto end(this map const &) -> iterator::sentinel
+	{
+		return {};
+	}
+
+	/*
+	 * Reserve space for future insertions.
+	 */
+	auto reserve(this map &self, size_type nelems) -> void
+	{
+		::ucl_object_reserve(self.get_ucl_object(), nelems);
+	}
+
+	/*
+	 * Add an element to the map.
+	 */
+	auto insert(this map &self, value_type const &v) -> void
+	{
+		auto uobj = ::ucl_object_ref(v.second.get_ucl_object());
+
+		::ucl_object_insert_key(self.get_ucl_object(), uobj,
+					v.first.data(), v.first.size(), true);
+	}
+
+	/*
+	 * Access a map element by key.
+	 */
+	auto find(this map const &self, std::string_view key)
+		-> std::optional<T>
+	{
+		auto const *obj = ::ucl_object_lookup_len(
+					self.get_ucl_object(),
+					key.data(), key.size());
+		if (obj == nullptr)
+			return {};
+
+		return {T(nihil::ucl::ref, obj)};
+	}
+
+	/*
+	 * Remove an object from the map.
+	 */
+	auto remove(this map &self, std::string_view key) -> bool
+	{
+		return ::ucl_object_delete_keyl(self.get_ucl_object(),
+						key.data(), key.size());
+	}
+
+	/*
+	 * Remove an object from the map and return it.
+	 */
+	auto pop(this map &self, std::string_view key)
+		-> std::optional<T>
+	{
+		auto *uobj = ::ucl_object_pop_keyl(self.get_ucl_object(),
+						   key.data(), key.size());
+		if (uobj)
+			return T(noref, uobj);
+		return {};
+	}
+
+	auto operator[] (this map const &self, std::string_view key) -> T
+	{
+		auto obj = self.find(key);
+		if (obj)
+			return *obj;
+		throw key_not_found(key);
+	}
+};
+
+} // namespace nihil::ucl

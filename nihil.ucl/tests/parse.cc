@@ -13,38 +13,38 @@ import nihil.ucl;
 TEST_CASE("ucl parse: iterate array", "[ucl]")
 {
 	using namespace std::literals;
+	using namespace nihil::ucl;
 
-	auto input = "value = [1, 42, 666];"sv;
-	auto obj = nihil::ucl::parse(input);
+	auto obj = parse("value = [1, 42, 666];"sv);
 
-	auto array = obj.lookup("value");
-	REQUIRE(array);
-	REQUIRE(array->key() == "value");
+	auto arr = obj["value"];
+	REQUIRE(arr.key() == "value");
 
-	auto vec = std::vector<nihil::ucl::object>();
-	std::ranges::copy(*array, std::back_inserter(vec));
+	auto vec = std::vector(std::from_range,
+			       object_cast<array<integer>>(arr));
+
 	REQUIRE(vec.size() == 3);
-	REQUIRE(object_cast<nihil::ucl::integer>(vec[0]).value() == 1);
-	REQUIRE(object_cast<nihil::ucl::integer>(vec[1]).value() == 42);
-	REQUIRE(object_cast<nihil::ucl::integer>(vec[2]).value() == 666);
+	REQUIRE(vec[0] == 1);
+	REQUIRE(vec[1] == 42);
+	REQUIRE(vec[2] == 666);
 }
 
 TEST_CASE("ucl parse: iterate hash", "[ucl]")
 {
 	using namespace std::literals;
+	using namespace nihil::ucl;
 
 	auto input = "int = 42; bool = true; str = \"test\";"sv;
-	auto obj = nihil::ucl::parse(input);
+	auto obj = parse(input);
 
-	for (auto &&value : obj) {
-		if (value.key() == "int")
-			REQUIRE(object_cast<nihil::ucl::integer>(value).value()
-				== 42);
-		else if (value.key() == "bool")
-			REQUIRE(object_cast<nihil::ucl::boolean>(value).value()
-				== true);
-		else if (value.key() == "str")
-			REQUIRE(object_cast<nihil::ucl::string>(value).value()
-				== "test");
+	for (auto &&[key, value] : obj) {
+		REQUIRE(key == value.key());
+
+		if (key == "int")
+			REQUIRE(object_cast<integer>(value) == 42);
+		else if (key == "bool")
+			REQUIRE(object_cast<boolean>(value) == true);
+		else if (key == "str")
+			REQUIRE(object_cast<string>(value) == "test");
 	}
 }

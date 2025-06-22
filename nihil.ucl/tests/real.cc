@@ -48,12 +48,10 @@ TEST_CASE("ucl: real: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto input = "value = 42.1"sv;
-	auto obj = nihil::ucl::parse(input);
-	auto v = obj.lookup("value");
-	REQUIRE(v);
-	REQUIRE(v->key() == "value");
-	REQUIRE_THAT(object_cast<nihil::ucl::real>(*v).value(),
+	auto obj = nihil::ucl::parse("value = 42.1"sv);
+	auto v = obj["value"];
+	REQUIRE(v.key() == "value");
+	REQUIRE_THAT(object_cast<nihil::ucl::real>(v).value(),
 		     Catch::Matchers::WithinRel(42.1));
 }
 

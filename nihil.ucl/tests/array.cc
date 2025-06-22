@@ -97,14 +97,8 @@ TEST_CASE("ucl: array: parse", "[ucl]")
 	using namespace std::literals;
 	using namespace nihil::ucl;
 
-	auto input = "value = [1, 42, 666]"sv;
-	auto obj = parse(input);
-	auto v = obj.lookup("value");
-
-	REQUIRE(v);
-	REQUIRE(v->key() == "value");
-
-	auto arr = object_cast<array<integer>>(*v);
+	auto obj = parse("value = [1, 42, 666]"sv);
+	auto arr = object_cast<array<integer>>(obj["value"]);
 	REQUIRE(arr.size() == 3);
 	REQUIRE(arr[0] == 1);
 	REQUIRE(arr[1] == 42);
@@ -170,9 +164,7 @@ TEST_CASE("ucl: array: heterogeneous elements", "[ucl]")
 	using namespace nihil::ucl;
 
 	auto obj = parse("array [ 42, true, \"test\" ];");
-	auto v = obj.lookup("array");
-	REQUIRE(v);
-	auto arr = object_cast<array<>>(*v);
+	auto arr = object_cast<array<>>(obj["array"]);
 
 	REQUIRE(arr.size() == 3);
 
