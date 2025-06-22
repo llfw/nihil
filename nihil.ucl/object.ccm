@@ -23,6 +23,7 @@ export module nihil.ucl:object;
 
 import nihil;
 import :error;
+import :type;
 
 namespace nihil::ucl {
 
@@ -32,25 +33,12 @@ export struct parser;
  * The basic object type.
  */
 
-enum struct object_type {
-	object = UCL_OBJECT,
-	array = UCL_ARRAY,
-	integer = UCL_INT,
-	real = UCL_FLOAT,
-	string = UCL_STRING,
-	boolean = UCL_BOOLEAN,
-	time = UCL_TIME,
-	userdata = UCL_USERDATA,
-	null = UCL_NULL,
-};
-
-template<typename T>
-concept datatype = requires(T o) {
-	{ T::ucl_type } -> std::convertible_to<object_type>;
-};
-
 export struct object {
 	inline static constexpr object_type ucl_type = object_type::object;
+
+	// Create an object from an existing ucl_object_t.  We assume the
+	// object has already been referenced.
+	object(::ucl_object_t *object) : _object(object) {}
 
 	// Free our object on destruction.
 	virtual ~object() {
@@ -100,28 +88,8 @@ export struct object {
 	// Return the type of this object.
 	auto type(this object const &self) -> object_type
 	{
-		switch (ucl_object_type(self.get_ucl_object())) {
-		case UCL_OBJECT:
-			return object_type::object;
-		case UCL_ARRAY:
-			return object_type::array;
-		case UCL_INT:
-			return object_type::integer;
-		case UCL_FLOAT:
-			return object_type::real;
-		case UCL_STRING:
-			return object_type::string;
-		case UCL_BOOLEAN:
-			return object_type::boolean;
-		case UCL_TIME:
-			return object_type::time;
-		case UCL_USERDATA:
-			return object_type::userdata;
-		case UCL_NULL:
-			return object_type::null;
-		default:
-			std::abort();
-		}
+		auto utype = ::ucl_object_type(self.get_ucl_object());
+		return static_cast<object_type>(utype);
 	}
 
 	// Return the underlying object.
@@ -156,10 +124,6 @@ export struct object {
 	}
 
 protected:
-	// Create an object from an existing ucl_object_t.  We assume the
-	// object has already been referenced.
-	object(::ucl_object_t *object) : _object(object) {}
-
 	// The object we're wrapping.
 	::ucl_object_t *_object = nullptr;
 
@@ -272,31 +236,6 @@ export auto begin(object const &o) -> iterator
 export auto end(object const &) -> iterator::sentinel
 {
 	return {};
-}
-
-/***********************************************************************
- * Value access by object_cast.
- */
-
-// Exception thrown when object_cast fails.
-export struct bad_object_cast : error {
-	bad_object_cast()
-		: error("bad object_cast<>: object does not match target type")
-	{}
-};
-
-//export template<typename To>
-////auto object_cast(object const &from) -> To = delete;
-
-export template<datatype To>
-auto object_cast(object const &from) -> To
-{
-	if (from.type() != To::ucl_type)
-		throw bad_object_cast();
-
-	auto const *uobj = from.get_ucl_object();
-	auto *refptr = ::ucl_object_ref(uobj);
-	return To(refptr);
 }
 
 } // namespace nihil::ucl

@@ -10,7 +10,9 @@ target_sources(nihil.ucl PUBLIC
 	emit.ccm
 	error.ccm
 	object.ccm
+	object_cast.ccm
 	parser.ccm
+	type.ccm
 
 	array.ccm
 	boolean.ccm

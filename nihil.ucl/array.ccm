@@ -150,9 +150,7 @@ auto operator-(array_iterator<T> const &lhs,
 	return copy;
 }
 
-static_assert(std::random_access_iterator<array_iterator<object>>);
-
-export template<datatype T>
+export template<datatype T = object>
 struct array final : object {
 	inline static constexpr object_type ucl_type = object_type::array;
 

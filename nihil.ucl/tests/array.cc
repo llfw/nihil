@@ -12,18 +12,23 @@ import nihil.ucl;
 
 TEST_CASE("ucl: array: construct", "[ucl]")
 {
-	auto arr = nihil::ucl::array<nihil::ucl::integer>();
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>();
 	REQUIRE(arr.size() == 0);
+	REQUIRE(str(arr.type()) == "array");
 }
 
 TEST_CASE("ucl: array: push_back", "[ucl]")
 {
-	auto arr = nihil::ucl::array<nihil::ucl::integer>();
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>();
 	REQUIRE(arr.size() == 0);
 
-	arr.push_back(nihil::ucl::integer(1));
-	arr.push_back(nihil::ucl::integer(42));
-	arr.push_back(nihil::ucl::integer(666));
+	arr.push_back(integer(1));
+	arr.push_back(integer(42));
+	arr.push_back(integer(666));
 
 	REQUIRE(arr.size() == 3);
 	REQUIRE(arr[0].value() == 1);
@@ -34,17 +39,18 @@ TEST_CASE("ucl: array: push_back", "[ucl]")
 
 	REQUIRE(arr.front() == 1);
 	REQUIRE(arr.back() == 666);
-
 }
 
 TEST_CASE("ucl: array: compare", "[ucl]")
 {
-	auto arr = nihil::ucl::array<nihil::ucl::integer>();
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>();
 	arr.push_back(1);
 	arr.push_back(42);
 	arr.push_back(666);
 
-	auto arr2 = nihil::ucl::array<nihil::ucl::integer>();
+	auto arr2 = array<integer>();
 	REQUIRE(arr != arr2);
 
 	arr2.push_back(1);
@@ -52,7 +58,7 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 	arr2.push_back(666);
 	REQUIRE(arr == arr2);
 
-	auto arr3 = nihil::ucl::array<nihil::ucl::integer>();
+	auto arr3 = array<integer>();
 	arr3.push_back(1);
 	arr3.push_back(1);
 	arr3.push_back(1);
@@ -61,10 +67,15 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 
 TEST_CASE("ucl: array: iterator", "[ucl]")
 {
-	auto arr = nihil::ucl::array<nihil::ucl::integer>{1, 42, 666};
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>{1, 42, 666};
 
 	auto it = arr.begin();
 	REQUIRE(*it == 1);
+	auto end = arr.end();
+	REQUIRE(it != end);
+	REQUIRE(it < end);
 
 	++it;
 	REQUIRE(*it == 42);
@@ -74,20 +85,26 @@ TEST_CASE("ucl: array: iterator", "[ucl]")
 
 	--it;
 	REQUIRE(*it == 42);
+
+	++it;
+	REQUIRE(it != end);
+	++it;
+	REQUIRE(it == end);
 }
 
 TEST_CASE("ucl: array: parse", "[ucl]")
 {
 	using namespace std::literals;
+	using namespace nihil::ucl;
 
 	auto input = "value = [1, 42, 666]"sv;
-	auto obj = nihil::ucl::parse(input);
+	auto obj = parse(input);
 	auto v = obj.lookup("value");
 
 	REQUIRE(v);
 	REQUIRE(v->key() == "value");
 
-	auto arr = object_cast<nihil::ucl::array<nihil::ucl::integer>>(*v);
+	auto arr = object_cast<array<integer>>(*v);
 	REQUIRE(arr.size() == 3);
 	REQUIRE(arr[0] == 1);
 	REQUIRE(arr[1] == 42);
@@ -96,7 +113,9 @@ TEST_CASE("ucl: array: parse", "[ucl]")
 
 TEST_CASE("ucl: array: emit", "[ucl]")
 {
-	auto ucl = nihil::ucl::parse("array = [1, 42, 666];");
+	using namespace nihil::ucl;
+
+	auto ucl = parse("array = [1, 42, 666];");
 	auto output = std::format("{:c}", ucl);
 	REQUIRE(output == 
 "array [\n"
@@ -108,7 +127,9 @@ TEST_CASE("ucl: array: emit", "[ucl]")
 
 TEST_CASE("ucl: array is a sized_range", "[ucl]")
 {
-	auto arr = nihil::ucl::array<nihil::ucl::integer>{1, 42, 666};
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>{1, 42, 666};
 	static_assert(std::ranges::sized_range<decltype(arr)>);
 
 	auto size = std::ranges::size(arr);
@@ -116,19 +137,87 @@ TEST_CASE("ucl: array is a sized_range", "[ucl]")
 
 	auto begin = std::ranges::begin(arr);
 	static_assert(std::random_access_iterator<decltype(begin)>);
+
 	auto end = std::ranges::end(arr);
 	static_assert(std::sentinel_for<decltype(end), decltype(begin)>);
 
 	REQUIRE(std::distance(begin, end) == 3);
 
-	auto vec = std::vector<nihil::ucl::integer>();
+	auto vec = std::vector<integer>();
 	std::ranges::copy(arr, std::back_inserter(vec));
 	REQUIRE(std::ranges::equal(arr, vec));
 
 	auto arr_as_ints =
-		arr | std::views::transform(&nihil::ucl::integer::value);
-	auto int_vec = std::vector<nihil::ucl::integer::value_type>();
+		arr | std::views::transform(&integer::value);
+	auto int_vec = std::vector<integer::value_type>();
 	std::ranges::copy(arr_as_ints, std::back_inserter(int_vec));
 	REQUIRE(int_vec == std::vector<std::int64_t>{1, 42, 666});
 
 }
+
+TEST_CASE("ucl: array: bad object_cast", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>();
+
+	REQUIRE_THROWS_AS(object_cast<integer>(arr), type_mismatch);
+}
+
+TEST_CASE("ucl: array: heterogeneous elements", "[ucl]")
+{
+	using namespace std::literals;
+	using namespace nihil::ucl;
+
+	auto obj = parse("array [ 42, true, \"test\" ];");
+	auto v = obj.lookup("array");
+	REQUIRE(v);
+	auto arr = object_cast<array<>>(*v);
+
+	REQUIRE(arr.size() == 3);
+
+	auto int_obj = object_cast<integer>(arr[0]);
+	REQUIRE(int_obj == 42);
+
+	auto bool_obj = object_cast<boolean>(arr[1]);
+	REQUIRE(bool_obj == true);
+
+	auto string_obj = object_cast<string>(arr[2]);
+	REQUIRE(string_obj == "test");
+}
+
+TEST_CASE("ucl: array: heterogenous cast", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto arr = array<>();
+	arr.push_back(integer(42));
+	arr.push_back(boolean(true));
+
+	// Converting to an array<integer> should fail.
+	REQUIRE_THROWS_AS(object_cast<array<integer>>(arr), type_mismatch);
+
+	// Converting to array<object> should succeed.
+	auto obj_arr = object_cast<array<object>>(arr);
+	REQUIRE(obj_arr[0] == integer(42));
+}
+
+TEST_CASE("ucl: array: homogeneous cast", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto arr = array<>();
+	arr.push_back(integer(1));
+	arr.push_back(integer(42));
+
+	auto obj = object(arr.get_ucl_object());
+
+	// Converting to array<string> should fail.
+	REQUIRE_THROWS_AS(object_cast<array<string>>(obj), type_mismatch);
+
+	// Converting to an array<integer> should succeed.
+	auto obj_arr = object_cast<array<integer>>(obj);
+	REQUIRE(obj_arr[0] == 1);
+	REQUIRE(obj_arr[1] == 42);
+}
+

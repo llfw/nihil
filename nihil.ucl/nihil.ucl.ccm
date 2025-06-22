@@ -5,9 +5,12 @@
 module;
 
 export module nihil.ucl;
+
 export import :emit;
 export import :object;
+export import :object_cast;
 export import :parser;
+export import :type;
 
 export import :array;
 export import :boolean;
