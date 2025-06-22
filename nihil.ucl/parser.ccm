@@ -147,7 +147,8 @@ export struct parser {
 		if (obj == nullptr)
 			throw error("attempt to call top() on an empty parser");
 
-		return {obj};
+		// ucl_parser_get_objects() refs the object for us.
+		return {noref, obj};
 	}
 
 private:

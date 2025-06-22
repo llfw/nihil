@@ -22,18 +22,30 @@ export struct boolean final : object {
 
 	inline static constexpr object_type ucl_type = object_type::boolean;
 
-	boolean(value_type value)
-		: object(::ucl_object_frombool(value))
+	// Create a new boolean from a UCL object.
+	boolean(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	boolean(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	// Create a new boolean from a value.
+	explicit boolean(value_type value)
+		: object(noref, ::ucl_object_frombool(value))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
 	}
 
-	explicit boolean(::ucl_object_t *uobj) : object(uobj)
-	{
-		assert(type() == object_type::boolean);
-	}
-
+	// Return this object's value.
 	auto value(this boolean const &self) -> value_type
 	{
 		auto v = value_type{};

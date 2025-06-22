@@ -21,19 +21,51 @@ export struct string final : object {
 
 	inline static constexpr object_type ucl_type = object_type::string;
 
-	string(value_type value)
-		: object(::ucl_object_fromstring_common(
-				value.data(), value.size(), UCL_STRING_RAW))
+	// Create a new string from a UCL object.
+	string(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	string(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	// Create a new UCL string from a string.
+	string(std::string_view value)
+		: object(nihil::ucl::ref, 
+			 ::ucl_object_fromstring_common(
+				value.data(), value.size(),
+				UCL_STRING_RAW))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
 	}
 
-	explicit string(::ucl_object_t *uobj) : object(uobj)
-	{
-		assert(type() == object_type::string);
-	}
+	// Create a new UCL string from an iterator pair.
+	template<std::contiguous_iterator Iterator>
+	string(Iterator first, Iterator last)
+		: string(std::string_view(first, last))
+	{}
 
+	template<std::input_iterator Iterator>
+	requires(!std::contiguous_iterator<Iterator>)
+	string(Iterator first, Iterator last)
+		: string(std::string(first, last))
+	{}
+
+	// Create a new UCL string from a range.
+	string(std::from_range_t, std::ranges::range auto &&range)
+		: string(std::ranges::begin(range),
+			 std::ranges::end(range))
+	{}
+
+	// Return the value of this string.
 	auto value(this string const &self) -> value_type
 	{
 		char const *dptr{};

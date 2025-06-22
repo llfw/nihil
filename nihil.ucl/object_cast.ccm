@@ -71,11 +71,10 @@ struct convert_check<array<T>>
 export template<datatype To>
 auto object_cast(object const &from) -> To
 {
-	convert_check<To>{}.check(from.get_ucl_object());
+	auto uobj = from.get_ucl_object();
 
-	auto const *uobj = from.get_ucl_object();
-	auto *refptr = ::ucl_object_ref(uobj);
-	return To(refptr);
+	convert_check<To>{}.check(uobj);
+	return To(nihil::ucl::ref, uobj);
 }
 
 } // namespace nihil::ucl

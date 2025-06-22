@@ -22,18 +22,30 @@ export struct integer final : object {
 
 	inline static constexpr object_type ucl_type = object_type::integer;
 
+	// Create a new integer from a UCL object.
+	integer(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	integer(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	// Create a new integer from a value.
 	integer(value_type value)
-		: object(::ucl_object_fromint(value))
+		: object(noref, ::ucl_object_fromint(value))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
 	}
 
-	explicit integer(::ucl_object_t *uobj) : object(uobj)
-	{
-		assert(type() == object_type::integer);
-	}
-
+	// Return the value of this object.
 	auto value(this integer const &self) -> value_type
 	{
 		auto v = value_type{};

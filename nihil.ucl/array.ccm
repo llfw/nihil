@@ -35,7 +35,7 @@ struct array_iterator {
 		if (uobj == nullptr)
 			throw error("failed to fetch UCL array index");
 
-		return T(::ucl_object_ref(uobj));
+		return T(nihil::ucl::ref, uobj);
 	}
 
 	auto operator[] (this array_iterator const &self,
@@ -158,15 +158,26 @@ struct array final : object {
 	using size_type = std::size_t;
 	using difference_type = std::ptrdiff_t;
 
-	array() : object(::ucl_object_typed_new(UCL_ARRAY))
+	// Create an empty array.
+	array() : object(noref, ::ucl_object_typed_new(UCL_ARRAY))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
 	}
 
-	explicit array(::ucl_object_t *uobj) : object(uobj)
+	// Create a new array from a UCL object.
+	array(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
 	{
-		assert(type() == object_type::array);
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	array(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
 	}
 
 	/*
@@ -175,7 +186,7 @@ struct array final : object {
 	template<std::input_iterator Iterator>
 	requires(std::convertible_to<std::iter_value_t<Iterator>, T>)
 	array(Iterator first, Iterator last)
-		 : object(::ucl_object_typed_new(UCL_ARRAY))
+		 : array()
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
@@ -249,14 +260,6 @@ struct array final : object {
 	/*
 	 * Append an element to the array.
 	 */
-	auto push_back(this array &self, value_type &&v) -> void
-	{
-		// There's no real benefit to moving the object here, but
-		// move it anyway to preserve the expected semantics.
-		auto copy = std::move(v);
-		self.push_back(copy);
-	}
-
 	auto push_back(this array &self, value_type const &v) -> void
 	{
 		auto uobj = ::ucl_object_ref(v.get_ucl_object());
@@ -266,14 +269,6 @@ struct array final : object {
 	/*
 	 * Prepend an element to the array.
 	 */
-	auto push_front(this array &self, value_type &&v) -> void
-	{
-		// There's no real benefit to moving the object here, but
-		// move it anyway to preserve the expected semantics.
-		auto copy = std::move(v);
-		self.push_front(copy);
-	}
-
 	auto push_front(this array &self, value_type const &v) -> void
 	{
 		auto uobj = ::ucl_object_ref(v.get_ucl_object());
@@ -292,7 +287,7 @@ struct array final : object {
 		if (uobj == nullptr)
 			throw error("failed to fetch UCL array index");
 
-		return T(::ucl_object_ref(uobj));
+		return T(nihil::ucl::ref, uobj);
 	}
 
 	auto operator[] (this array const &self, size_type idx) -> T

@@ -21,16 +21,27 @@ export struct real final : object {
 
 	inline static constexpr object_type ucl_type = object_type::real;
 
+	// Create a new real from a UCL object.
+	real(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	real(noref_t, ::ucl_object_t *uobj)
+		: object(noref, uobj)
+	{
+		if (type() != ucl_type)
+			throw type_mismatch(ucl_type, type());
+	}
+
+	// Create a new real from a value.
 	real(value_type value)
-		: object(::ucl_object_fromdouble(value))
+		: object(noref, ::ucl_object_fromdouble(value))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
-	}
-
-	explicit real(::ucl_object_t *uobj) : object(uobj)
-	{
-		assert(type() == object_type::real);
 	}
 
 	auto value(this real const &self) -> value_type

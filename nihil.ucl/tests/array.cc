@@ -210,7 +210,7 @@ TEST_CASE("ucl: array: homogeneous cast", "[ucl]")
 	arr.push_back(integer(1));
 	arr.push_back(integer(42));
 
-	auto obj = object(arr.get_ucl_object());
+	auto obj = object(ref, arr.get_ucl_object());
 
 	// Converting to array<string> should fail.
 	REQUIRE_THROWS_AS(object_cast<array<string>>(obj), type_mismatch);

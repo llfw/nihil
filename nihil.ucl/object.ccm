@@ -33,16 +33,30 @@ export struct parser;
  * The basic object type.
  */
 
+// Ref the UCL object when creating an object.
+export inline constexpr struct ref_t {} ref;
+// Don't ref the UCL object.
+export inline constexpr struct noref_t {} noref;
+
 export struct object {
 	inline static constexpr object_type ucl_type = object_type::object;
 
-	// Create an object from an existing ucl_object_t.  We assume the
-	// object has already been referenced.
-	object(::ucl_object_t *object) : _object(object) {}
+	// Create an object from an existing ucl_object_t.  The first argument
+	// determines whether we ref the object or not.
+
+	object(ref_t, ::ucl_object_t const *object)
+		: _object(::ucl_object_ref(object))
+	{
+	}
+
+	object(noref_t, ::ucl_object_t *object)
+		: _object(object)
+	{
+	}
 
 	// Free our object on destruction.
 	virtual ~object() {
-		if (_object)
+		if (_object != nullptr)
 			::ucl_object_unref(_object);
 	}
 
@@ -70,19 +84,22 @@ export struct object {
 		-> object &
 	{
 		if (&self != &other) {
+			auto *new_uobj = ::ucl_object_copy(other.get_ucl_object());
+			if (new_uobj == nullptr)
+				throw error("failed to copy UCL object");
+
 			if (self._object != nullptr)
 				::ucl_object_unref(self._object);
-
-			if (other._object != nullptr) {
-				self._object = ::ucl_object_copy(other._object);
-				if (self._object == nullptr)
-					throw error("failed to copy UCL object");
-			} else {
-				self._object = nullptr;
-			}
+			self._object = new_uobj;
 		}
 
 		return self;
+	}
+
+	// Increase the refcount of this object.
+	auto ref(this object const &self) -> object
+	{
+		return object(nihil::ucl::ref, self.get_ucl_object());
 	}
 
 	// Return the type of this object.
@@ -95,11 +112,15 @@ export struct object {
 	// Return the underlying object.
 	auto get_ucl_object(this object &self) -> ::ucl_object_t *
 	{
+		if (self._object == nullptr)
+			throw error("attempt to access empty UCL object");
 		return self._object;
 	}
 
 	auto get_ucl_object(this object const &self) -> ::ucl_object_t const *
 	{
+		if (self._object == nullptr)
+			throw error("attempt to access empty UCL object");
 		return self._object;
 	}
 
@@ -107,7 +128,8 @@ export struct object {
 	auto key(this object const &self) -> std::string_view
 	{
 		auto dlen = std::size_t{};
-		auto const *dptr = ::ucl_object_keyl(self._object, &dlen);
+		auto const *dptr = ::ucl_object_keyl(self.get_ucl_object(),
+						     &dlen);
 		return {dptr, dlen};
 	}
 
@@ -116,11 +138,12 @@ export struct object {
 		-> std::optional<object>
 	{
 		auto const *obj = ::ucl_object_lookup_any(
-					self._object, key.data(), key.size());
+					self.get_ucl_object(),
+					key.data(), key.size());
 		if (obj == nullptr)
 			return {};
 
-		return {object(::ucl_object_ref(obj))};
+		return {object(nihil::ucl::ref, obj)};
 	}
 
 protected:
@@ -194,8 +217,7 @@ export struct iterator {
 	}
 
 	auto operator*(this iterator const &self) -> object {
-		auto *ptr = ::ucl_object_ref(self._state->cur);
-		return object(ptr);
+		return object(ref, self._state->cur);
 	}
 
 private:
