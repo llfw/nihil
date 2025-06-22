@@ -7,7 +7,9 @@ module;
 #include <array>
 #include <charconv>
 #include <cstdlib>
+#include <format>
 #include <iterator>
+#include <iostream>
 #include <span>
 #include <string>
 #include <utility>
@@ -138,4 +140,75 @@ export auto emit(object const &object, emitter format,
 			       &functions, nullptr);
 }
 
+/*
+ * Basic ostream printer for UCL; default to JSON since it's probably what
+ * most people expect.
+ */
+export auto operator<<(std::ostream &stream, object const &o)
+	-> std::ostream &
+{
+	emit(o, emitter::json, std::ostream_iterator<char>(stream));
+	return stream;
+}
+
 } // namespace nihil::ucl
+
+/*
+ * Specialisation of std::formatter<> for object.
+ */
+template<>
+struct std::formatter<nihil::ucl::object, char>
+{
+	nihil::ucl::emitter emitter = nihil::ucl::emitter::json;
+
+	template<class ParseContext>
+	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	{
+		auto it = ctx.begin();
+		auto end = ctx.end();
+
+		while (it != end) {
+			switch (*it) {
+			case 'j':
+				emitter = nihil::ucl::emitter::json;
+				break;
+			case 'J':
+				emitter = nihil::ucl::emitter::compact_json;
+				break;
+			case 'c':
+				emitter = nihil::ucl::emitter::configuration;
+				break;
+			case 'y':
+				emitter = nihil::ucl::emitter::yaml;
+				break;
+			case '}':
+				return it;
+			default:
+				throw std::format_error("Invalid format string "
+							"for UCL object");
+			}
+
+			++it;
+		}
+
+		return it;
+	}
+
+	template<class FmtContext>
+	FmtContext::iterator format(nihil::ucl::object const &o,
+				    FmtContext& ctx) const
+	{
+		// We can't use emit() here since the context iterator is not
+		// an std::output_iterator.
+
+		auto out = ctx.out();
+
+		auto ucl_format = static_cast<::ucl_emitter>(emitter);
+		auto wrapper = nihil::ucl::emit_wrapper(out);
+		auto functions = wrapper.get_functions();
+
+		::ucl_object_emit_full(o.get_ucl_object(), ucl_format,
+				       &functions, nullptr);
+		return out;
+	}
+};

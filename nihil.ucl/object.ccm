@@ -170,6 +170,29 @@ private:
 };
 
 /***********************************************************************
+ * Object comparison.
+ */
+
+export auto operator<=>(object const &lhs, object const &rhs)
+	-> std::strong_ordering
+{
+	auto cmp = ::ucl_object_compare(lhs.get_ucl_object(),
+					rhs.get_ucl_object());
+
+	if (cmp < 0)
+		return std::strong_ordering::less;
+	else if (cmp > 0)
+		return std::strong_ordering::greater;
+	else
+		return std::strong_ordering::equal;
+}
+
+export auto operator==(object const &lhs, object const &rhs) -> bool
+{
+	return (lhs <=> rhs) == std::strong_ordering::equal;
+}
+
+/***********************************************************************
  * Object iteration.
  */
 
