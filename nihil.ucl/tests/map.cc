@@ -2,9 +2,32 @@
  * This source code is released into the public domain.
  */
 
+#include <concepts>
+
 #include <catch2/catch_test_macros.hpp>
+#include <ucl.h>
 
 import nihil.ucl;
+
+TEST_CASE("ucl: map: invariants", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	REQUIRE(map<>::ucl_type == object_type::object);
+	REQUIRE(static_cast<::ucl_type>(map<>::ucl_type) == UCL_OBJECT);
+
+	static_assert(std::destructible<map<>>);
+	static_assert(std::default_initializable<map<>>);
+	static_assert(std::move_constructible<map<>>);
+	static_assert(std::copy_constructible<map<>>);
+	static_assert(std::equality_comparable<map<>>);
+	static_assert(std::totally_ordered<map<>>);
+	static_assert(std::swappable<map<>>);
+
+	static_assert(std::ranges::range<map<integer>>);
+	static_assert(std::same_as<std::pair<std::string_view, integer>,
+				   std::ranges::range_value_t<map<integer>>>);
+}
 
 TEST_CASE("ucl: map: default construct", "[ucl]")
 {
@@ -21,6 +44,41 @@ TEST_CASE("ucl: map: construct from initializer_list", "[ucl]")
 		{"1"sv, integer(1)},
 		{"42"sv, integer(42)},
 	};
+
+	REQUIRE(str(map.type()) == "object");
+	REQUIRE(map["1"] == 1);
+	REQUIRE(map["42"] == 42);
+}
+
+TEST_CASE("ucl: map: construct from range", "[ucl]")
+{
+	using namespace nihil::ucl;
+	using namespace std::literals;
+
+	auto vec = std::vector<std::pair<std::string_view, integer>>{
+		{"1"sv, integer(1)},
+		{"42"sv, integer(42)},
+	};
+
+	auto map = nihil::ucl::map<integer>(std::from_range, vec);
+
+	REQUIRE(str(map.type()) == "object");
+	REQUIRE(map["1"] == 1);
+	REQUIRE(map["42"] == 42);
+}
+
+TEST_CASE("ucl: map: construct from iterator pair", "[ucl]")
+{
+	using namespace nihil::ucl;
+	using namespace std::literals;
+
+	auto vec = std::vector<std::pair<std::string_view, integer>>{
+		{"1"sv, integer(1)},
+		{"42"sv, integer(42)},
+	};
+
+	auto map = nihil::ucl::map<integer>(std::ranges::begin(vec),
+					    std::ranges::end(vec));
 
 	REQUIRE(str(map.type()) == "object");
 	REQUIRE(map["1"] == 1);

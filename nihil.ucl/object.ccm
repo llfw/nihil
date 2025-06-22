@@ -137,6 +137,11 @@ protected:
 	// The object we're wrapping.
 	::ucl_object_t *_object = nullptr;
 
+	friend auto swap(object &a, object &b) -> void
+	{
+		std::swap(a._object, b._object);
+	}
+
 private:
 
 	friend struct parser;

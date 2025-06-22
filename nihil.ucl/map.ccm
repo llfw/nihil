@@ -164,7 +164,7 @@ struct map final : object {
 		 		     value_type>)
 	map(std::from_range_t, Range &&range)
 		 : map(std::ranges::begin(range),
-			 std::ranges::end(range))
+		   std::ranges::end(range))
 	{
 	}
 

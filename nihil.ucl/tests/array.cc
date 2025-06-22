@@ -3,20 +3,78 @@
  */
 
 #include <algorithm>
+#include <concepts>
 #include <ranges>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
+#include <ucl.h>
 
 import nihil.ucl;
 
-TEST_CASE("ucl: array: construct", "[ucl]")
+TEST_CASE("ucl: array: invariants", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	REQUIRE(array<>::ucl_type == object_type::array);
+	REQUIRE(static_cast<::ucl_type>(array<>::ucl_type) == UCL_ARRAY);
+
+	static_assert(std::destructible<array<>>);
+	static_assert(std::default_initializable<array<>>);
+	static_assert(std::move_constructible<array<>>);
+	static_assert(std::copy_constructible<array<>>);
+	static_assert(std::equality_comparable<array<>>);
+	static_assert(std::totally_ordered<array<>>);
+	static_assert(std::swappable<array<>>);
+	
+	static_assert(std::ranges::sized_range<array<integer>>);
+	static_assert(std::same_as<std::ranges::range_value_t<array<integer>>,
+				   integer>);
+}
+
+TEST_CASE("ucl: array: default construct", "[ucl]")
 {
 	using namespace nihil::ucl;
 
 	auto arr = array<integer>();
 	REQUIRE(arr.size() == 0);
 	REQUIRE(str(arr.type()) == "array");
+}
+
+TEST_CASE("ucl: array: construct from range", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto vec = std::vector{integer(1), integer(42)};
+	auto arr = array<integer>(std::from_range, vec);
+
+	REQUIRE(arr.size() == 2);
+	REQUIRE(arr[0] == 1);
+	REQUIRE(arr[1] == 42);
+}
+
+TEST_CASE("ucl: array: construct from iterator pair", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto vec = std::vector{integer(1), integer(42)};
+	auto arr = array<integer>(std::ranges::begin(vec),
+				  std::ranges::end(vec));
+
+	REQUIRE(arr.size() == 2);
+	REQUIRE(arr[0] == 1);
+	REQUIRE(arr[1] == 42);
+}
+
+TEST_CASE("ucl: array: construct from initializer_list", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	auto arr = array<integer>{integer(1), integer(42)};
+
+	REQUIRE(arr.size() == 2);
+	REQUIRE(arr[0] == 1);
+	REQUIRE(arr[1] == 42);
 }
 
 TEST_CASE("ucl: array: push_back", "[ucl]")
@@ -45,10 +103,9 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto arr = array<integer>();
-	arr.push_back(integer(1));
-	arr.push_back(integer(42));
-	arr.push_back(integer(666));
+	auto arr = array<integer>{
+		integer(1), integer(42), integer(666)
+	};
 
 	auto arr2 = array<integer>();
 	REQUIRE(arr != arr2);
@@ -58,10 +115,10 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 	arr2.push_back(integer(666));
 	REQUIRE(arr == arr2);
 
-	auto arr3 = array<integer>();
-	arr3.push_back(integer(1));
-	arr3.push_back(integer(1));
-	arr3.push_back(integer(1));
+	auto arr3 = array<integer>{
+		integer(1), integer(1), integer(1)
+	};
+
 	REQUIRE(arr != arr3);
 }
 
@@ -124,7 +181,6 @@ TEST_CASE("ucl: array is a sized_range", "[ucl]")
 	using namespace nihil::ucl;
 
 	auto arr = array<integer>{integer(1), integer(42), integer(666)};
-	static_assert(std::ranges::sized_range<decltype(arr)>);
 
 	auto size = std::ranges::size(arr);
 	REQUIRE(size == 3);
@@ -143,7 +199,7 @@ TEST_CASE("ucl: array is a sized_range", "[ucl]")
 
 	auto arr_as_ints =
 		arr | std::views::transform(&integer::value);
-	auto int_vec = std::vector<integer::value_type>();
+	auto int_vec = std::vector<integer::contained_type>();
 	std::ranges::copy(arr_as_ints, std::back_inserter(int_vec));
 	REQUIRE(int_vec == std::vector<std::int64_t>{1, 42, 666});
 

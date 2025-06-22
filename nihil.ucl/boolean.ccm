@@ -18,7 +18,7 @@ import :object;
 namespace nihil::ucl {
 
 export struct boolean final : object {
-	using value_type = bool;
+	using contained_type = bool;
 
 	inline static constexpr object_type ucl_type = object_type::boolean;
 
@@ -41,7 +41,7 @@ export struct boolean final : object {
 	boolean() : boolean(false) {}
 
 	// Create a new boolean from a value.
-	explicit boolean(value_type value)
+	explicit boolean(contained_type value)
 		: object(noref, ::ucl_object_frombool(value))
 	{
 		if (_object == nullptr)
@@ -49,9 +49,9 @@ export struct boolean final : object {
 	}
 
 	// Return this object's value.
-	auto value(this boolean const &self) -> value_type
+	auto value(this boolean const &self) -> contained_type
 	{
-		auto v = value_type{};
+		auto v = contained_type{};
 		auto const *uobj = self.get_ucl_object();
 
 		if (::ucl_object_toboolean_safe(uobj, &v))
@@ -77,13 +77,13 @@ export auto operator<=> (boolean const &a, boolean const &b)
 	return a.value() <=> b.value();
 }
 
-export auto operator== (boolean const &a, boolean::value_type b)
+export auto operator== (boolean const &a, boolean::contained_type b)
 	-> bool
 {
 	return a.value() == b;
 }
 
-export auto operator<=> (boolean const &a, boolean::value_type b)
+export auto operator<=> (boolean const &a, boolean::contained_type b)
 	-> std::strong_ordering
 {
 	return a.value() <=> b;
