@@ -1,0 +1,78 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cassert>
+#include <cstdlib>
+#include <string>
+
+#include <ucl.h>
+
+export module nihil.ucl:string;
+
+import :object;
+
+namespace nihil::ucl {
+
+export struct string final : object {
+	using value_type = std::string_view;
+
+	inline static constexpr object_type ucl_type = object_type::string;
+
+	string(value_type value)
+		: object(::ucl_object_fromstring_common(
+				value.data(), value.size(), UCL_STRING_RAW))
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+	}
+
+	explicit string(::ucl_object_t *uobj) : object(uobj)
+	{
+		assert(type() == object_type::string);
+	}
+
+	auto value(this string const &self) -> value_type
+	{
+		char const *dptr{};
+		std::size_t dlen;
+
+		auto const *uobj = self.get_ucl_object();
+		if (::ucl_object_tolstring_safe(uobj, &dptr, &dlen))
+			return {dptr, dlen};
+
+		std::abort();
+	}
+};
+
+/*
+ * Comparison operators.
+ */
+
+export auto operator== (string const &a, string const &b)
+	-> bool
+{
+	return a.value() == b.value();
+}
+
+export auto operator<=> (string const &a, string const &b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b.value();
+}
+
+export auto operator== (string const &a, string::value_type b)
+	-> bool
+{
+	return a.value() == b;
+}
+
+export auto operator<=> (string const &a, string::value_type b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b;
+}
+
+} // namespace nihil::ucl

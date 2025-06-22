@@ -1,0 +1,76 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cassert>
+#include <cstdlib>
+#include <string>
+
+#include <ucl.h>
+
+export module nihil.ucl:real;
+
+import :object;
+
+namespace nihil::ucl {
+
+export struct real final : object {
+	using value_type = double;
+
+	inline static constexpr object_type ucl_type = object_type::real;
+
+	real(value_type value)
+		: object(::ucl_object_fromdouble(value))
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+	}
+
+	explicit real(::ucl_object_t *uobj) : object(uobj)
+	{
+		assert(type() == object_type::real);
+	}
+
+	auto value(this real const &self) -> value_type
+	{
+		auto v = value_type{};
+		auto const *uobj = self.get_ucl_object();
+
+		if (::ucl_object_todouble_safe(uobj, &v))
+			return v;
+
+		std::abort();
+	}
+};
+
+/*
+ * Comparison operators.
+ */
+
+export auto operator== (real const &a, real const &b)
+	-> bool
+{
+	return a.value() == b.value();
+}
+
+export auto operator<=> (real const &a, real const &b)
+	-> std::partial_ordering
+{
+	return a.value() <=> b.value();
+}
+
+export auto operator== (real const &a, real::value_type b)
+	-> bool
+{
+	return a.value() == b;
+}
+
+export auto operator<=> (real const &a, real::value_type b)
+	-> std::partial_ordering
+{
+	return a.value() <=> b;
+}
+
+} // namespace nihil::ucl

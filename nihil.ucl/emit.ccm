@@ -1,0 +1,141 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <array>
+#include <charconv>
+#include <cstdlib>
+#include <iterator>
+#include <span>
+#include <string>
+#include <utility>
+
+#include <ucl.h>
+
+export module nihil.ucl:emit;
+
+import :object;
+
+namespace nihil::ucl {
+
+export enum struct emitter {
+	configuration = UCL_EMIT_CONFIG,
+	compact_json = UCL_EMIT_JSON_COMPACT,
+	json = UCL_EMIT_JSON,
+	yaml = UCL_EMIT_YAML,
+};
+
+/*
+ * Wrap ucl_emitter_functions for a particular output iterator type.
+ *
+ * We can't throw exceptions here since we're called from C code.  The emit
+ * functions return an integer value, but it's not really clear what this is
+ * for (for example, returning errors?) and the C API seems to mostly ignore
+ * it.  So, we just eat errors and keep going.
+ */
+template<std::output_iterator<char> Iterator>
+struct emit_wrapper {
+	emit_wrapper(Iterator iterator_)
+		: iterator(std::move(iterator_))
+	{}
+
+	static auto append_character(unsigned char c, std::size_t nchars,
+				     void *ud)
+		noexcept -> int
+	try {
+		auto *self = static_cast<emit_wrapper *>(ud);
+
+		while (nchars--)
+			*self->iterator++ = static_cast<char>(c);
+
+		return 0;
+	} catch (...) {
+		return 0;
+	}
+
+	static auto append_len(unsigned char const *str, std::size_t len,
+			       void *ud) 
+		noexcept -> int
+	try {
+		auto *self = static_cast<emit_wrapper *>(ud);
+
+		for (auto c : std::span(str, len))
+			*self->iterator++ = static_cast<char>(c);
+
+		return 0;
+	} catch (...) {
+		return 0;
+	}
+
+	static auto append_int(std::int64_t value, void *ud)
+		noexcept -> int
+	try {
+		auto constexpr bufsize =
+			std::numeric_limits<std::int64_t>::digits10;
+		auto buf = std::array<char, bufsize>();
+
+		auto *self = static_cast<emit_wrapper *>(ud);
+		auto result = std::to_chars(buf.data(), buf.data() + buf.size(),
+					    value, 10);
+
+		if (result.ec == std::errc())
+			for (auto c : std::span(buf.data(), result.ptr))
+				*self->iterator++ = c;
+
+		return 0;
+	} catch (...) {
+		return 0;
+	}
+
+	static auto append_double(double value, void *ud)
+		noexcept -> int
+	try {
+		auto constexpr bufsize =
+			std::numeric_limits<double>::digits10;
+		auto buf = std::array<char, bufsize>();
+
+		auto *self = static_cast<emit_wrapper *>(ud);
+		auto result = std::to_chars(buf.data(), buf.data() + buf.size(),
+					    value);
+
+		if (result.ec == std::errc())
+			for (auto c : std::span(buf.data(), result.ptr))
+				*self->iterator++ = c;
+
+		return 0;
+	} catch (...) {
+		return 0;
+	}
+
+	auto get_functions(this emit_wrapper &self) -> ucl_emitter_functions
+	{
+		auto ret = ucl_emitter_functions{};
+
+		ret.ucl_emitter_append_character = &emit_wrapper::append_character;
+		ret.ucl_emitter_append_len = &emit_wrapper::append_len;
+		ret.ucl_emitter_append_int = &emit_wrapper::append_int;
+		ret.ucl_emitter_append_double = &emit_wrapper::append_double;
+		ret.ud = &self;
+
+		return ret;
+	}
+
+private:
+	Iterator iterator{};
+};
+
+export auto emit(object const &object, emitter format,
+		 std::output_iterator<char> auto &&it)
+	-> void
+{
+	auto ucl_format = static_cast<ucl_emitter>(format);
+	auto wrapper = emit_wrapper(it);
+	auto functions = wrapper.get_functions();
+
+	::ucl_object_emit_full(object.get_ucl_object(), ucl_format,
+			       &functions, nullptr);
+}
+
+} // namespace nihil::ucl

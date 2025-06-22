@@ -1,0 +1,279 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * A UCL object.  The object is immutable and internally refcounted, so it
+ * may be copied as needed.
+ *
+ */
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <format>
+#include <string>
+#include <utility>
+
+#include <ucl.h>
+
+export module nihil.ucl:object;
+
+import nihil;
+import :error;
+
+namespace nihil::ucl {
+
+export struct parser;
+
+/***********************************************************************
+ * The basic object type.
+ */
+
+enum struct object_type {
+	object = UCL_OBJECT,
+	array = UCL_ARRAY,
+	integer = UCL_INT,
+	real = UCL_FLOAT,
+	string = UCL_STRING,
+	boolean = UCL_BOOLEAN,
+	time = UCL_TIME,
+	userdata = UCL_USERDATA,
+	null = UCL_NULL,
+};
+
+template<typename T>
+concept datatype = requires(T o) {
+	{ T::ucl_type } -> std::convertible_to<object_type>;
+};
+
+export struct object {
+	inline static constexpr object_type ucl_type = object_type::object;
+
+	// Free our object on destruction.
+	virtual ~object() {
+		if (_object)
+			::ucl_object_unref(_object);
+	}
+
+	// Movable.
+	object(object &&other) noexcept
+		: _object(std::exchange(other._object, nullptr))
+	{}
+
+	auto operator=(this object &self, object &&other) noexcept
+		-> object &
+	{
+		if (&self != &other)
+			self._object = std::exchange(other._object, nullptr);
+		return self;
+	}
+
+	// Copyable.
+	object(object const &other) noexcept
+		: _object(nullptr)
+	{
+		*this = other;
+	}
+
+	auto operator=(this object &self, object const &other)
+		-> object &
+	{
+		if (&self != &other) {
+			if (self._object != nullptr)
+				::ucl_object_unref(self._object);
+
+			if (other._object != nullptr) {
+				self._object = ::ucl_object_copy(other._object);
+				if (self._object == nullptr)
+					throw error("failed to copy UCL object");
+			} else {
+				self._object = nullptr;
+			}
+		}
+
+		return self;
+	}
+
+	// Return the type of this object.
+	auto type(this object const &self) -> object_type
+	{
+		switch (ucl_object_type(self.get_ucl_object())) {
+		case UCL_OBJECT:
+			return object_type::object;
+		case UCL_ARRAY:
+			return object_type::array;
+		case UCL_INT:
+			return object_type::integer;
+		case UCL_FLOAT:
+			return object_type::real;
+		case UCL_STRING:
+			return object_type::string;
+		case UCL_BOOLEAN:
+			return object_type::boolean;
+		case UCL_TIME:
+			return object_type::time;
+		case UCL_USERDATA:
+			return object_type::userdata;
+		case UCL_NULL:
+			return object_type::null;
+		default:
+			std::abort();
+		}
+	}
+
+	// Return the underlying object.
+	auto get_ucl_object(this object &self) -> ::ucl_object_t *
+	{
+		return self._object;
+	}
+
+	auto get_ucl_object(this object const &self) -> ::ucl_object_t const *
+	{
+		return self._object;
+	}
+
+	// Return the key of this object.
+	auto key(this object const &self) -> std::string_view
+	{
+		auto dlen = std::size_t{};
+		auto const *dptr = ::ucl_object_keyl(self._object, &dlen);
+		return {dptr, dlen};
+	}
+
+	// Return a sub-object of this one.
+	auto lookup(this object const &self, std::string_view key)
+		-> std::optional<object>
+	{
+		auto const *obj = ::ucl_object_lookup_any(
+					self._object, key.data(), key.size());
+		if (obj == nullptr)
+			return {};
+
+		return {object(::ucl_object_ref(obj))};
+	}
+
+protected:
+	// Create an object from an existing ucl_object_t.  We assume the
+	// object has already been referenced.
+	object(::ucl_object_t *object) : _object(object) {}
+
+	// The object we're wrapping.
+	::ucl_object_t *_object = nullptr;
+
+private:
+
+	friend struct parser;
+	friend struct iterator;
+};
+
+/***********************************************************************
+ * Object iteration.
+ */
+
+export struct iterator {
+	using difference_type = std::ptrdiff_t;
+	using value_type = object;
+	using reference = value_type &;
+	using const_reference = value_type const &;
+	using pointer = value_type *;
+	using const_pointer = value_type const *;
+
+	struct sentinel{};
+
+	explicit iterator(object const &obj)
+	{
+		_state = std::make_shared<state>(obj);
+		++(*this);
+	}
+
+	auto operator==(this iterator const &self, sentinel) -> bool
+	{
+		return (self._state->cur == nullptr);
+	}
+
+	auto operator++(this iterator &self) -> iterator &
+	{
+		self._state->next();
+		return self;
+	}
+
+	auto operator++(this iterator &self, int) -> iterator &
+	{
+		self._state->next();
+		return self;
+	}
+
+	auto operator*(this iterator const &self) -> object {
+		auto *ptr = ::ucl_object_ref(self._state->cur);
+		return object(ptr);
+	}
+
+private:
+	struct state {
+		state(object const &obj) 
+		{
+			auto const *uobj = obj.get_ucl_object();
+			if ((iter = ::ucl_object_iterate_new(uobj)) == nullptr)
+				throw error("failed to create UCL iterator");
+		}
+
+		state(state const &) = delete;
+		auto operator=(this state &, state const &) -> state& = delete;
+
+		~state() {
+			if (iter != nullptr)
+				::ucl_object_iterate_free(iter);
+		}
+
+		auto next() -> void {
+			cur = ::ucl_object_iterate_safe(iter, true);
+		}
+
+		ucl_object_iter_t iter = nullptr;
+		ucl_object_t const *cur = nullptr;
+	};
+
+	std::shared_ptr<state> _state;
+};
+
+static_assert(std::input_iterator<iterator>);
+
+export auto begin(object const &o) -> iterator
+{
+	return iterator(o);
+}
+
+export auto end(object const &) -> iterator::sentinel
+{
+	return {};
+}
+
+/***********************************************************************
+ * Value access by object_cast.
+ */
+
+// Exception thrown when object_cast fails.
+export struct bad_object_cast : error {
+	bad_object_cast()
+		: error("bad object_cast<>: object does not match target type")
+	{}
+};
+
+//export template<typename To>
+////auto object_cast(object const &from) -> To = delete;
+
+export template<datatype To>
+auto object_cast(object const &from) -> To
+{
+	if (from.type() != To::ucl_type)
+		throw bad_object_cast();
+
+	auto const *uobj = from.get_ucl_object();
+	auto *refptr = ::ucl_object_ref(uobj);
+	return To(refptr);
+}
+
+} // namespace nihil::ucl

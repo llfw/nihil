@@ -1,0 +1,77 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
+
+#include <ucl.h>
+
+export module nihil.ucl:boolean;
+
+import :object;
+
+namespace nihil::ucl {
+
+export struct boolean final : object {
+	using value_type = bool;
+
+	inline static constexpr object_type ucl_type = object_type::boolean;
+
+	boolean(value_type value)
+		: object(::ucl_object_frombool(value))
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+	}
+
+	explicit boolean(::ucl_object_t *uobj) : object(uobj)
+	{
+		assert(type() == object_type::boolean);
+	}
+
+	auto value(this boolean const &self) -> value_type
+	{
+		auto v = value_type{};
+		auto const *uobj = self.get_ucl_object();
+
+		if (::ucl_object_toboolean_safe(uobj, &v))
+			return v;
+
+		std::abort();
+	}
+};
+
+/*
+ * Comparison operators.
+ */
+
+export auto operator== (boolean const &a, boolean const &b)
+	-> bool
+{
+	return a.value() == b.value();
+}
+
+export auto operator<=> (boolean const &a, boolean const &b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b.value();
+}
+
+export auto operator== (boolean const &a, boolean::value_type b)
+	-> bool
+{
+	return a.value() == b;
+}
+
+export auto operator<=> (boolean const &a, boolean::value_type b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b;
+}
+
+} // namespace nihil::ucl

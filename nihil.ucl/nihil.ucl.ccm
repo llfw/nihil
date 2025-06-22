@@ -5,5 +5,12 @@
 module;
 
 export module nihil.ucl;
+export import :emit;
+export import :object;
+export import :parser;
 
-// TODO: Implement.
+export import :array;
+export import :boolean;
+export import :integer;
+export import :real;
+export import :string;

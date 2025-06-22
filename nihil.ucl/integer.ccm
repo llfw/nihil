@@ -1,0 +1,77 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
+
+#include <ucl.h>
+
+export module nihil.ucl:integer;
+
+import :object;
+
+namespace nihil::ucl {
+
+export struct integer final : object {
+	using value_type = std::int64_t;
+
+	inline static constexpr object_type ucl_type = object_type::integer;
+
+	integer(value_type value)
+		: object(::ucl_object_fromint(value))
+	{
+		if (_object == nullptr)
+			throw error("failed to create UCL object");
+	}
+
+	explicit integer(::ucl_object_t *uobj) : object(uobj)
+	{
+		assert(type() == object_type::integer);
+	}
+
+	auto value(this integer const &self) -> value_type
+	{
+		auto v = value_type{};
+		auto const *uobj = self.get_ucl_object();
+
+		if (::ucl_object_toint_safe(uobj, &v))
+			return v;
+
+		std::abort();
+	}
+};
+
+/*
+ * Comparison operators.
+ */
+
+export auto operator== (integer const &a, integer const &b)
+	-> bool
+{
+	return a.value() == b.value();
+}
+
+export auto operator<=> (integer const &a, integer const &b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b.value();
+}
+
+export auto operator== (integer const &a, integer::value_type b)
+	-> bool
+{
+	return a.value() == b;
+}
+
+export auto operator<=> (integer const &a, integer::value_type b)
+	-> std::strong_ordering
+{
+	return a.value() <=> b;
+}
+
+} // namespace nihil::ucl
