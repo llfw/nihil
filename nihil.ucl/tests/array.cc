@@ -2,6 +2,8 @@
  * This source code is released into the public domain.
  */
 
+#include <algorithm>
+#include <ranges>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
@@ -95,15 +97,38 @@ TEST_CASE("ucl: array: parse", "[ucl]")
 TEST_CASE("ucl: array: emit", "[ucl]")
 {
 	auto ucl = nihil::ucl::parse("array = [1, 42, 666];");
-
-	auto output = std::string();
-	emit(ucl, nihil::ucl::emitter::configuration,
-	     std::back_inserter(output));
-
+	auto output = std::format("{:c}", ucl);
 	REQUIRE(output == 
 "array [\n"
 "    1,\n"
 "    42,\n"
 "    666,\n"
 "]\n");
+}
+
+TEST_CASE("ucl: array is a sized_range", "[ucl]")
+{
+	auto arr = nihil::ucl::array<nihil::ucl::integer>{1, 42, 666};
+	static_assert(std::ranges::sized_range<decltype(arr)>);
+
+	auto size = std::ranges::size(arr);
+	REQUIRE(size == 3);
+
+	auto begin = std::ranges::begin(arr);
+	static_assert(std::random_access_iterator<decltype(begin)>);
+	auto end = std::ranges::end(arr);
+	static_assert(std::sentinel_for<decltype(end), decltype(begin)>);
+
+	REQUIRE(std::distance(begin, end) == 3);
+
+	auto vec = std::vector<nihil::ucl::integer>();
+	std::ranges::copy(arr, std::back_inserter(vec));
+	REQUIRE(std::ranges::equal(arr, vec));
+
+	auto arr_as_ints =
+		arr | std::views::transform(&nihil::ucl::integer::value);
+	auto int_vec = std::vector<nihil::ucl::integer::value_type>();
+	std::ranges::copy(arr_as_ints, std::back_inserter(int_vec));
+	REQUIRE(int_vec == std::vector<std::int64_t>{1, 42, 666});
+
 }

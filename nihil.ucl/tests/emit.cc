@@ -18,14 +18,8 @@ TEST_CASE("ucl: emit to std::ostream", "[ucl]")
 	auto strm = std::ostringstream();
 	strm << obj;
 
-	REQUIRE(strm.str() ==
-"{\n"
-"    \"int\": [\n"
-"        1,\n"
-"        42,\n"
-"        666\n"
-"    ]\n"
-"}");
+	// The ostream emitter produces JSON.
+	REQUIRE(strm.str() == std::format("{:j}", obj));
 }
 
 TEST_CASE("ucl: emit JSON with std::format", "[ucl]")
