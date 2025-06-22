@@ -31,9 +31,9 @@ TEST_CASE("ucl: array: push_back", "[ucl]")
 	arr.push_back(integer(666));
 
 	REQUIRE(arr.size() == 3);
-	REQUIRE(arr[0].value() == 1);
-	REQUIRE(arr[1].value() == 42);
-	REQUIRE(arr[2].value() == 666);
+	REQUIRE(arr[0] == 1);
+	REQUIRE(arr[1] == 42);
+	REQUIRE(arr[2] == 666);
 
 	REQUIRE_THROWS_AS(arr[3], std::out_of_range);
 
@@ -46,22 +46,22 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 	using namespace nihil::ucl;
 
 	auto arr = array<integer>();
-	arr.push_back(1);
-	arr.push_back(42);
-	arr.push_back(666);
+	arr.push_back(integer(1));
+	arr.push_back(integer(42));
+	arr.push_back(integer(666));
 
 	auto arr2 = array<integer>();
 	REQUIRE(arr != arr2);
 
-	arr2.push_back(1);
-	arr2.push_back(42);
-	arr2.push_back(666);
+	arr2.push_back(integer(1));
+	arr2.push_back(integer(42));
+	arr2.push_back(integer(666));
 	REQUIRE(arr == arr2);
 
 	auto arr3 = array<integer>();
-	arr3.push_back(1);
-	arr3.push_back(1);
-	arr3.push_back(1);
+	arr3.push_back(integer(1));
+	arr3.push_back(integer(1));
+	arr3.push_back(integer(1));
 	REQUIRE(arr != arr3);
 }
 
@@ -69,7 +69,7 @@ TEST_CASE("ucl: array: iterator", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto arr = array<integer>{1, 42, 666};
+	auto arr = array<integer>{integer(1), integer(42), integer(666)};
 
 	auto it = arr.begin();
 	REQUIRE(*it == 1);
@@ -129,7 +129,7 @@ TEST_CASE("ucl: array is a sized_range", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto arr = array<integer>{1, 42, 666};
+	auto arr = array<integer>{integer(1), integer(42), integer(666)};
 	static_assert(std::ranges::sized_range<decltype(arr)>);
 
 	auto size = std::ranges::size(arr);

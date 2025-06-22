@@ -36,8 +36,13 @@ export struct string final : object {
 			throw type_mismatch(ucl_type, type());
 	}
 
+	// Create a new empty string.
+	string()
+		: string(std::string_view(""))
+	{}
+
 	// Create a new UCL string from a string.
-	string(std::string_view value)
+	explicit string(std::string_view value)
 		: object(nihil::ucl::ref, 
 			 ::ucl_object_fromstring_common(
 				value.data(), value.size(),
@@ -75,6 +80,7 @@ export struct string final : object {
 		if (::ucl_object_tolstring_safe(uobj, &dptr, &dlen))
 			return {dptr, dlen};
 
+		// This should never fail.
 		std::abort();
 	}
 };
@@ -95,16 +101,42 @@ export auto operator<=> (string const &a, string const &b)
 	return a.value() <=> b.value();
 }
 
-export auto operator== (string const &a, string::value_type b)
-	-> bool
+/*
+ * For convenience, allow comparison with C++ strings without having to
+ * construct a temporary UCL object.
+ */
+
+export auto operator==(string const &lhs, std::string_view rhs) -> bool
 {
-	return a.value() == b;
+	return lhs.value() == rhs;
 }
 
-export auto operator<=> (string const &a, string::value_type b)
+export auto operator<=>(string const &lhs, std::string_view rhs)
 	-> std::strong_ordering
 {
-	return a.value() <=> b;
+	return lhs.value() <=> rhs;
+}
+
+export auto operator==(string const &lhs, std::string const &rhs) -> bool
+{
+	return lhs == std::string_view(rhs);
+}
+
+export auto operator<=>(string const &lhs, std::string const &rhs)
+	-> std::strong_ordering
+{
+	return lhs <=> std::string_view(rhs);
+}
+
+export auto operator==(string const &lhs, char const *rhs) -> bool
+{
+	return lhs == std::string_view(rhs);
+}
+
+export auto operator<=>(string const &lhs, char const *rhs)
+	-> std::strong_ordering
+{
+	return lhs <=> std::string_view(rhs);
 }
 
 } // namespace nihil::ucl

@@ -36,14 +36,20 @@ export struct real final : object {
 			throw type_mismatch(ucl_type, type());
 	}
 
+	// Create a default-initialised real.
+	real()
+		: real(0)
+	{}
+
 	// Create a new real from a value.
-	real(value_type value)
+	explicit real(value_type value)
 		: object(noref, ::ucl_object_fromdouble(value))
 	{
 		if (_object == nullptr)
 			throw error("failed to create UCL object");
 	}
 
+	// Return the value of this real.
 	auto value(this real const &self) -> value_type
 	{
 		auto v = value_type{};

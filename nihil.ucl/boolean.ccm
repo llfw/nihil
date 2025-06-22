@@ -37,6 +37,9 @@ export struct boolean final : object {
 			throw type_mismatch(ucl_type, type());
 	}
 
+	// Create a new default-initialised boolean.
+	boolean() : boolean(false) {}
+
 	// Create a new boolean from a value.
 	explicit boolean(value_type value)
 		: object(noref, ::ucl_object_frombool(value))

@@ -16,16 +16,32 @@ TEST_CASE("ucl: real: construct", "[ucl]")
 		     Catch::Matchers::WithinRel(42.1));
 }
 
-TEST_CASE("ucl: real: compare", "[ucl]")
+TEST_CASE("ucl: real: default construct", "[ucl]")
 {
-	auto i = nihil::ucl::real(42);
+	auto i = nihil::ucl::real();
+	REQUIRE(i == 0);
+}
 
-	REQUIRE(i == nihil::ucl::real(42));
+TEST_CASE("ucl: real: operator==", "[ucl]")
+{
+	auto i = nihil::ucl::real(42.5);
+
+	REQUIRE(i == 42.5);
+	REQUIRE(i == nihil::ucl::real(42.5));
+
+	REQUIRE(i != 1);
 	REQUIRE(i != nihil::ucl::real(1));
-	REQUIRE((i == 42) == true);
+}
 
-	REQUIRE(i > nihil::ucl::real(40));
-	REQUIRE(i > 40);
+TEST_CASE("ucl: real: operator<=>", "[ucl]")
+{
+	auto i = nihil::ucl::real(42.5);
+
+	REQUIRE(i < 43);
+	REQUIRE(i < nihil::ucl::real(43));
+
+	REQUIRE(i > 1);
+	REQUIRE(i > nihil::ucl::real(1));
 }
 
 TEST_CASE("ucl: real: parse", "[ucl]")

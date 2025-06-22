@@ -37,8 +37,13 @@ export struct integer final : object {
 			throw type_mismatch(ucl_type, type());
 	}
 
+	// Create a new default-initialised integer.
+	integer()
+		: integer(0)
+	{}
+
 	// Create a new integer from a value.
-	integer(value_type value)
+	explicit integer(value_type value)
 		: object(noref, ::ucl_object_fromint(value))
 	{
 		if (_object == nullptr)

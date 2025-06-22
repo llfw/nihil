@@ -10,19 +10,36 @@ import nihil.ucl;
 
 TEST_CASE("ucl: boolean: construct", "[ucl]")
 {
-	auto obj = nihil::ucl::boolean(true);
-	REQUIRE(object_cast<nihil::ucl::boolean>(obj).value() == true);
+	auto b = nihil::ucl::boolean(true);
+	REQUIRE(b == true);
 }
 
-TEST_CASE("ucl: boolean: compare", "[ucl]")
+TEST_CASE("ucl: boolean: default construct", "[ucl]")
+{
+	auto b = nihil::ucl::boolean();
+	REQUIRE(b == false);
+}
+
+TEST_CASE("ucl: boolean: operator==", "[ucl]")
 {
 	auto b = nihil::ucl::boolean(true);
 
-	REQUIRE(b == nihil::ucl::boolean(true));
 	REQUIRE(b == true);
+	REQUIRE(b == nihil::ucl::boolean(true));
 
-	REQUIRE(b != nihil::ucl::boolean(false));
 	REQUIRE(b != false);
+	REQUIRE(b != nihil::ucl::boolean(false));
+}
+
+TEST_CASE("ucl: boolean: operator<=>", "[ucl]")
+{
+	auto b = nihil::ucl::boolean(false);
+
+	REQUIRE(b < true);
+	REQUIRE(b < nihil::ucl::boolean(true));
+
+	REQUIRE(b >= false);
+	REQUIRE(b >= nihil::ucl::boolean(false));
 }
 
 TEST_CASE("ucl: boolean: parse", "[ucl]")

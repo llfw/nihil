@@ -10,20 +10,36 @@ import nihil.ucl;
 
 TEST_CASE("ucl: integer: construct", "[ucl]")
 {
-	auto obj = nihil::ucl::integer(42);
-	REQUIRE(object_cast<nihil::ucl::integer>(obj).value() == 42);
+	auto i = nihil::ucl::integer(42);
+	REQUIRE(i == 42);
 }
 
-TEST_CASE("ucl: integer: compare", "[ucl]")
+TEST_CASE("ucl: integer: default construct", "[ucl]")
+{
+	auto i = nihil::ucl::integer();
+	REQUIRE(i == 0);
+}
+
+TEST_CASE("ucl: integer: operator==", "[ucl]")
 {
 	auto i = nihil::ucl::integer(42);
 
+	REQUIRE(i == 42);
 	REQUIRE(i == nihil::ucl::integer(42));
-	REQUIRE(i != nihil::ucl::integer(1));
-	REQUIRE((i == 42) == true);
 
-	REQUIRE(i > nihil::ucl::integer(40));
-	REQUIRE(i > 40);
+	REQUIRE(i != 1);
+	REQUIRE(i != nihil::ucl::integer(1));
+}
+
+TEST_CASE("ucl: integer: operator<=>", "[ucl]")
+{
+	auto i = nihil::ucl::integer(42);
+
+	REQUIRE(i < 43);
+	REQUIRE(i < nihil::ucl::integer(43));
+
+	REQUIRE(i > 1);
+	REQUIRE(i > nihil::ucl::integer(1));
 }
 
 TEST_CASE("ucl: parse: integer", "[ucl]")
