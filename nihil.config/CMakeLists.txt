@@ -15,8 +15,10 @@ target_sources(nihil.config
 
 	PRIVATE
 	option.cc
+	read.cc
 	store.cc
 	string.cc
+	write.cc
 )
 
 if(NIHIL_TESTS)

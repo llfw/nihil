@@ -5,38 +5,15 @@
 module;
 
 #include <filesystem>
-#include <format>
-#include <utility>
 
 export module nihil.config:write;
-
-import nihil.ucl;
-import :store;
 
 namespace nihil::config {
 
 /*
- * Write all config values (except defaults) to disk.
+ * Write all config values (except defaults) to disk.  Throws config::error
+ * on failure.
  */
-auto write_to(std::filesystem::path const &filename) -> void
-try {
-	auto uclconfig = ucl::map<ucl::object>();
-
-	// Add all the options to the UCL object.
-	for (auto const &option : store::get().all()) {
-		if (option.is_default())
-			continue;
-
-		uclconfig.insert({option.name(), option.to_ucl()});
-	}
-
-	auto ucl_text = std::format("{:c}", uclconfig);
-	auto ret = safe_write_file(filename, ucl_text);
-	if (!ret)
-		throw error(std::format("{}: {}", filename.string(),
-					ret.error().message()));
-} catch (ucl::error const &exc) {
-	throw error(std::format("{}: {}", filename.string(), exc.what()));
-}
+auto write_to(std::filesystem::path const &filename) -> void;
 
 };
