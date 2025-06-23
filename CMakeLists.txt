@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.28)
 
-project(libexi)
+project(nihil)
 
 option(NIHIL_CONFIG	"Build the nihil.config library"	ON)
 option(NIHIL_UCL	"Build the nihil.ucl library"		ON)
