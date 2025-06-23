@@ -71,6 +71,9 @@ struct node {
 	// Run the handler for this node.
 	auto invoke(Context const &ctx, int argc, char **argv) const -> int
 	{
+		if (argc == 0)
+			throw usage_error("incomplete command");
+
 		// Look for a subcommand with argv[0].
 		auto it = commands.find(argv[0]);
 		if (it == commands.end())
@@ -84,9 +87,6 @@ struct node {
 
 		--argc;
 		++argv;
-
-		if (argc == 0)
-			throw usage_error("incomplete command");
 
 		// Otherwise, continue recursing.
 		return child.invoke(ctx, argc, argv);
