@@ -9,7 +9,7 @@ module;
 #include <cstdlib>
 #include <format>
 #include <iterator>
-#include <iostream>
+#include <iosfwd>
 #include <span>
 #include <string>
 #include <utility>
@@ -34,8 +34,8 @@ export enum struct emitter {
  *
  * We can't throw exceptions here since we're called from C code.  The emit
  * functions return an integer value, but it's not really clear what this is
- * for (for example, returning errors?) and the C API seems to mostly ignore
- * it.  So, we just eat errors and keep going.
+ * for and the C API seems to mostly ignore it.  So, we just eat errors and
+ * keep going.
  */
 template<std::output_iterator<char> Iterator>
 struct emit_wrapper {
@@ -130,7 +130,7 @@ private:
 
 export auto emit(object const &object, emitter format,
 		 std::output_iterator<char> auto &&it)
-	-> void
+-> void
 {
 	auto ucl_format = static_cast<ucl_emitter>(format);
 	auto wrapper = emit_wrapper(it);
@@ -144,12 +144,7 @@ export auto emit(object const &object, emitter format,
  * Basic ostream printer for UCL; default to JSON since it's probably what
  * most people expect.
  */
-export auto operator<<(std::ostream &stream, object const &o)
-	-> std::ostream &
-{
-	emit(o, emitter::json, std::ostream_iterator<char>(stream));
-	return stream;
-}
+export auto operator<<(std::ostream &stream, object const &o) -> std::ostream &;
 
 } // namespace nihil::ucl
 

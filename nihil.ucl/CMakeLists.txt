@@ -4,8 +4,9 @@ pkg_check_modules(LIBUCL REQUIRED libucl)
 
 add_library(nihil.ucl STATIC)
 target_link_libraries(nihil.ucl PUBLIC nihil)
-target_sources(nihil.ucl PUBLIC
-	FILE_SET modules TYPE CXX_MODULES FILES
+
+target_sources(nihil.ucl
+	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.ucl.ccm
 	emit.ccm
 	error.ccm
@@ -20,6 +21,18 @@ target_sources(nihil.ucl PUBLIC
 	map.ccm
 	real.ccm
 	string.ccm
+
+	PRIVATE
+	emit.cc
+	error.cc
+	parser.cc
+	type.cc
+
+	object.cc
+	boolean.cc
+	integer.cc
+	real.cc
+	string.cc
 )
 
 target_compile_options(nihil.ucl PUBLIC ${LIBUCL_CFLAGS_OTHER})

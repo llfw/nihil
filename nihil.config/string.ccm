@@ -9,10 +9,8 @@ module;
 
 export module nihil.config:string;
 
-import nihil;
 import nihil.ucl;
 import :option;
-import :store;
 
 namespace nihil::config {
 
@@ -20,43 +18,15 @@ export struct string final : option
 {
 	string(std::string &storage,
 	       std::string_view name,
-	       std::string_view description) noexcept
-		: option(name, description)
-		, _storage(storage)
-	{
-		store::get().register_option(this);
-	}
+	       std::string_view description) noexcept;
 
-	~string()
-	{
-		store::get().unregister_option(this);
-	}
+	~string();
 
-	auto get_string() const -> std::string override
-	{
-		return _storage;
-	};
+	auto get_string() const -> std::string override;
+	auto set_string(std::string_view new_value) -> void override;
 
-	auto set_string(std::string_view new_value) -> void override
-	{
-		_storage = new_value;
-	}
-
-	auto to_ucl() const -> ucl::object override
-	{
-		return ucl::string(_storage);
-	}
-
-	auto from_ucl(ucl::object const &uclobj) -> void override
-	{
-		try {
-			_storage = object_cast<ucl::string>(uclobj).value();
-			is_default(false);
-		} catch (ucl::type_mismatch const &exc) {
-			throw error(std::format("'{}': expected string, not {}",
-				    name(), str(exc.actual_type())));
-		}
-	}
+	auto to_ucl() const -> ucl::object override;
+	auto from_ucl(ucl::object const &uclobj) -> void override;
 
 private:
 	std::string &_storage;

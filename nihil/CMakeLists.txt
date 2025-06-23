@@ -1,8 +1,8 @@
 # This source code is released into the public domain.
 
 add_library(nihil STATIC)
-target_sources(nihil PUBLIC
-	FILE_SET modules TYPE CXX_MODULES FILES
+target_sources(nihil
+	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.ccm
 	argv.ccm
 	command_map.ccm
@@ -25,6 +25,14 @@ target_sources(nihil PUBLIC
 	tabulate.ccm
 	usage_error.ccm
 	write_file.ccm
+
+	PRIVATE
+	exec.cc
+	fd.cc
+	find_in_path.cc
+	getenv.cc
+	open_file.cc
+	process.cc
 )
 
 if(NIHIL_TESTS)

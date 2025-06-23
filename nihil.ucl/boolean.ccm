@@ -23,70 +23,28 @@ export struct boolean final : object {
 	inline static constexpr object_type ucl_type = object_type::boolean;
 
 	// Create a new boolean from a UCL object.
-	boolean(ref_t, ::ucl_object_t const *uobj)
-		: object(nihil::ucl::ref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
-
-	boolean(noref_t, ::ucl_object_t *uobj)
-		: object(noref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
+	boolean(ref_t, ::ucl_object_t const *uobj);
+	boolean(noref_t, ::ucl_object_t *uobj);
 
 	// Create a new default-initialised boolean.
-	boolean() : boolean(false) {}
+	boolean();
 
 	// Create a new boolean from a value.
-	explicit boolean(contained_type value)
-		: object(noref, ::ucl_object_frombool(value))
-	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
-	}
+	explicit boolean(contained_type value);
 
 	// Return this object's value.
-	auto value(this boolean const &self) -> contained_type
-	{
-		auto v = contained_type{};
-		auto const *uobj = self.get_ucl_object();
-
-		if (::ucl_object_toboolean_safe(uobj, &v))
-			return v;
-
-		std::abort();
-	}
+	auto value(this boolean const &self) -> contained_type;
 };
 
 /*
  * Comparison operators.
  */
 
-export auto operator== (boolean const &a, boolean const &b)
-	-> bool
-{
-	return a.value() == b.value();
-}
-
+export auto operator== (boolean const &a, boolean const &b) -> bool;
+export auto operator== (boolean const &a, boolean::contained_type b) -> bool;
 export auto operator<=> (boolean const &a, boolean const &b)
-	-> std::strong_ordering
-{
-	return a.value() <=> b.value();
-}
-
-export auto operator== (boolean const &a, boolean::contained_type b)
-	-> bool
-{
-	return a.value() == b;
-}
-
+	-> std::strong_ordering;
 export auto operator<=> (boolean const &a, boolean::contained_type b)
-	-> std::strong_ordering
-{
-	return a.value() <=> b;
-}
+	-> std::strong_ordering;
 
 } // namespace nihil::ucl

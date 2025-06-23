@@ -4,8 +4,7 @@
 
 module;
 
-#include <format>
-#include <utility>
+#include <string>
 
 export module nihil.ucl:error;
 
@@ -17,7 +16,7 @@ namespace nihil::ucl {
  * Exception thrown when an issue occurs with UCL.
  */
 export struct error : generic_error {
-	error(std::string what) : generic_error(std::move(what)) {}
+	error(std::string what);
 };
 
 } // namespace nihil::ucl

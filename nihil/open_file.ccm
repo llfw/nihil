@@ -8,9 +8,6 @@ module;
 #include <filesystem>
 #include <system_error>
 
-#include <fcntl.h>
-#include <unistd.h>
-
 export module nihil:open_file;
 
 import :fd;
@@ -21,15 +18,7 @@ namespace nihil {
  * Open the given file and return an fd for it.
  */
 auto open_file(std::filesystem::path const &filename,
-	       int flags,
-	       int mode = 0777)
-	-> std::expected<fd, std::error_code>
-{
-	auto fdno = ::open(filename.c_str(), flags, mode);
-	if (fdno != -1)
-		return fd(fdno);
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+	       int flags, int mode = 0777)
+	-> std::expected<fd, std::error_code>;
 
 } // namespace nihil

@@ -4,15 +4,11 @@
 
 module;
 
-#include <cerrno>
-#include <cstring>
-#include <format>
 #include <optional>
 #include <system_error>
 #include <utility>
 
 #include <sys/types.h>
-#include <sys/wait.h>
 
 export module nihil:process;
 
@@ -24,29 +20,15 @@ namespace nihil {
  * Exception thrown when a process operation fails.
  */
 export struct process_error : generic_error {
-	process_error(std::string what)
-		: generic_error(std::move(what))
-	{}
+	process_error(std::string what);
 };
 
 // A waitpid() call failed.
 export struct waitpid_error : process_error {
-	waitpid_error(::pid_t pid, std::error_code error)
-		: process_error(std::format("waitpid({}): {}",
-					    pid, error.message()))
-		, _pid(pid)
-		, _error(error)
-	{}
+	waitpid_error(::pid_t pid, std::error_code error);
 
-	auto pid(this waitpid_error const &self) -> ::pid_t
-	{
-		return self._pid;
-	}
-
-	auto error(this waitpid_error const &self) -> std::error_code
-	{
-		return self._error;
-	}
+	auto pid(this waitpid_error const &self) -> ::pid_t;
+	auto error(this waitpid_error const &self) -> std::error_code;
 
 private:
 	::pid_t _pid;
@@ -59,31 +41,14 @@ private:
 export struct wait_result final {
 	// Return true if the process exited normally with an exit code of
 	// zero, otherwise false.
-	auto okay(this wait_result const &self) -> bool
-	{
-		return self.status() == 0;
-	}
-
-	explicit operator bool(this wait_result const &self)
-	{
-		return self.okay();
-	}
+	auto okay(this wait_result const &self) -> bool;
+	explicit operator bool(this wait_result const &self);
 
 	// Return the exit status, if any.
-	auto status(this wait_result const &self) -> std::optional<int>
-	{
-		if (WIFEXITED(self._status))
-			return WEXITSTATUS(self._status);
-		return {};
-	}
+	auto status(this wait_result const &self) -> std::optional<int>;
 
 	// Return the exit signal, if any.
-	auto signal(this wait_result const &self) -> std::optional<int>
-	{
-		if (WIFSIGNALED(self._status))
-			return WTERMSIG(self._status);
-		return {};
-	}
+	auto signal(this wait_result const &self) -> std::optional<int>;
 
 private:
 	friend struct process;
@@ -91,9 +56,7 @@ private:
 	int _status;
 
 	// Construct a new wait_result from the output of waitpid().
-	wait_result(int status)
-		: _status(status)
-	{}
+	wait_result(int status);
 };
 
 /*
@@ -106,23 +69,15 @@ export struct process final {
 	 * Create a new process from a pid, which must be a child of the
 	 * current process.
 	 */
-	process(::pid_t pid)
-		: _pid(pid)
-	{}
+	process(::pid_t pid);
 
 	// When destroyed, we automatically wait for the process to
 	// avoid creating zombie processes.
-	~process() {
-		if (_pid == -1)
-			return;
-
-		auto status = int{};
-		std::ignore = waitpid(_pid, &status, WEXITED);
-	}
+	~process();
 
 	// Movable.
-	process(process &&) noexcept = default;
-	auto operator=(process &&) noexcept -> process& = default;
+	process(process &&) noexcept;
+	auto operator=(process &&) noexcept -> process&;
 
 	// Not copyable.
 	process(process const &) = delete;
@@ -136,26 +91,13 @@ export struct process final {
 	 * its exit status.  This destroys the process state, leaving this
 	 * object in a moved-from state.
 	 */
-	auto wait(this process &&self) -> wait_result
-	{
-		auto status = int{};
-		auto ret = waitpid(self._pid, &status, WEXITED);
-		if (ret != -1)
-			return wait_result(status);
-
-		throw waitpid_error(self._pid,
-				    std::make_error_code(std::errc(errno)));
-	}
+	auto wait(this process &&self) -> wait_result;
 
 	/*
 	 * Release this process so we won't try to wait for it when
 	 * destroying this object.
 	 */
-	auto release(this process &&self) -> ::pid_t {
-		auto const ret = self._pid;
-		self._pid = -1;
-		return ret;
-	}
+	auto release(this process &&self) -> ::pid_t;
 
 private:
 	::pid_t _pid;

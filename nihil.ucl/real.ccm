@@ -4,9 +4,7 @@
 
 module;
 
-#include <cassert>
-#include <cstdlib>
-#include <string>
+#include <compare>
 
 #include <ucl.h>
 
@@ -22,72 +20,29 @@ export struct real final : object {
 	inline static constexpr object_type ucl_type = object_type::real;
 
 	// Create a new real from a UCL object.
-	real(ref_t, ::ucl_object_t const *uobj)
-		: object(nihil::ucl::ref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
-
-	real(noref_t, ::ucl_object_t *uobj)
-		: object(noref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
+	real(ref_t, ::ucl_object_t const *uobj);
+	real(noref_t, ::ucl_object_t *uobj);
 
 	// Create a default-initialised real.
-	real()
-		: real(0)
-	{}
+	real();
 
 	// Create a new real from a value.
-	explicit real(contained_type value)
-		: object(noref, ::ucl_object_fromdouble(value))
-	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
-	}
+	explicit real(contained_type value);
 
 	// Return the value of this real.
-	auto value(this real const &self) -> contained_type
-	{
-		auto v = contained_type{};
-		auto const *uobj = self.get_ucl_object();
-
-		if (::ucl_object_todouble_safe(uobj, &v))
-			return v;
-
-		std::abort();
-	}
+	auto value(this real const &self) -> contained_type;
 };
 
 /*
  * Comparison operators.
  */
 
-export auto operator== (real const &a, real const &b)
-	-> bool
-{
-	return a.value() == b.value();
-}
+export auto operator== (real const &a, real const &b) -> bool;
+export auto operator== (real const &a, real::contained_type b) -> bool;
 
 export auto operator<=> (real const &a, real const &b)
-	-> std::partial_ordering
-{
-	return a.value() <=> b.value();
-}
-
-export auto operator== (real const &a, real::contained_type b)
-	-> bool
-{
-	return a.value() == b;
-}
-
+	-> std::partial_ordering;
 export auto operator<=> (real const &a, real::contained_type b)
-	-> std::partial_ordering
-{
-	return a.value() <=> b;
-}
+	-> std::partial_ordering;
 
 } // namespace nihil::ucl

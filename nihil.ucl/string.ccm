@@ -4,7 +4,6 @@
 
 module;
 
-#include <cassert>
 #include <cstdlib>
 #include <string>
 
@@ -28,35 +27,14 @@ export struct string final : object {
 	using iterator = pointer;
 
 	// Create a new string from a UCL object.
-	string(ref_t, ::ucl_object_t const *uobj)
-		: object(nihil::ucl::ref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
-
-	string(noref_t, ::ucl_object_t *uobj)
-		: object(noref, uobj)
-	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
-	}
+	string(ref_t, ::ucl_object_t const *uobj);
+	string(noref_t, ::ucl_object_t *uobj);
 
 	// Create a new empty string.
-	string()
-		: string(std::string_view(""))
-	{}
+	string();
 
 	// Create a new UCL string from a string.
-	explicit string(std::string_view value)
-		: object(nihil::ucl::ref, 
-			 ::ucl_object_fromstring_common(
-				value.data(), value.size(),
-				UCL_STRING_RAW))
-	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
-	}
+	explicit string(std::string_view value);
 
 	// Create a new UCL string from an iterator pair.
 	template<std::contiguous_iterator Iterator>
@@ -77,108 +55,44 @@ export struct string final : object {
 	{}
 
 	// Return the value of this string.
-	auto value(this string const &self) -> contained_type
-	{
-		char const *dptr{};
-		std::size_t dlen;
-
-		auto const *uobj = self.get_ucl_object();
-		if (::ucl_object_tolstring_safe(uobj, &dptr, &dlen))
-			return {dptr, dlen};
-
-		// This should never fail.
-		std::abort();
-	}
+	auto value(this string const &self) -> contained_type;
 
 	// Return the size of this string.
-	auto size(this string const &self) -> size_type
-	{
-		return self.value().size();
-	}
+	auto size(this string const &self) -> size_type;
 
 	// Test if this string is empty.
-	auto empty(this string const &self) -> bool
-	{
-		return self.size() == 0;
-	}
+	auto empty(this string const &self) -> bool;
 
 	// Access this string's data
-	auto data(this string const &self) -> pointer
-	{
-		char const *dptr{};
-
-		auto const *uobj = self.get_ucl_object();
-		if (::ucl_object_tostring_safe(uobj, &dptr))
-			return dptr;
-
-		// This should never fail.
-		std::abort();
-	}
+	auto data(this string const &self) -> pointer;
 
 	// Iterator access
-	auto begin(this string const &self) -> iterator
-	{
-		return self.data();
-	}
-
-	auto end(this string const &self) -> iterator
-	{
-		return self.data() + self.size();
-	}
+	auto begin(this string const &self) -> iterator;
+	auto end(this string const &self) -> iterator;
 };
 
 /*
  * Comparison operators.
  */
 
-export auto operator== (string const &a, string const &b)
-	-> bool
-{
-	return a.value() == b.value();
-}
-
+export auto operator== (string const &a, string const &b) -> bool;
 export auto operator<=> (string const &a, string const &b)
-	-> std::strong_ordering
-{
-	return a.value() <=> b.value();
-}
+	-> std::strong_ordering;
 
 /*
  * For convenience, allow comparison with C++ strings without having to
  * construct a temporary UCL object.
  */
 
-export auto operator==(string const &lhs, std::string_view rhs) -> bool
-{
-	return lhs.value() == rhs;
-}
+export auto operator==(string const &lhs, std::string_view rhs) -> bool;
+export auto operator==(string const &lhs, std::string const &rhs) -> bool;
+export auto operator==(string const &lhs, char const *rhs) -> bool;
 
 export auto operator<=>(string const &lhs, std::string_view rhs)
-	-> std::strong_ordering
-{
-	return lhs.value() <=> rhs;
-}
-
-export auto operator==(string const &lhs, std::string const &rhs) -> bool
-{
-	return lhs == std::string_view(rhs);
-}
-
+	-> std::strong_ordering;
 export auto operator<=>(string const &lhs, std::string const &rhs)
-	-> std::strong_ordering
-{
-	return lhs <=> std::string_view(rhs);
-}
-
-export auto operator==(string const &lhs, char const *rhs) -> bool
-{
-	return lhs == std::string_view(rhs);
-}
-
+	-> std::strong_ordering;
 export auto operator<=>(string const &lhs, char const *rhs)
-	-> std::strong_ordering
-{
-	return lhs <=> std::string_view(rhs);
-}
+	-> std::strong_ordering;
 
 } // namespace nihil::ucl

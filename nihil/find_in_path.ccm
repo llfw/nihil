@@ -4,57 +4,20 @@
 
 module;
 
-#include <format>
-#include <ranges>
-#include <string>
-
-#include <fcntl.h>
-#include <paths.h>
-#include <unistd.h>
+#include <filesystem>
+#include <optional>
 
 export module nihil:find_in_path;
 
 import :fd;
-import :getenv;
 
 namespace nihil {
 
 /*
  * Find an executable in $PATH, open it with O_EXEC and return the fd.
- * If $PATH is not set, uses _PATH_DEFPATH.
+ * If $PATH is not set, uses _PATH_DEFPATH.  If the file can't be found
+ * or opened, returns std::nullopt.
  */
-auto find_in_path(std::string_view file) -> std::optional<fd> {
-	using namespace std::literals;
+auto find_in_path(std::filesystem::path const &file) -> std::optional<fd>;
 
-	auto try_open = [](std::string_view path) -> std::optional<fd> {
-		auto cpath = std::string(path);
-		auto const ret = ::open(cpath.c_str(), O_EXEC);
-		if (ret != -1)
-			return fd(ret);
-		return {};
-	};
-
-	if (file.empty())
-		return {};
-
-	// Absolute pathname skips the search.
-	if (file[0] == '/')
-		return try_open(file);
-
-	auto path = getenv("PATH").value_or(_PATH_DEFPATH);
-
-	for (auto &&dir : std::views::split(path, ':')) {
-		// An empty $PATH element means cwd.
-		auto sdir = std::string_view(dir);
-		if (sdir.empty())
-			sdir = ".";
-
-		auto const path = std::format("{}/{}", sdir, file);
-		if (auto ret = try_open(path); ret)
-			return ret;
-	}
-
-	return {};
-}
-
-} // namespace lfjail
+} // namespace nihil

@@ -25,15 +25,13 @@ namespace nihil::ucl {
  * Exception thrown when an issue occurs parsing UCL.
  */
 export struct parse_error : error {
-	parse_error(std::string what) : error(std::move(what)) {}
+	parse_error(std::string what);
 };
 
 // UCL parser flags.
 export inline constexpr int parser_key_lower = UCL_PARSER_KEY_LOWERCASE;
 export inline constexpr int parser_zerocopy = UCL_PARSER_ZEROCOPY;
 export inline constexpr int parser_no_time = UCL_PARSER_NO_TIME;
-
-export struct parser;
 
 // A macro handler.  This proxies the C API callback to the C++ API.
 using macro_callback_t = bool (std::string_view);
@@ -42,39 +40,25 @@ struct macro_handler {
 	std::function<macro_callback_t> callback;
 
 	// Handle a callback from the C API.
-	static auto handle(unsigned char const *data, std::size_t len, void *ud)
-		-> bool
-	{
-		auto handler = static_cast<macro_handler *>(ud);
-		auto string = std::string_view(
-				reinterpret_cast<char const *>(data),
-				len);
-		return handler->callback(string);
-	}
+	static auto handle(
+		unsigned char const *data,
+		std::size_t len, void
+		*ud)
+	-> bool;
 };
 
 /*
  * A UCL parser.  This wraps the C ucl_parser API.
  */
 export struct parser {
-
 	// Create a new parser with the given flags.
-	parser(int flags) {
-		if ((_parser = ::ucl_parser_new(flags)) != nullptr)
-			return;
-
-		throw error("failed to create UCL parser");
-	}
+	parser(int flags);
 
 	// Create a new parser with the default flags.
-	parser() : parser(0) {}
+	parser();
 
 	// Destroy our parser when we're destroyed.
-	~parser()
-	{
-		if (_parser)
-			::ucl_parser_free(_parser);
-	}
+	~parser();
 
 	// Add a parser macro.  Unlike ucl_parser_register_macro, this doesn't
 	// take a userdata parameter; it's assumed the user will use lambda
@@ -99,17 +83,12 @@ export struct parser {
 	// Add a parser variable.
 	auto register_value(this parser &self,
 			    std::string_view variable,
-			    std::string_view value) -> void
-	{
-		::ucl_parser_register_variable(self._parser,
-					       std::string(variable).c_str(),
-					       std::string(value).c_str());
-	}
+			    std::string_view value) -> void;
 
 	// Add data to the parser.
 	auto add(this parser &self,
 		 std::ranges::contiguous_range auto &&data)
-		-> void
+	-> void
 	// Only bytes (chars) are permitted.
 	requires(sizeof(std::ranges::range_value_t<decltype(data)>) == 1)
 	{
@@ -125,7 +104,7 @@ export struct parser {
 	}
 
 	auto add(this parser &self, std::ranges::range auto &&data)
-		-> void
+	-> void
 	requires (!std::ranges::contiguous_range<decltype(data)>)
 	{
 		auto cdata = std::vector<char>(
@@ -135,18 +114,7 @@ export struct parser {
 	}
 
 	// Return the top object of this parser.
-	auto top(this parser &self) -> map<object>
-	{
-		if (self._parser == nullptr)
-			throw error("attempt to call top() on an empty parser");
-
-		auto obj = ::ucl_parser_get_object(self._parser);
-		if (obj == nullptr)
-			throw error("attempt to call top() on an empty parser");
-
-		// ucl_parser_get_objects() refs the object for us.
-		return {noref, obj};
-	}
+	auto top(this parser &self) -> map<object>;
 
 private:
 	// The parser object.  Should never be null, unless we've been

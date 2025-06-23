@@ -4,11 +4,9 @@
 
 module;
 
-#include <fcntl.h>
-#include <unistd.h>
-
 #include <expected>
-#include <format>
+#include <ranges>
+#include <span>
 #include <stdexcept>
 #include <system_error>
 
@@ -23,9 +21,7 @@ namespace nihil {
  * to be caught, since it indicates an internal logic error in the caller.
  */
 export struct fd_logic_error final : std::logic_error {
-	fd_logic_error(std::string what)
-		: std::logic_error(std::move(what))
-	{}
+	fd_logic_error(std::string what);
 };
 
 /*
@@ -34,67 +30,43 @@ export struct fd_logic_error final : std::logic_error {
 
 export struct fd final {
 	// Construct an empty (invalid) fd.
-	fd() noexcept = default;
+	fd() noexcept;
 
 	// Construct an fd from an exising file destrictor, taking ownership.
-	fd(int fd_) noexcept : _fd(fd_) {}
+	fd(int fd_) noexcept;
 
 	// Destructor.  Close the fd, discarding any errors.
-	~fd()
-	{
-		if (*this)
-			this->close();
-	}
+	~fd();
 
 	// Move from another fd, leaving the moved-from fd in an invalid state.
-	fd(fd &&other) noexcept
-		: _fd(std::exchange(other._fd, _invalid_fd))
-	{}
-
-	// Move assign from another fd.
-	auto operator=(fd &&other) noexcept -> fd &
-	{
-		if (this != &other)
-			_fd = std::exchange(other._fd, _invalid_fd);
-		return *this;
-	}
+	fd(fd &&other) noexcept;
+	auto operator=(fd &&other) noexcept -> fd &;
 
 	// Not copyable.
 	fd(fd const &) = delete;
 	fd& operator=(fd const &) = delete;
 
 	// Return true if this fd is valid (open).
-	explicit operator bool(this fd const &self) noexcept
-	{
-		return self._fd != _invalid_fd;
-	}
+	explicit operator bool(this fd const &self) noexcept;
 
 	// Close the wrapped fd.
-	auto close(this fd &self) -> std::expected<void, std::error_code>
-	{
-		auto const ret = ::close(self.get());
-		self._fd = _invalid_fd;
-
-		if (ret == 0)
-			return {};
-
-		return std::unexpected(std::make_error_code(std::errc(errno)));
-	}
+	auto close(this fd &self) -> std::expected<void, std::error_code>;
 
 	// Return the stored fd.
-	auto get(this fd const &self) -> int {
-		if (self)
-			return self._fd;
-		throw fd_logic_error("Attempt to call get() on invalid fd");
-	}
-
+	auto get(this fd const &self) -> int;
 
 	// Release the stored fd and return it.  The caller must close it.
-	auto release(this fd &&self) -> int {
-		if (self)
-			return std::exchange(self._fd, self._invalid_fd);
-		throw fd_logic_error("Attempt to release an invalid fd");
-	}
+	auto release(this fd &&self) -> int;
+
+	// Write data from the provided buffer to the fd.  Returns the
+	// number of bytes written.
+	auto write(this fd &self, std::span<std::byte const>) 
+		-> std::expected<std::size_t, std::error_code>;
+
+	// Read data from the fd to the provided buffer.  Returns the
+	// number of bytes read.
+	auto read(this fd &self, std::span<std::byte>)
+		-> std::expected<std::size_t, std::error_code>;
 
 private:
 	static constexpr int _invalid_fd = -1;
@@ -103,16 +75,7 @@ private:
 };
 
 // Create a copy of this fd by calling dup().
-export auto dup(fd const &self) -> std::expected<fd, std::error_code>
-{
-	auto thisfd = self.get();
-
-	auto const newfd = ::dup(thisfd);
-	if (newfd != -1)
-		return {newfd};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+export auto dup(fd const &self) -> std::expected<fd, std::error_code>;
 
 // Create a copy of this fd by calling dup2().  Note that because this results
 // in the existing fd and the new fd both being managed by an fd instance,
@@ -124,171 +87,60 @@ export auto dup(fd const &self) -> std::expected<fd, std::error_code>
 // In both of these cases, either use raw_dup() instead, or immediately call
 // release() on the returned fd to prevent the fd instance from closing it.
 export auto dup(fd const &self, int newfd)
-	-> std::expected<fd, std::error_code>
-{
-	auto thisfd = self.get();
-
-	auto const ret = ::dup2(thisfd, newfd);
-	if (ret != -1)
-		return {newfd};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+	-> std::expected<fd, std::error_code>;
 
 // Create a copy of this fd by calling dup().
-export auto raw_dup(fd const &self) -> std::expected<int, std::error_code>
-{
-	auto thisfd = self.get();
-
-	auto const newfd = ::dup(thisfd);
-	if (newfd != -1)
-		return {newfd};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+export auto raw_dup(fd const &self)
+	-> std::expected<int, std::error_code>;
 
 // Create a copy of this fd by calling dup2().
 export auto raw_dup(fd const &self, int newfd)
-	-> std::expected<int, std::error_code>
-{
-	auto thisfd = self.get();
-
-	auto const ret = ::dup2(thisfd, newfd);
-	if (ret != -1)
-		return {newfd};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+	-> std::expected<int, std::error_code>;
 
 // Return the fnctl flags for this fd.
-export auto getflags(fd const &self) -> std::expected<int, std::error_code>
-{
-	auto const flags = ::fcntl(self.get(), F_GETFL);
-	if (flags != -1)
-		return {flags};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+export auto getflags(fd const &self)
+	-> std::expected<int, std::error_code>;
 
 // Replace the fnctl flags for this fd.
 export auto replaceflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>
-{
-	auto const ret = ::fcntl(self.get(), F_SETFL, newflags);
-	if (ret == 0)
-		return {};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+	-> std::expected<void, std::error_code>;
 
 // Add bits to the fcntl flags for this fd.  Returns the new flags.
 export auto setflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>
-{
-	auto flags = getflags(self);
-	if (!flags)
-		return flags;
-
-	*flags |= newflags;
-	auto const ret = replaceflags(self, *flags);
-	if (!ret)
-		return std::unexpected(ret.error());
-
-	return {*flags};
-}
+	-> std::expected<int, std::error_code>;
 
 // Remove bits from the fcntl flags for this fd.  Returns the new flags.
 export auto clearflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>
-{
-	auto flags = getflags(self);
-	if (!flags)
-		return flags;
-
-	*flags &= ~clrflags;
-	auto const ret = replaceflags(self, *flags);
-	if (!ret)
-		return std::unexpected(ret.error());
-
-	return {*flags};
-}
+	-> std::expected<int, std::error_code>;
 
 // Return the fd flags for this fd.
-export auto getfdflags(fd const &self) -> std::expected<int, std::error_code>
-{
-	auto const flags = ::fcntl(self.get(), F_GETFD);
-	if (flags != -1)
-		return {flags};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+export auto getfdflags(fd const &self)
+	-> std::expected<int, std::error_code>;
 
 // Replace the fd flags for this fd.
 export auto replacefdflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>
-{
-	auto const ret = ::fcntl(self.get(), F_SETFD, newflags);
-	if (ret != -1)
-		return {};
-
-	return std::unexpected(std::make_error_code(std::errc(errno)));
-}
+	-> std::expected<void, std::error_code>;
 
 // Add bits to the fd flags for this fd.  Returns the new flags.
 export auto setfdflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>
-{
-	auto flags = getfdflags(self);
-	if (!flags)
-		return flags;
-
-	*flags |= newflags;
-	auto const ret = replacefdflags(self, *flags);
-	if (!ret)
-		return std::unexpected(ret.error());
-
-	return {*flags};
-}
+	-> std::expected<int, std::error_code>;
 
 // Remove bits from the fd flags for this fd.  Returns the new flags.
 export auto clearfdflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>
-{
-	auto flags = getfdflags(self);
-	if (!flags)
-		return flags;
-
-	*flags &= ~clrflags;
-	auto ret = replacefdflags(self, *flags);
-	if (!ret)
-		return std::unexpected(ret.error());
-
-	return {*flags};
-}
+	-> std::expected<int, std::error_code>;
 
 // Create two fds by calling pipe() and return them.
-export auto pipe() -> std::expected<std::pair<fd, fd>, std::error_code> {
-	auto fds = std::array<int, 2>{};
-
-	if (auto const ret = ::pipe(fds.data()); ret != 0)
-		return std::unexpected(std::make_error_code(std::errc(errno)));
-
-	return {{fd(fds[0]), fd(fds[1])}};
-}
+export auto pipe() -> std::expected<std::pair<fd, fd>, std::error_code>;
 
 /*
- * Write data to a file descriptor from the provided buffer.  Returns the
+ * Write data to a file descriptor from the provided range.  Returns the
  * number of bytes (not objects) written.  Incomplete writes may cause a
  * partial object to be written.
  */
 export auto write(fd &file, std::ranges::contiguous_range auto &&range)
 	-> std::expected<std::size_t, std::error_code>
 {
-	auto const ret = ::write(file.get(), std::ranges::data(range),
-				 std::ranges::size(range));
-	if (ret >= 0)
-		return ret;
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return file.write(as_bytes(std::span(range)));
 }
 
 /*
@@ -299,11 +151,7 @@ export auto write(fd &file, std::ranges::contiguous_range auto &&range)
 export auto read(fd &file, std::ranges::contiguous_range auto &&range)
 	-> std::expected<std::size_t, std::error_code>
 {
-	auto const ret = ::read(file.get(), std::ranges::data(range),
-				std::ranges::size(range));
-	if (ret >= 0)
-		return ret;
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return file.read(as_writable_bytes(std::span(range)));
 }
 
 } // namespace nihil

@@ -4,10 +4,8 @@
 
 module;
 
-#include <iostream>
+#include <iosfwd>
 #include <string>
-
-#include <ucl++.h>
 
 export module nihil.config:option;
 
@@ -23,34 +21,17 @@ namespace nihil::config {
 export struct option
 {
 	// Short name of this option.
-	auto name(this option const &self) noexcept -> std::string_view
-	{
-		return self._name;
-	}
+	auto name(this option const &self) noexcept -> std::string_view;
 
 	// Human-readable description of this option.
-	auto description(this option const &self) noexcept -> std::string_view
-	{
-		return self._description;
-	}
+	auto description(this option const &self) noexcept -> std::string_view;
 
 	// If true, this option is set to its default value.
-	auto is_default(this option const &self) noexcept -> bool
-	{
-		return self._is_default;
-	}
+	auto is_default(this option const &self) noexcept -> bool;
 
 	// Get or set this option as a string.
-	auto string(this option const &self) -> std::string
-	{
-		return self.get_string();
-	}
-
-	void string(this option &self, std::string_view value)
-	{
-		self.set_string(value);
-		self._is_default = false;
-	}
+	auto string(this option const &self) -> std::string;
+	auto string(this option &self, std::string_view value) -> void;
 
 	/*
 	 * Return this object as a UCL object.  This is used when writing the
@@ -69,17 +50,9 @@ export struct option
 	auto operator=(option const &) -> option& = delete;
 
 protected:
-	option(std::string_view name,
-	       std::string_view description)
-		: _name(name)
-		, _description(description)
-	{
-	}
+	option(std::string_view name, std::string_view description);
 
-	auto is_default(bool b) -> void
-	{
-		_is_default = b;
-	}
+	auto is_default(bool b) -> void;
 
 	/*
 	 * Get or set this option as a string.
@@ -96,9 +69,6 @@ private:
 /*
  * Make options printable.  This is mostly useful for testing.
  */
-export auto operator<<(std::ostream &strm, option const &opt) -> std::ostream &
-{
-	return strm << "<" << opt.name() << "=" << opt.string() << ">";
-}
+export auto operator<<(std::ostream &strm, option const &opt) -> std::ostream &;
 
 } // namespace nihil

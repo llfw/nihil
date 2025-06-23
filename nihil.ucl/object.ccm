@@ -10,12 +10,9 @@ module;
  *
  */
 
-#include <algorithm>
-#include <cassert>
+#include <compare>
 #include <cstddef>
-#include <format>
 #include <string>
-#include <utility>
 
 #include <ucl.h>
 
@@ -44,103 +41,40 @@ export struct object {
 	// Create an object from an existing ucl_object_t.  The first argument
 	// determines whether we ref the object or not.
 
-	object(ref_t, ::ucl_object_t const *object)
-		: _object(::ucl_object_ref(object))
-	{
-	}
-
-	object(noref_t, ::ucl_object_t *object)
-		: _object(object)
-	{
-	}
+	object(ref_t, ::ucl_object_t const *object);
+	object(noref_t, ::ucl_object_t *object);
 
 	// Free our object on destruction.
-	virtual ~object() {
-		if (_object != nullptr)
-			::ucl_object_unref(_object);
-	}
+	virtual ~object();
 
 	// Movable.
-	object(object &&other) noexcept
-		: _object(std::exchange(other._object, nullptr))
-	{}
-
-	auto operator=(this object &self, object &&other) noexcept
-		-> object &
-	{
-		if (&self != &other)
-			self._object = std::exchange(other._object, nullptr);
-		return self;
-	}
+	object(object &&other) noexcept;
+	auto operator=(this object &self, object &&other) noexcept -> object&;
 
 	// Copyable.
-	object(object const &other) noexcept
-		: _object(nullptr)
-	{
-		*this = other;
-	}
-
-	auto operator=(this object &self, object const &other)
-		-> object &
-	{
-		if (&self != &other) {
-			auto *new_uobj = ::ucl_object_copy(other.get_ucl_object());
-			if (new_uobj == nullptr)
-				throw error("failed to copy UCL object");
-
-			if (self._object != nullptr)
-				::ucl_object_unref(self._object);
-			self._object = new_uobj;
-		}
-
-		return self;
-	}
+	// Note that this copies the entire UCL object.
+	object(object const &other) noexcept;
+	auto operator=(this object &self, object const &other) -> object &;
 
 	// Increase the refcount of this object.
-	auto ref(this object const &self) -> object
-	{
-		return object(nihil::ucl::ref, self.get_ucl_object());
-	}
+	auto ref(this object const &self) -> object;
 
 	// Return the type of this object.
-	auto type(this object const &self) -> object_type
-	{
-		auto utype = ::ucl_object_type(self.get_ucl_object());
-		return static_cast<object_type>(utype);
-	}
+	auto type(this object const &self) -> object_type;
 
 	// Return the underlying object.
-	auto get_ucl_object(this object &self) -> ::ucl_object_t *
-	{
-		if (self._object == nullptr)
-			throw error("attempt to access empty UCL object");
-		return self._object;
-	}
+	auto get_ucl_object(this object &self) -> ::ucl_object_t *;
 
-	auto get_ucl_object(this object const &self) -> ::ucl_object_t const *
-	{
-		if (self._object == nullptr)
-			throw error("attempt to access empty UCL object");
-		return self._object;
-	}
+	auto get_ucl_object(this object const &self) -> ::ucl_object_t const *;
 
 	// Return the key of this object.
-	auto key(this object const &self) -> std::string_view
-	{
-		auto dlen = std::size_t{};
-		auto const *dptr = ::ucl_object_keyl(self.get_ucl_object(),
-						     &dlen);
-		return {dptr, dlen};
-	}
+	auto key(this object const &self) -> std::string_view;
 
 protected:
 	// The object we're wrapping.
 	::ucl_object_t *_object = nullptr;
 
-	friend auto swap(object &a, object &b) -> void
-	{
-		std::swap(a._object, b._object);
-	}
+	friend auto swap(object &a, object &b) -> void;
 
 private:
 
@@ -152,104 +86,8 @@ private:
  * Object comparison.
  */
 
+export auto operator==(object const &lhs, object const &rhs) -> bool;
 export auto operator<=>(object const &lhs, object const &rhs)
-	-> std::strong_ordering
-{
-	auto cmp = ::ucl_object_compare(lhs.get_ucl_object(),
-					rhs.get_ucl_object());
-
-	if (cmp < 0)
-		return std::strong_ordering::less;
-	else if (cmp > 0)
-		return std::strong_ordering::greater;
-	else
-		return std::strong_ordering::equal;
-}
-
-export auto operator==(object const &lhs, object const &rhs) -> bool
-{
-	return (lhs <=> rhs) == std::strong_ordering::equal;
-}
-
-/***********************************************************************
- * Object iteration.
- */
-
-export struct iterator {
-	using difference_type = std::ptrdiff_t;
-	using value_type = object;
-	using reference = value_type &;
-	using const_reference = value_type const &;
-	using pointer = value_type *;
-	using const_pointer = value_type const *;
-
-	struct sentinel{};
-
-	explicit iterator(object const &obj)
-	{
-		_state = std::make_shared<state>(obj);
-		++(*this);
-	}
-
-	auto operator==(this iterator const &self, sentinel) -> bool
-	{
-		return (self._state->cur == nullptr);
-	}
-
-	auto operator++(this iterator &self) -> iterator &
-	{
-		self._state->next();
-		return self;
-	}
-
-	auto operator++(this iterator &self, int) -> iterator &
-	{
-		self._state->next();
-		return self;
-	}
-
-	auto operator*(this iterator const &self) -> object {
-		return object(ref, self._state->cur);
-	}
-
-private:
-	struct state {
-		state(object const &obj) 
-		{
-			auto const *uobj = obj.get_ucl_object();
-			if ((iter = ::ucl_object_iterate_new(uobj)) == nullptr)
-				throw error("failed to create UCL iterator");
-		}
-
-		state(state const &) = delete;
-		auto operator=(this state &, state const &) -> state& = delete;
-
-		~state() {
-			if (iter != nullptr)
-				::ucl_object_iterate_free(iter);
-		}
-
-		auto next() -> void {
-			cur = ::ucl_object_iterate_safe(iter, true);
-		}
-
-		ucl_object_iter_t iter = nullptr;
-		ucl_object_t const *cur = nullptr;
-	};
-
-	std::shared_ptr<state> _state;
-};
-
-static_assert(std::input_iterator<iterator>);
-
-export auto begin(object const &o) -> iterator
-{
-	return iterator(o);
-}
-
-export auto end(object const &) -> iterator::sentinel
-{
-	return {};
-}
+	-> std::strong_ordering;
 
 } // namespace nihil::ucl
