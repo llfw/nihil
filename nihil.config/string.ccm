@@ -4,20 +4,19 @@
 
 module;
 
-#include <stdexcept>
+#include <format>
 #include <string>
-
-#include <ucl++.h>
 
 export module nihil.config:string;
 
 import nihil;
+import nihil.ucl;
 import :option;
 import :store;
 
 namespace nihil::config {
 
-struct string final : option
+export struct string final : option
 {
 	string(std::string &storage,
 	       std::string_view name,
@@ -26,6 +25,11 @@ struct string final : option
 		, _storage(storage)
 	{
 		store::get().register_option(this);
+	}
+
+	~string()
+	{
+		store::get().unregister_option(this);
 	}
 
 	auto get_string() const -> std::string override
@@ -38,13 +42,20 @@ struct string final : option
 		_storage = new_value;
 	}
 
-	auto add_to_ucl(ucl_object_t *ucl) const -> void override
+	auto to_ucl() const -> ucl::object override
 	{
-		auto ucl_value = ucl_object_fromstring_common(
-					_storage.data(), _storage.size(),
-					UCL_STRING_RAW);
-		ucl_object_insert_key(ucl, ucl_value,
-				      name().data(), name().size(), true);
+		return ucl::string(_storage);
+	}
+
+	auto from_ucl(ucl::object const &uclobj) -> void override
+	{
+		try {
+			_storage = object_cast<ucl::string>(uclobj).value();
+			is_default(false);
+		} catch (ucl::type_mismatch const &exc) {
+			throw error(std::format("'{}': expected string, not {}",
+				    name(), str(exc.actual_type())));
+		}
 	}
 
 private:

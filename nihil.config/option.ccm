@@ -4,13 +4,14 @@
 
 module;
 
+#include <iostream>
 #include <string>
 
 #include <ucl++.h>
 
 export module nihil.config:option;
 
-import nihil;
+import nihil.ucl;
 import :error;
 
 namespace nihil::config {
@@ -52,10 +53,16 @@ export struct option
 	}
 
 	/*
-	 * Add this option to a UCL object.  This is used when writing the
+	 * Return this object as a UCL object.  This is used when writing the
 	 * configuration file.
 	 */
-	virtual void add_to_ucl(ucl_object_t *) const = 0;
+	virtual auto to_ucl() const -> ucl::object = 0;
+
+	/*
+	 * Set this object from a UCL object.  This is used when reading the
+	 * configuration file.
+	 */
+	virtual auto from_ucl(ucl::object const &) -> void = 0;
 
 	// Not copyable or movable.
 	option(option const &) = delete;
@@ -69,6 +76,11 @@ protected:
 	{
 	}
 
+	auto is_default(bool b) -> void
+	{
+		_is_default = b;
+	}
+
 	/*
 	 * Get or set this option as a string.
 	 */
@@ -80,5 +92,13 @@ private:
 	std::string _description;
 	bool _is_default = true;
 };
+
+/*
+ * Make options printable.  This is mostly useful for testing.
+ */
+export auto operator<<(std::ostream &strm, option const &opt) -> std::ostream &
+{
+	return strm << "<" << opt.name() << "=" << opt.string() << ">";
+}
 
 } // namespace nihil

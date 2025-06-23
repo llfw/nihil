@@ -31,9 +31,8 @@ namespace nihil {
  * Generic error, what() should be descriptive.
  */
 export struct exec_error : generic_error {
-	template<typename... Args>
-	exec_error(std::format_string<Args...> fmt, Args &&...args)
-		: generic_error(fmt, std::forward<Args>(args)...)
+	exec_error(std::string what)
+		: generic_error(std::move(what))
 	{}
 };
 
@@ -41,12 +40,18 @@ export struct exec_error : generic_error {
  * We tried to execute a path or filename and the file was not found.
  */
 export struct executable_not_found : exec_error {
-	std::string executable;
-
-	executable_not_found(std::string_view executable_)
-		: exec_error("{}: command not found", executable_)
-		, executable(executable_)
+	executable_not_found(std::string_view filename)
+		: exec_error(std::format("{}: command not found", filename))
+		, _filename(filename)
 	{}
+
+	auto filename(this executable_not_found const &self) -> std::string_view
+	{
+		return self._filename;
+	}
+
+private:
+	std::string _filename;
 };
 
 /*

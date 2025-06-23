@@ -9,6 +9,8 @@ module;
 
 export module nihil:generic_error;
 
+import :format_filesystem;
+
 namespace nihil {
 
 /*
@@ -17,9 +19,16 @@ namespace nihil {
  */
 
 export struct generic_error : std::runtime_error {
-	template<typename... Args>
-	generic_error(std::format_string<Args...> fmt, Args &&...args)
-		: std::runtime_error(std::format(fmt, std::forward<Args>(args)...))
+	generic_error(char const *what)
+		: std::runtime_error(what)
+	{}
+
+	generic_error(std::string_view what)
+		: std::runtime_error(std::string(what).c_str())
+	{}
+
+	generic_error(std::string const &what)
+		: std::runtime_error(what.c_str())
 	{}
 };
 

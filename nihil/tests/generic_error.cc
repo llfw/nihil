@@ -6,12 +6,27 @@
 
 import nihil;
 
-using namespace std::literals;
-
 TEST_CASE("generic_error: basic", "[generic_error]") {
+	using namespace std::literals;
+
+	// C string
 	try {
-		throw nihil::generic_error("{} + {} = {}", 1, 2, 3);
+		throw nihil::generic_error("test error");
 	} catch (nihil::generic_error const &exc) {
-		REQUIRE(exc.what() == "1 + 2 = 3"s);
+		REQUIRE(exc.what() == "test error"sv);
+	}
+
+	// std::string
+	try {
+		throw nihil::generic_error("test error"s);
+	} catch (nihil::generic_error const &exc) {
+		REQUIRE(exc.what() == "test error"sv);
+	}
+
+	// std::string_view
+	try {
+		throw nihil::generic_error("test error"sv);
+	} catch (nihil::generic_error const &exc) {
+		REQUIRE(exc.what() == "test error"sv);
 	}
 }

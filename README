@@ -11,7 +11,8 @@ license
 
 all of nihil is in the public domain, with the exception of:
 
-- modules/generator.ccm
+- nihil/generator.ccm (BSL)
+- nihil/monad.ccm (MIT)
 
 requirements
 ------------

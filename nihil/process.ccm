@@ -6,7 +6,9 @@ module;
 
 #include <cerrno>
 #include <cstring>
+#include <format>
 #include <optional>
+#include <system_error>
 #include <utility>
 
 #include <sys/types.h>
@@ -19,9 +21,42 @@ import :generic_error;
 namespace nihil {
 
 /*
+ * Exception thrown when a process operation fails.
+ */
+export struct process_error : generic_error {
+	process_error(std::string what)
+		: generic_error(std::move(what))
+	{}
+};
+
+// A waitpid() call failed.
+export struct waitpid_error : process_error {
+	waitpid_error(::pid_t pid, std::error_code error)
+		: process_error(std::format("waitpid({}): {}",
+					    pid, error.message()))
+		, _pid(pid)
+		, _error(error)
+	{}
+
+	auto pid(this waitpid_error const &self) -> ::pid_t
+	{
+		return self._pid;
+	}
+
+	auto error(this waitpid_error const &self) -> std::error_code
+	{
+		return self._error;
+	}
+
+private:
+	::pid_t _pid;
+	std::error_code _error;
+};
+
+/*
  * wait_result: the exit status of a process.
  */
-struct wait_result final {
+export struct wait_result final {
 	// Return true if the process exited normally with an exit code of
 	// zero, otherwise false.
 	auto okay(this wait_result const &self) -> bool
@@ -64,7 +99,7 @@ private:
 /*
  * process: represents a process we created, which can be waited for.
  */
-struct process final {
+export struct process final {
 	process() = delete;
 
 	/*
@@ -105,19 +140,11 @@ struct process final {
 	{
 		auto status = int{};
 		auto ret = waitpid(self._pid, &status, WEXITED);
+		if (ret != -1)
+			return wait_result(status);
 
-		self._pid = -1;
-
-		switch (ret) {
-		case -1:
-			throw generic_error("waitpid({}): failed: {}",
-					    self._pid, strerror(errno));
-		case 0:
-			throw generic_error("waitpid({}): no child to wait",
-					    self._pid);
-		}
-
-		return wait_result(status);
+		throw waitpid_error(self._pid,
+				    std::make_error_code(std::errc(errno)));
 	}
 
 	/*

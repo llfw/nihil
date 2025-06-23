@@ -39,10 +39,7 @@ namespace nihil {
 
 // Exception thrown when a table spec is invalid.
 export struct table_spec_error : generic_error {
-	template<typename... Args>
-	table_spec_error(std::format_string<Args...> fmt, Args &&...args)
-		: generic_error(fmt, std::forward<Args>(args)...)
-	{}
+	table_spec_error(std::string what) : generic_error(std::move(what)) {}
 };
 
 /*
@@ -145,8 +142,8 @@ auto parse_field_flags(field_spec<Char> &field, Iterator &pos, Sentinel end)
 		case '}':
 			return;
 		default:
-			throw table_spec_error(
-				"Invalid table spec: unknown flag character");
+			throw table_spec_error("Invalid table spec: "
+					       "unknown flag character");
 		}
 
 		if (++pos == end)
@@ -168,7 +165,7 @@ auto parse_field(Iterator &pos, Sentinel end)
 
 	// The field spec should start with a '{'.
 	if (*pos != '{')
-		throw table_spec_error("Invalid table spec: expected '{{'");
+		throw table_spec_error("Invalid table spec: expected '{'");
 
 	if (++pos == end)
 		throw table_spec_error("Invalid table spec: unterminated field");
@@ -178,7 +175,7 @@ auto parse_field(Iterator &pos, Sentinel end)
 
 	auto brace = std::ranges::find(pos, end, '}');
 	if (brace == end)
-		throw table_spec_error("Invalid table spec: expected '}}'");
+		throw table_spec_error("Invalid table spec: expected '}'");
 
 	field.name = std::basic_string_view<Char>(pos, brace);
 	pos = std::next(brace);

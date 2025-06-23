@@ -1,0 +1,271 @@
+/*
+ * From https://github.com/toby-allsopp/coroutine_monad
+ *
+ * Copyright (c) 2017 Toby Allsopp
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+module;
+
+#include <coroutine>
+#include <exception>
+#include <expected>
+#include <optional>
+#include <utility>
+
+export module nihil:monad;
+
+namespace nihil {
+
+/**********************************************************************
+ * return_object_holder
+ */
+
+// An object that starts out unitialized. Initialized by a call to emplace.
+template <typename T>
+using deferred = std::optional<T>;
+
+template <typename T>
+struct return_object_holder {
+	// The staging object that is returned (by copy/move) to the caller of
+	// the coroutine.
+	deferred<T> stage;
+	return_object_holder*& p;
+
+	// When constructed, we assign a pointer to ourselves to the supplied
+	// reference to pointer.
+	return_object_holder(return_object_holder*& p)
+		: stage{}
+		, p(p)
+	{
+		p = this;
+	}
+
+	// Copying doesn't make any sense (which copy should the pointer refer
+	// to?).
+	return_object_holder(return_object_holder const&) = delete;
+
+	// To move, we just update the pointer to point at the new object.
+	return_object_holder(return_object_holder&& other)
+		: stage(std::move(other.stage))
+		, p(other.p)
+	{
+		p = this;
+	}
+
+	// Assignment doesn't make sense.
+	void operator=(return_object_holder const&) = delete;
+	void operator=(return_object_holder&&) = delete;
+
+	// A non-trivial destructor is required until
+	// https://bugs.llvm.org//show_bug.cgi?id=28593 is fixed.
+	~return_object_holder() {}
+
+	// Construct the staging value; arguments are perfect forwarded to T's
+	// constructor.
+	template <typename... Args>
+	void emplace(Args&&... args)
+	{
+		stage.emplace(std::forward<Args>(args)...);
+	}
+
+	// We assume that we will be converted only once, so we can move from
+	// the staging object. We also assume that `emplace` has been called
+	// at least once.
+	operator T()
+	{
+		return std::move(*stage);
+	}
+};
+
+template <typename T>
+auto make_return_object_holder(return_object_holder<T>*& p)
+{
+	return return_object_holder<T>{p};
+}
+
+/**********************************************************************
+ * std::optional
+ */
+
+template <typename T>
+struct optional_promise {
+	return_object_holder<std::optional<T>>* data;
+
+	auto get_return_object()
+	{
+		return make_return_object_holder(data);
+	}
+
+	auto initial_suspend() noexcept -> std::suspend_never
+	{
+		return {};
+	}
+
+	auto final_suspend() noexcept -> std::suspend_never
+	{
+		return {};
+	}
+
+	void return_value(T x)
+	{
+		data->emplace(std::move(x));
+	}
+
+	void unhandled_exception()
+	{
+		std::rethrow_exception(std::current_exception());
+	}
+};
+
+} // namespace nihil
+
+// This makes std::optional<T> useable as a coroutine return type. Strictly,
+// this specilaization should depend on a user-defined type, otherwise this is
+// undefined behaviour. As this is purely for demonstration purposes, let's
+// live dangerously.
+
+export template <typename T, typename... Args>
+struct std::coroutine_traits<std::optional<T>, Args...> {
+	using promise_type = nihil::optional_promise<T>;
+};
+
+namespace nihil {
+
+template <typename T>
+struct optional_awaitable {
+	std::optional<T> o;
+
+	auto await_ready()
+	{
+		return o.has_value();
+	}
+
+	auto await_resume()
+	{
+		return *o;
+	}
+
+	template <typename U>
+	void await_suspend(std::coroutine_handle<optional_promise<U>> h)
+	{
+		h.promise().data->emplace(std::nullopt);
+		h.destroy();
+	}
+};
+
+} // namespace nihil
+
+namespace std {
+
+export template <typename T>
+auto operator co_await(std::optional<T> o) {
+	return nihil::optional_awaitable<T>{std::move(o)};
+}
+
+} // namespace std
+
+/**********************************************************************
+ * std::expected
+ */
+
+namespace nihil {
+
+template <typename T, typename E>
+struct expected_promise {
+	return_object_holder<std::expected<T, E>>* data;
+
+	auto get_return_object()
+	{
+		return make_return_object_holder(data);
+	}
+
+	auto initial_suspend() noexcept -> std::suspend_never
+	{
+		return {};
+	}
+
+	auto final_suspend() noexcept -> std::suspend_never
+	{
+		return {};
+	}
+
+	void return_value(T o)
+	{
+		data->emplace(std::move(o));
+	}
+
+	void return_value(std::unexpected<E> err)
+	{
+		data->emplace(std::move(err));
+	}
+
+	void unhandled_exception()
+	{
+		std::rethrow_exception(std::current_exception());
+	}
+};
+
+} // namespace nihil
+
+// This makes std::expected<T> useable as a coroutine return type. Strictly,
+// this specilaization should depend on a user-defined type, otherwise this is
+// undefined behaviour. As this is purely for demonstration purposes, let's
+// live dangerously.
+
+export template <typename T, typename E, typename... Args>
+struct std::coroutine_traits<std::expected<T, E>, Args...> {
+	using promise_type = nihil::expected_promise<T, E>;
+};
+
+namespace nihil {
+
+template <typename T, typename E>
+struct expected_awaitable {
+	std::expected<T, E> o;
+
+	auto await_ready()
+	{
+		return o.has_value();
+	}
+
+	auto await_resume()
+	{
+		return *o;
+	}
+
+	template <typename P>
+	void await_suspend(std::coroutine_handle<P> h)
+	{
+		h.promise().data->emplace(std::unexpected(o.error()));
+		h.destroy();
+	}
+};
+
+} // namespace nihil
+
+namespace std {
+
+export template <typename T, typename E>
+auto operator co_await(std::expected<T, E> o) {
+	return nihil::expected_awaitable<T, E>{std::move(o)};
+}
+
+} // namespace std

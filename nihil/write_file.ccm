@@ -1,0 +1,79 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <filesystem>
+#include <ranges>
+#include <system_error>
+#include <vector>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+export module nihil:write_file;
+
+import :guard;
+import :open_file;
+
+namespace nihil {
+
+/*
+ * Write the contents of a range to a file.  Returns the number of bytes
+ * written.
+ */
+export [[nodiscard]]
+auto write_file(std::filesystem::path const &filename,
+		std::ranges::contiguous_range auto &&range,
+		int mode = 0777)
+-> std::expected<std::size_t, std::error_code>
+{
+	return	open_file(filename, O_CREAT|O_WRONLY, mode)
+		.and_then([&] (auto &&fd) {
+			return write(fd, range);
+		});
+}
+
+/*
+ * Utility wrapper for non-contiguous ranges.
+ */
+export [[nodiscard]]
+auto write_file(std::filesystem::path const &filename,
+		std::ranges::range auto &&range)
+-> std::expected<std::size_t, std::error_code>
+requires(!std::ranges::contiguous_range<decltype(range)>)
+{
+	return write_file(filename, std::vector(std::from_range, range));
+}
+
+/*
+ * Write the contents of a range to a file safely.  The data will be written
+ * to "<filename>.tmp", and if the write succeeds, the temporary file will be
+ * renamed to the target filename.  If an error occurs, the target file will
+ * not be modified.
+ */
+export [[nodiscard]]
+auto safe_write_file(std::filesystem::path const &filename,
+		     std::ranges::range auto &&range)
+-> std::expected<void, std::error_code>
+{
+	auto tmpfile = filename;
+	tmpfile.remove_filename();
+	tmpfile /= (filename.filename().native() + ".tmp");
+
+	auto tmpfile_guard = guard([tmpfile] { ::unlink(tmpfile.c_str()); });
+
+	if (auto err = write_file(tmpfile, range); !err)
+		return std::unexpected(err.error());
+
+	if (::rename(tmpfile.c_str(), filename.c_str()) == -1)
+		return std::unexpected(std::make_error_code(std::errc(errno)));
+
+	tmpfile_guard.release();
+	return {};
+}
+
+
+} // namespace nihil

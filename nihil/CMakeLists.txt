@@ -10,16 +10,22 @@ target_sources(nihil PUBLIC
 	exec.ccm
 	fd.ccm
 	find_in_path.ccm
+	format_filesystem.ccm
 	generator.ccm
 	generic_error.ccm
 	getenv.ccm
 	guard.ccm
+	monad.ccm
 	next_word.ccm
+	open_file.ccm
 	process.ccm
+	read_file.ccm
 	skipws.ccm
 	spawn.ccm
 	tabulate.ccm
-	usage_error.ccm)
+	usage_error.ccm
+	write_file.ccm
+)
 
 if(NIHIL_TESTS)
 	add_subdirectory(tests)

@@ -1,0 +1,49 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <filesystem>
+#include <iterator>
+#include <ranges>
+#include <span>
+#include <system_error>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+export module nihil:read_file;
+
+import :fd;
+import :open_file;
+
+namespace nihil {
+
+/*
+ * Load the contents of a file into an output iterator. 
+ */
+export auto read_file(std::filesystem::path const &filename,
+	       std::output_iterator<char> auto &&iter)
+	-> std::expected<void, std::error_code>
+{
+	auto do_write = [&](fd &&file) -> std::expected<void, std::error_code>
+	{
+		auto constexpr bufsize = std::size_t{1024};
+		auto buffer = std::array<char, bufsize>{};
+
+		for (;;) {
+			auto err = read(file, buffer);
+			if (!err)
+				return std::unexpected(err.error());
+
+			auto data = std::span(buffer).subspan(0, *err);
+			std::ranges::copy(data, iter);
+		}
+	};
+
+	return open_file(filename, O_RDONLY).and_then(do_write);
+}
+
+} // namespace nihil

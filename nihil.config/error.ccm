@@ -17,10 +17,7 @@ namespace nihil::config {
  * Exception thrown when an issue occurs with the configuration.
  */
 export struct error : generic_error {
-	template<typename... Args>
-	error(std::format_string<Args...> fmt, Args &&...args)
-		: generic_error(fmt, std::forward<Args>(args)...)
-	{}
+	error(std::string what) : generic_error(std::move(what)) {}
 };
 
 } // namespace nihil::config

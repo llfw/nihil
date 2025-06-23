@@ -10,6 +10,7 @@ module;
 
 #include <algorithm>
 #include <cerrno>
+#include <format>
 #include <iterator>
 #include <string>
 #include <utility>
@@ -43,7 +44,8 @@ export struct fd_pipe final {
 	fd_pipe(int fdno, fd &ret) : _fdno(fdno), _fd(&ret) {
 		auto fds = pipe();
 		if (!fds)
-			throw exec_error("pipe: {}", fds.error().message());
+			throw exec_error(std::format("pipe: {}",
+						     fds.error().message()));
 		std::tie(_parent_fd, _child_fd) = std::move(*fds);
 	}
 
@@ -129,7 +131,8 @@ struct capture final {
 	{
 		auto fds = pipe();
 		if (!fds)
-			throw exec_error("pipe: {}", fds.error().message());
+			throw exec_error(std::format("pipe: {}",
+						     fds.error().message()));
 
 		std::tie(_parent_fd, _child_fd) = std::move(*fds);
 	}
@@ -183,7 +186,7 @@ export auto spawn(executor auto &&executor, auto &&...actions) -> process
 {
 	auto const pid = ::fork();
 	if (pid == -1)
-		throw exec_error("fork: {}", std::strerror(errno));
+		throw exec_error(std::format("fork: {}", std::strerror(errno)));
 
 	auto proc = process(pid);
 

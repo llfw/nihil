@@ -8,10 +8,12 @@ add_executable(nihil.test
 	generic_error.cc
 	getenv.cc
 	guard.cc
+	monad.cc
 	next_word.cc
 	skipws.cc
 	spawn.cc
-	tabulate.cc)
+	tabulate.cc
+)
 
 target_link_libraries(nihil.test PRIVATE
 	nihil

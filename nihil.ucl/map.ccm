@@ -7,6 +7,7 @@ module;
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
@@ -22,7 +23,7 @@ namespace nihil::ucl {
 // Exception thrown when map::operator[] does not find the key.
 export struct key_not_found : error {
 	key_not_found(std::string_view key)
-		: error("key '{}' not found in map", key)
+		: error(std::format("key '{}' not found in map", key))
 		, _key(key)
 	{}
 

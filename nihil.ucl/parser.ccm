@@ -25,10 +25,7 @@ namespace nihil::ucl {
  * Exception thrown when an issue occurs parsing UCL.
  */
 export struct parse_error : error {
-	template<typename... Args>
-	parse_error(std::format_string<Args...> fmt, Args &&...args)
-		: error(fmt, std::forward<Args>(args)...)
-	{}
+	parse_error(std::string what) : error(std::move(what)) {}
 };
 
 // UCL parser flags.
@@ -124,8 +121,7 @@ export struct parser {
 		auto ret = ::ucl_parser_add_chunk(self._parser, dptr,
 						  std::ranges::size(data));
 		if (ret == false)
-			throw parse_error("{}",
-				::ucl_parser_get_error(self._parser));
+			throw parse_error(::ucl_parser_get_error(self._parser));
 	}
 
 	auto add(this parser &self, std::ranges::range auto &&data)

@@ -10,3 +10,4 @@ export import :error;
 export import :option;
 export import :store;
 export import :string;
+export import :write;
