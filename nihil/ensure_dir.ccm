@@ -1,0 +1,20 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <filesystem>
+
+export module nihil:ensure_dir;
+
+namespace nihil {
+
+/*
+ * Create the given directory and any parent directories; throws
+ * generic_error on failure.
+ */
+export auto ensure_dir(std::filesystem::path const &dir) -> void;
+
+} // namespace nihil
+

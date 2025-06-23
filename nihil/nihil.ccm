@@ -9,6 +9,7 @@ export module nihil;
 export import :argv;
 export import :command_map;
 export import :ctype;
+export import :ensure_dir;
 export import :exec;
 export import :fd;
 export import :find_in_path;

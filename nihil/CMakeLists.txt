@@ -7,6 +7,7 @@ target_sources(nihil
 	argv.ccm
 	command_map.ccm
 	ctype.ccm
+	ensure_dir.ccm
 	exec.ccm
 	fd.ccm
 	find_in_path.ccm
@@ -27,6 +28,7 @@ target_sources(nihil
 	write_file.ccm
 
 	PRIVATE
+	ensure_dir.cc
 	exec.cc
 	fd.cc
 	find_in_path.cc
