@@ -25,6 +25,7 @@ target_sources(nihil
 	spawn.ccm
 	tabulate.ccm
 	usage_error.ccm
+	uuid.ccm
 	write_file.ccm
 
 	PRIVATE
