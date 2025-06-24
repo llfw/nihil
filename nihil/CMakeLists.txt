@@ -29,6 +29,7 @@ target_sources(nihil
 	write_file.ccm
 
 	PRIVATE
+	command_map.cc
 	ensure_dir.cc
 	exec.cc
 	fd.cc

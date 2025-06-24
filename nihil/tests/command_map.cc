@@ -11,7 +11,7 @@ import nihil;
 namespace {
 
 auto cmd_sub1_called = false;
-auto cmd_sub1 = nihil::command<int>("cmd sub1", [](int, int, char **) -> int
+auto cmd_sub1 = nihil::command("cmd sub1", [](int, char **) -> int
 {
 	cmd_sub1_called = true;
 	return 0;
@@ -25,27 +25,6 @@ TEST_CASE("command_map: basic", "[command_map]")
 		"cmd", "sub1", nullptr
 	};
 	auto argv = const_cast<char **>(args.data());
-	nihil::dispatch_command(0, args.size() - 1, argv);
+	nihil::dispatch_command(args.size() - 1, argv);
 	REQUIRE(cmd_sub1_called == true);
-}
-
-TEST_CASE("command_map: no arguments", "[command_map]")
-{
-	auto args = std::vector<char const *>{
-		nullptr
-	};
-	auto argv = const_cast<char **>(args.data());
-	REQUIRE_THROWS_AS(nihil::dispatch_command(0, args.size() - 1, argv),
-			  nihil::usage_error);
-}
-
-TEST_CASE("command_map: unknown command", "[command_map]")
-{
-	auto args = std::vector<char const *>{
-		"cmd", "nonesuch", nullptr
-	};
-	auto argv = const_cast<char **>(args.data());
-
-	REQUIRE_THROWS_AS(nihil::dispatch_command(0, args.size() - 1, argv),
-			  nihil::usage_error);
 }
