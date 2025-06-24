@@ -17,8 +17,8 @@ namespace nihil {
 /*
  * Open the given file and return an fd for it.
  */
-auto open_file(std::filesystem::path const &filename,
-	       int flags, int mode = 0777)
+export auto open_file(std::filesystem::path const &filename,
+		      int flags, int mode = 0777)
 	-> std::expected<fd, std::error_code>;
 
 } // namespace nihil
