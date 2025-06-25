@@ -1,0 +1,170 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * error: a type representing an error.
+ *
+ * An error consists of an immediate cause, which may be a string or
+ * std:error_code, and an optional proximate cause, which is another error
+ * object.  Any number of error objects may be stacked.
+ *
+ * For example, a failure to open a file might be a stack of two errors:
+ *
+ * - string, "failed to open /etc/somefile",
+ * - std::error_code, "No such file or directory".
+ *
+ * Calling .str() will format the entire stack starting at that error,
+ * for example: "failed to open /etc/somefile: No such file or directory".
+ *
+ * Errors may be copied, moved and thrown, although throwing errors is probably
+ * not very useful since there's no way to distinguish different errors.
+ *
+ */
+
+#include <iosfwd>
+#include <format>
+#include <memory>
+#include <optional>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <variant>
+
+export module nihil:error;
+
+namespace nihil {
+
+// Things which can be errors.
+using error_t = std::variant<
+			std::monostate,
+			std::string,
+			std::error_code,
+			std::error_condition
+		>;
+
+export struct error {
+	// Create an empty error, representing success.
+	error();
+
+	// Create an error from a freeform string.
+	error(std::string_view what, error cause);
+	explicit error(std::string_view what);
+
+	template<typename Cause>
+	requires(std::is_error_code_enum<Cause>::value ||
+		 std::is_error_condition_enum<Cause>::value)
+	error(std::string_view what, Cause &&cause)
+		: error(what, error(std::forward<Cause>(cause)))
+	{}
+
+	// Create an error from an std::error_code.
+	error(std::error_condition what, error cause);
+	explicit error(std::error_condition what);
+
+	// Create an error from an std::error_condition.
+	error(std::error_code what, error cause);
+	explicit error(std::error_code what);
+
+	// Create an error from an std::error_code enum.
+	error(auto errc, error cause)
+	requires(std::is_error_code_enum<decltype(errc)>::value)
+		: error(std::move(cause), std::make_error_code(errc))
+	{}
+
+	explicit error(auto errc)
+	requires(std::is_error_code_enum<decltype(errc)>::value)
+		: error(std::make_error_code(errc))
+	{}
+
+	// Create an error from an std::error_condition enum.
+	error(auto errc, error cause)
+	requires(std::is_error_condition_enum<decltype(errc)>::value)
+		: error(std::move(cause), std::make_error_condition(errc))
+	{}
+
+	explicit error(auto errc)
+	requires(std::is_error_condition_enum<decltype(errc)>::value)
+		: error(std::make_error_condition(errc))
+	{}
+
+	error(error const &);
+	error(error &&) noexcept;
+
+	auto operator=(this error &, error const &) -> error &;
+	auto operator=(this error &, error &&) noexcept -> error &;
+
+	// Return the cause of this error.
+	auto cause(this error const &) -> std::optional<error>;
+
+	// Format this error and its cause(s) as a string.
+	auto what(this error const &) -> std::string;
+
+	// Format this error as a string.
+	auto str(this error const &) -> std::string;
+
+	// Return this error's error_code, if any.
+	auto code(this error const &) -> std::optional<std::error_code>;
+
+	// Return this error's error_condition, if any.
+	auto condition(this error const &)
+		-> std::optional<std::error_condition>;
+
+private:
+	friend auto operator==(error const &, error const &) -> bool;
+	friend auto operator<=>(error const &, error const &)
+		-> std::strong_ordering;
+
+	error_t m_error = std::make_error_code(std::errc());
+	std::shared_ptr<error> m_cause;
+};
+
+// Compare an error to another error.  This only compares the error itself,
+// not any nested causes.
+export auto operator==(error const &, error const &) -> bool;
+export auto operator<=>(error const &, error const &) -> std::strong_ordering;
+
+// Compare an error to an std::error_code.
+export auto operator==(error const &, std::error_code const &) -> bool;
+
+// Compare an error to an std::error_condition.
+export auto operator==(error const &, std::error_condition const &) -> bool;
+
+// Compare an error to an std::error_code enum.
+export auto operator==(error const &lhs, auto rhs) -> bool
+requires(std::is_error_code_enum<decltype(rhs)>::value)
+{
+	return lhs.code() == rhs;
+}
+
+// Compare an error to an std::error_condition enum.
+export auto operator==(error const &lhs, auto rhs) -> bool
+requires(std::is_error_condition_enum<decltype(rhs)>::value)
+{
+	return lhs.condition() == rhs;
+}
+
+// Print an error to an ostream.
+export auto operator<<(std::ostream &, error const &) -> std::ostream &;
+
+} // namespace nihil
+
+// Make error formattable.
+export template<>
+struct std::formatter<nihil::error, char>
+{
+	template<typename ParseContext>
+	constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator
+	{
+		return ctx.begin();
+	}
+
+	template<typename FormatContext>
+	auto format(nihil::error const &e, FormatContext &ctx) const
+		-> FormatContext::iterator
+	{
+		return std::ranges::copy(e.what(), ctx.out()).out;
+	}
+};

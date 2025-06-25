@@ -4,16 +4,19 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
+
+import nihil;
 
 export module nihil.config:write;
 
-namespace nihil::config {
+export namespace nihil::config {
 
 /*
- * Write all config values (except defaults) to disk.  Throws config::error
- * on failure.
+ * Write all config values (except defaults) to disk.
  */
-auto write_to(std::filesystem::path const &filename) -> void;
+auto write_to(std::filesystem::path const &filename) ->
+	std::expected<void, nihil::error>;
 
 };

@@ -16,15 +16,14 @@ module;
 
 #include <ucl.h>
 
+import nihil;
+
 export module nihil.ucl:object;
 
-import nihil;
 import :error;
 import :type;
 
 namespace nihil::ucl {
-
-export struct parser;
 
 /***********************************************************************
  * The basic object type.
@@ -75,11 +74,6 @@ protected:
 	::ucl_object_t *_object = nullptr;
 
 	friend auto swap(object &a, object &b) -> void;
-
-private:
-
-	friend struct parser;
-	friend struct iterator;
 };
 
 /***********************************************************************

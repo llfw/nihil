@@ -19,6 +19,7 @@ module;
 #include <memory>
 #include <ranges>
 #include <type_traits>
+#include <utility>
 
 export module nihil:generator;
 

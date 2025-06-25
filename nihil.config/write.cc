@@ -4,6 +4,7 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <utility>
@@ -15,7 +16,8 @@ module nihil.config;
 
 namespace nihil::config {
 
-auto write_to(std::filesystem::path const &filename) -> void
+auto write_to(std::filesystem::path const &filename)
+	-> std::expected<void, nihil::error>
 try {
 	auto uclconfig = ucl::map<ucl::object>();
 
@@ -30,10 +32,15 @@ try {
 	auto ucl_text = std::format("{:c}", uclconfig);
 	auto ret = safe_write_file(filename, ucl_text);
 	if (!ret)
-		throw error(std::format("{}: {}", filename.string(),
-					ret.error().message()));
+		return std::unexpected(nihil::error(
+			std::format("cannot write {}", filename.string()),
+			ret.error()));
+
+	return {};
 } catch (ucl::error const &exc) {
-	throw error(std::format("{}: {}", filename.string(), exc.what()));
+	return std::unexpected(nihil::error(
+			"failed to serialize configuration",
+			nihil::error(exc.what())));
 }
 
 };

@@ -5,6 +5,7 @@
 module;
 
 #include <concepts>
+#include <functional>
 #include <optional>
 #include <utility>
 

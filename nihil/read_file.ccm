@@ -16,6 +16,7 @@ module;
 
 export module nihil:read_file;
 
+import :error;
 import :fd;
 import :open_file;
 
@@ -26,9 +27,9 @@ namespace nihil {
  */
 export auto read_file(std::filesystem::path const &filename,
 	       std::output_iterator<char> auto &&iter)
-	-> std::expected<void, std::error_code>
+	-> std::expected<void, error>
 {
-	auto do_write = [&](fd &&file) -> std::expected<void, std::error_code>
+	auto do_write = [&](fd &&file) -> std::expected<void, error>
 	{
 		auto constexpr bufsize = std::size_t{1024};
 		auto buffer = std::array<char, bufsize>{};

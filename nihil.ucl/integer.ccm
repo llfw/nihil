@@ -13,6 +13,7 @@ module;
 export module nihil.ucl:integer;
 
 import :object;
+import :type;
 
 namespace nihil::ucl {
 

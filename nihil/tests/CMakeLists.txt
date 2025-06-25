@@ -3,6 +3,7 @@
 add_executable(nihil.test
 	command_map.cc
 	ctype.cc
+	error.cc
 	fd.cc
 	generator.cc
 	generic_error.cc

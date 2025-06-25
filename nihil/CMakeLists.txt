@@ -8,6 +8,7 @@ target_sources(nihil
 	command_map.ccm
 	ctype.ccm
 	ensure_dir.ccm
+	error.ccm
 	exec.ccm
 	fd.ccm
 	find_in_path.ccm
@@ -16,11 +17,13 @@ target_sources(nihil
 	generic_error.ccm
 	getenv.ccm
 	guard.ccm
+	match.ccm
 	monad.ccm
 	next_word.ccm
 	open_file.ccm
 	process.ccm
 	read_file.ccm
+	rename_file.ccm
 	skipws.ccm
 	spawn.ccm
 	tabulate.ccm
@@ -31,12 +34,14 @@ target_sources(nihil
 	PRIVATE
 	command_map.cc
 	ensure_dir.cc
+	error.cc
 	exec.cc
 	fd.cc
 	find_in_path.cc
 	getenv.cc
 	open_file.cc
 	process.cc
+	rename_file.cc
 )
 
 if(NIHIL_TESTS)

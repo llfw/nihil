@@ -4,6 +4,7 @@
 
 module;
 
+#include <coroutine>
 #include <expected>
 #include <filesystem>
 #include <ranges>
@@ -15,8 +16,11 @@ module;
 
 export module nihil:write_file;
 
+import :error;
 import :guard;
+import :monad;
 import :open_file;
+import :rename_file;
 
 namespace nihil {
 
@@ -28,12 +32,11 @@ export [[nodiscard]]
 auto write_file(std::filesystem::path const &filename,
 		std::ranges::contiguous_range auto &&range,
 		int mode = 0777)
--> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 {
-	return	open_file(filename, O_CREAT|O_WRONLY, mode)
-		.and_then([&] (auto &&fd) {
-			return write(fd, range);
-		});
+	auto file = co_await open_file(filename, O_CREAT|O_WRONLY, mode);
+	auto nbytes = co_await write(file, range);
+	co_return nbytes;
 }
 
 /*
@@ -42,7 +45,7 @@ auto write_file(std::filesystem::path const &filename,
 export [[nodiscard]]
 auto write_file(std::filesystem::path const &filename,
 		std::ranges::range auto &&range)
--> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 requires(!std::ranges::contiguous_range<decltype(range)>)
 {
 	return write_file(filename, std::vector(std::from_range, range));
@@ -57,22 +60,21 @@ requires(!std::ranges::contiguous_range<decltype(range)>)
 export [[nodiscard]]
 auto safe_write_file(std::filesystem::path const &filename,
 		     std::ranges::range auto &&range)
--> std::expected<void, std::error_code>
+	-> std::expected<void, error>
 {
 	auto tmpfile = filename;
 	tmpfile.remove_filename();
 	tmpfile /= (filename.filename().native() + ".tmp");
 
-	auto tmpfile_guard = guard([tmpfile] { ::unlink(tmpfile.c_str()); });
+	auto tmpfile_guard = guard([&tmpfile] {
+		::unlink(tmpfile.c_str());
+	});
 
-	if (auto err = write_file(tmpfile, range); !err)
-		return std::unexpected(err.error());
-
-	if (::rename(tmpfile.c_str(), filename.c_str()) == -1)
-		return std::unexpected(std::make_error_code(std::errc(errno)));
+	co_await write_file(tmpfile, range);
+	co_await rename_file(tmpfile, filename);
 
 	tmpfile_guard.release();
-	return {};
+	co_return {};
 }
 
 

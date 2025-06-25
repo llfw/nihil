@@ -16,13 +16,13 @@ module nihil;
 namespace nihil {
 
 auto open_file(std::filesystem::path const &filename, int flags, int mode)
--> std::expected<fd, std::error_code>
+	-> std::expected<fd, error>
 {
 	auto fdno = ::open(filename.c_str(), flags, mode);
 	if (fdno != -1)
 		return fd(fdno);
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
 } // namespace nihil

@@ -4,15 +4,19 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
+
+import nihil;
 
 export module nihil.config:read;
 
 namespace nihil::config {
 
 /*
- * Load the configuration from a file.  Throws config::error on failure.
+ * Load the configuration from a file.
  */
-export auto read_from(std::filesystem::path const &filename) -> void;
+export [[nodiscard]] auto read_from(std::filesystem::path const &filename)
+	-> std::expected<void, nihil::error>;
 
 } // namespace nihil::config

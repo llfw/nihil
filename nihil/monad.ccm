@@ -137,11 +137,6 @@ struct optional_promise {
 
 } // namespace nihil
 
-// This makes std::optional<T> useable as a coroutine return type. Strictly,
-// this specilaization should depend on a user-defined type, otherwise this is
-// undefined behaviour. As this is purely for demonstration purposes, let's
-// live dangerously.
-
 export template <typename T, typename... Args>
 struct std::coroutine_traits<std::optional<T>, Args...> {
 	using promise_type = nihil::optional_promise<T>;
@@ -188,8 +183,8 @@ auto operator co_await(std::optional<T> o) {
 
 namespace nihil {
 
-template <typename T, typename E>
-struct expected_promise {
+export template <typename T, typename E>
+struct expected_promise_base {
 	return_object_holder<std::expected<T, E>>* data;
 
 	auto get_return_object()
@@ -207,28 +202,39 @@ struct expected_promise {
 		return {};
 	}
 
-	void return_value(T o)
-	{
-		data->emplace(std::move(o));
-	}
-
-	void return_value(std::unexpected<E> err)
-	{
-		data->emplace(std::move(err));
-	}
-
 	void unhandled_exception()
 	{
 		std::rethrow_exception(std::current_exception());
 	}
 };
 
-} // namespace nihil
+export template <typename T, typename E>
+struct expected_promise : expected_promise_base<T, E> {
+	void return_value(this expected_promise &self, std::unexpected<E> err)
+	{
+		self.data->emplace(std::move(err));
+	}
 
-// This makes std::expected<T> useable as a coroutine return type. Strictly,
-// this specilaization should depend on a user-defined type, otherwise this is
-// undefined behaviour. As this is purely for demonstration purposes, let's
-// live dangerously.
+	void return_value(this expected_promise &self, T o)
+	{
+		self.data->emplace(std::move(o));
+	}
+};
+
+export template <typename E>
+struct expected_promise<void, E> : expected_promise_base<void, E> {
+	void return_value(this expected_promise &self, std::unexpected<E> err)
+	{
+		self.data->emplace(std::move(err));
+	}
+
+	void return_value(this expected_promise &self, int)
+	{
+		self.data->emplace();
+	}
+};
+
+} // namespace nihil
 
 export template <typename T, typename E, typename... Args>
 struct std::coroutine_traits<std::expected<T, E>, Args...> {
@@ -237,8 +243,8 @@ struct std::coroutine_traits<std::expected<T, E>, Args...> {
 
 namespace nihil {
 
-template <typename T, typename E>
-struct expected_awaitable {
+export template<typename T, typename E>
+struct expected_awaitable_base {
 	std::expected<T, E> o;
 
 	auto await_ready()
@@ -246,16 +252,27 @@ struct expected_awaitable {
 		return o.has_value();
 	}
 
-	auto await_resume()
-	{
-		return *o;
-	}
-
 	template <typename P>
 	void await_suspend(std::coroutine_handle<P> h)
 	{
 		h.promise().data->emplace(std::unexpected(o.error()));
 		h.destroy();
+	}
+};
+
+export template <typename T, typename E>
+struct expected_awaitable : expected_awaitable_base<T, E> {
+	auto await_resume(this expected_awaitable &self)
+	{
+		return std::move(*self.o);
+	}
+};
+
+export template <typename E>
+struct expected_awaitable<void, E> : expected_awaitable_base<void, E> {
+	auto await_resume(this expected_awaitable &)
+	{
+		return std::expected<void, E>();
 	}
 };
 

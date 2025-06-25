@@ -45,7 +45,7 @@ export struct fd_pipe final {
 		auto fds = pipe();
 		if (!fds)
 			throw exec_error(std::format("pipe: {}",
-						     fds.error().message()));
+						     fds.error().what()));
 		std::tie(_parent_fd, _child_fd) = std::move(*fds);
 	}
 
@@ -132,7 +132,7 @@ struct capture final {
 		auto fds = pipe();
 		if (!fds)
 			throw exec_error(std::format("pipe: {}",
-						     fds.error().message()));
+						     fds.error().what()));
 
 		std::tie(_parent_fd, _child_fd) = std::move(*fds);
 	}

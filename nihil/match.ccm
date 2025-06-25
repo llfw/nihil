@@ -1,0 +1,23 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <variant>
+
+export module nihil:match;
+
+namespace nihil {
+
+template<class... Ts>
+struct match : Ts... { using Ts::operator()...; };
+
+template<typename... Ts, typename... Fs>
+constexpr decltype(auto) operator| (std::variant<Ts...> const &v,
+				    match<Fs...> const &match)
+{
+	return std::visit(match, v);
+}
+
+} // namespace nihil

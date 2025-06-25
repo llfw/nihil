@@ -51,7 +51,7 @@ fd::operator bool(this fd const &self) noexcept
 	return self._fd != _invalid_fd;
 }
 
-auto fd::close(this fd &self) -> std::expected<void, std::error_code>
+auto fd::close(this fd &self) -> std::expected<void, error>
 {
 	auto const ret = ::close(self.get());
 	self._fd = _invalid_fd;
@@ -59,7 +59,7 @@ auto fd::close(this fd &self) -> std::expected<void, std::error_code>
 	if (ret == 0)
 		return {};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
 auto fd::get(this fd const &self) -> int
@@ -76,7 +76,7 @@ auto fd::release(this fd &&self) -> int
 	throw fd_logic_error("Attempt to release an invalid fd");
 }
 
-auto dup(fd const &self) -> std::expected<fd, std::error_code>
+auto dup(fd const &self) -> std::expected<fd, error>
 {
 	auto thisfd = self.get();
 
@@ -84,10 +84,10 @@ auto dup(fd const &self) -> std::expected<fd, std::error_code>
 	if (newfd != -1)
 		return {newfd};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto dup(fd const &self, int newfd) -> std::expected<fd, std::error_code>
+auto dup(fd const &self, int newfd) -> std::expected<fd, error>
 {
 	auto thisfd = self.get();
 
@@ -95,10 +95,10 @@ auto dup(fd const &self, int newfd) -> std::expected<fd, std::error_code>
 	if (ret != -1)
 		return {newfd};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto raw_dup(fd const &self) -> std::expected<int, std::error_code>
+auto raw_dup(fd const &self) -> std::expected<int, error>
 {
 	auto thisfd = self.get();
 
@@ -106,10 +106,10 @@ auto raw_dup(fd const &self) -> std::expected<int, std::error_code>
 	if (newfd != -1)
 		return {newfd};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto raw_dup(fd const &self, int newfd) -> std::expected<int, std::error_code>
+auto raw_dup(fd const &self, int newfd) -> std::expected<int, error>
 {
 	auto thisfd = self.get();
 
@@ -117,30 +117,28 @@ auto raw_dup(fd const &self, int newfd) -> std::expected<int, std::error_code>
 	if (ret != -1)
 		return {newfd};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto getflags(fd const &self) -> std::expected<int, std::error_code>
+auto getflags(fd const &self) -> std::expected<int, error>
 {
 	auto const flags = ::fcntl(self.get(), F_GETFL);
 	if (flags != -1)
 		return {flags};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto replaceflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>
+auto replaceflags(fd &self, int newflags) -> std::expected<void, error>
 {
 	auto const ret = ::fcntl(self.get(), F_SETFL, newflags);
 	if (ret == 0)
 		return {};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto setflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>
+auto setflags(fd &self, int newflags) -> std::expected<int, error>
 {
 	auto flags = getflags(self);
 	if (!flags)
@@ -154,8 +152,7 @@ auto setflags(fd &self, int newflags)
 	return {*flags};
 }
 
-auto clearflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>
+auto clearflags(fd &self, int clrflags) -> std::expected<int, error>
 {
 	auto flags = getflags(self);
 	if (!flags)
@@ -169,27 +166,25 @@ auto clearflags(fd &self, int clrflags)
 	return {*flags};
 }
 
-auto getfdflags(fd const &self) -> std::expected<int, std::error_code>
+auto getfdflags(fd const &self) -> std::expected<int, error>
 {
 	auto const flags = ::fcntl(self.get(), F_GETFD);
 	if (flags != -1)
 		return {flags};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto replacefdflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>
+auto replacefdflags(fd &self, int newflags) -> std::expected<void, error>
 {
 	auto const ret = ::fcntl(self.get(), F_SETFD, newflags);
 	if (ret != -1)
 		return {};
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
-auto setfdflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>
+auto setfdflags(fd &self, int newflags) -> std::expected<int, error>
 {
 	auto flags = getfdflags(self);
 	if (!flags)
@@ -203,8 +198,7 @@ auto setfdflags(fd &self, int newflags)
 	return {*flags};
 }
 
-auto clearfdflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>
+auto clearfdflags(fd &self, int clrflags) -> std::expected<int, error>
 {
 	auto flags = getfdflags(self);
 	if (!flags)
@@ -218,33 +212,34 @@ auto clearfdflags(fd &self, int clrflags)
 	return {*flags};
 }
 
-auto pipe() -> std::expected<std::pair<fd, fd>, std::error_code> {
+auto pipe() -> std::expected<std::pair<fd, fd>, error>
+{
 	auto fds = std::array<int, 2>{};
 
 	if (auto const ret = ::pipe(fds.data()); ret != 0)
-		return std::unexpected(std::make_error_code(std::errc(errno)));
+		return std::unexpected(error(std::errc(errno)));
 
 	return {{fd(fds[0]), fd(fds[1])}};
 }
 
 auto fd::write(this fd &self, std::span<std::byte const> buffer)
-	-> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 {
 	auto const ret = ::write(self.get(), buffer.data(), buffer.size());
 	if (ret >= 0)
 		return ret;
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
 auto fd::read(this fd &self, std::span<std::byte> buffer)
-	-> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 {
 	auto const ret = ::read(self.get(), buffer.data(), buffer.size());
 	if (ret >= 0)
 		return ret;
 
-	return std::unexpected(std::make_error_code(std::errc(errno)));
+	return std::unexpected(error(std::errc(errno)));
 }
 
 } // namespace nihil

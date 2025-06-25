@@ -12,6 +12,7 @@ module;
 
 export module nihil:fd;
 
+import :error;
 import :generic_error;
 
 namespace nihil {
@@ -50,7 +51,7 @@ export struct fd final {
 	explicit operator bool(this fd const &self) noexcept;
 
 	// Close the wrapped fd.
-	auto close(this fd &self) -> std::expected<void, std::error_code>;
+	auto close(this fd &self) -> std::expected<void, error>;
 
 	// Return the stored fd.
 	auto get(this fd const &self) -> int;
@@ -61,12 +62,12 @@ export struct fd final {
 	// Write data from the provided buffer to the fd.  Returns the
 	// number of bytes written.
 	auto write(this fd &self, std::span<std::byte const>) 
-		-> std::expected<std::size_t, std::error_code>;
+		-> std::expected<std::size_t, error>;
 
 	// Read data from the fd to the provided buffer.  Returns the
 	// number of bytes read.
 	auto read(this fd &self, std::span<std::byte>)
-		-> std::expected<std::size_t, std::error_code>;
+		-> std::expected<std::size_t, error>;
 
 private:
 	static constexpr int _invalid_fd = -1;
@@ -75,7 +76,7 @@ private:
 };
 
 // Create a copy of this fd by calling dup().
-export auto dup(fd const &self) -> std::expected<fd, std::error_code>;
+export auto dup(fd const &self) -> std::expected<fd, error>;
 
 // Create a copy of this fd by calling dup2().  Note that because this results
 // in the existing fd and the new fd both being managed by an fd instance,
@@ -86,51 +87,41 @@ export auto dup(fd const &self) -> std::expected<fd, std::error_code>;
 //
 // In both of these cases, either use raw_dup() instead, or immediately call
 // release() on the returned fd to prevent the fd instance from closing it.
-export auto dup(fd const &self, int newfd)
-	-> std::expected<fd, std::error_code>;
+export auto dup(fd const &self, int newfd) -> std::expected<fd, error>;
 
 // Create a copy of this fd by calling dup().
-export auto raw_dup(fd const &self)
-	-> std::expected<int, std::error_code>;
+export auto raw_dup(fd const &self) -> std::expected<int, error>;
 
 // Create a copy of this fd by calling dup2().
-export auto raw_dup(fd const &self, int newfd)
-	-> std::expected<int, std::error_code>;
+export auto raw_dup(fd const &self, int newfd) -> std::expected<int, error>;
 
 // Return the fnctl flags for this fd.
-export auto getflags(fd const &self)
-	-> std::expected<int, std::error_code>;
+export auto getflags(fd const &self) -> std::expected<int, error>;
 
 // Replace the fnctl flags for this fd.
-export auto replaceflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>;
+export auto replaceflags(fd &self, int newflags) -> std::expected<void, error>;
 
 // Add bits to the fcntl flags for this fd.  Returns the new flags.
-export auto setflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>;
+export auto setflags(fd &self, int newflags) -> std::expected<int, error>;
 
 // Remove bits from the fcntl flags for this fd.  Returns the new flags.
-export auto clearflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>;
+export auto clearflags(fd &self, int clrflags) -> std::expected<int, error>;
 
 // Return the fd flags for this fd.
-export auto getfdflags(fd const &self)
-	-> std::expected<int, std::error_code>;
+export auto getfdflags(fd const &self) -> std::expected<int, error>;
 
 // Replace the fd flags for this fd.
 export auto replacefdflags(fd &self, int newflags)
-	-> std::expected<void, std::error_code>;
+	-> std::expected<void, error>;
 
 // Add bits to the fd flags for this fd.  Returns the new flags.
-export auto setfdflags(fd &self, int newflags)
-	-> std::expected<int, std::error_code>;
+export auto setfdflags(fd &self, int newflags) -> std::expected<int, error>;
 
 // Remove bits from the fd flags for this fd.  Returns the new flags.
-export auto clearfdflags(fd &self, int clrflags)
-	-> std::expected<int, std::error_code>;
+export auto clearfdflags(fd &self, int clrflags) -> std::expected<int, error>;
 
 // Create two fds by calling pipe() and return them.
-export auto pipe() -> std::expected<std::pair<fd, fd>, std::error_code>;
+export auto pipe() -> std::expected<std::pair<fd, fd>, error>;
 
 /*
  * Write data to a file descriptor from the provided range.  Returns the
@@ -138,7 +129,7 @@ export auto pipe() -> std::expected<std::pair<fd, fd>, std::error_code>;
  * partial object to be written.
  */
 export auto write(fd &file, std::ranges::contiguous_range auto &&range)
-	-> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 {
 	return file.write(as_bytes(std::span(range)));
 }
@@ -149,7 +140,7 @@ export auto write(fd &file, std::ranges::contiguous_range auto &&range)
  * object to be read.
  */
 export auto read(fd &file, std::ranges::contiguous_range auto &&range)
-	-> std::expected<std::size_t, std::error_code>
+	-> std::expected<std::size_t, error>
 {
 	return file.read(as_writable_bytes(std::span(range)));
 }

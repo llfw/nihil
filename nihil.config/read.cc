@@ -4,6 +4,7 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <iterator>
@@ -16,7 +17,8 @@ module nihil.config;
 
 namespace nihil::config {
 
-auto read_from(std::filesystem::path const &filename) -> void
+auto read_from(std::filesystem::path const &filename)
+	-> std::expected<void, nihil::error>
 {
 	// TODO: nihil.ucl should have a way to load UCL from a filename.
 
@@ -26,10 +28,9 @@ auto read_from(std::filesystem::path const &filename) -> void
 		// Ignore ENOENT, it simply means we haven't created the
 		// config file yet, so default values will be used.
 		if (err.error() == std::errc::no_such_file_or_directory)
-			return;
-		throw error(std::format("{}: {}",
-			    filename.string(),
-			    err.error().message()));
+			return {};
+		auto errstr = std::format("cannot read {}", filename.string());
+		return std::unexpected(nihil::error(errstr, err.error()));
 	}
 
 	// Parse the UCL.
@@ -52,6 +53,8 @@ auto read_from(std::filesystem::path const &filename) -> void
 		throw error(std::format("{}: {}", filename.string(),
 					err.what()));
 	}
+
+	return {};
 }
 
 } // namespace nihil::config
