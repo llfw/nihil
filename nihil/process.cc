@@ -6,6 +6,7 @@ module;
 
 #include <cerrno>
 #include <cstring>
+#include <expected>
 #include <format>
 #include <optional>
 #include <system_error>
@@ -17,29 +18,6 @@ module;
 module nihil;
 
 namespace nihil {
-
-process_error::process_error(std::string what)
-	: generic_error(std::move(what))
-{
-}
-
-waitpid_error::waitpid_error(::pid_t pid, std::error_code error)
-	: process_error(std::format("waitpid({}): {}",
-				    pid, error.message()))
-	, _pid(pid)
-	, _error(error)
-{
-}
-
-auto waitpid_error::pid(this waitpid_error const &self) -> ::pid_t
-{
-	return self._pid;
-}
-
-auto waitpid_error::error(this waitpid_error const &self) -> std::error_code
-{
-	return self._error;
-}
 
 auto wait_result::okay(this wait_result const &self) -> bool
 {
@@ -70,41 +48,52 @@ wait_result::wait_result(int status)
 {}
 
 process::process(::pid_t pid)
-	: _pid(pid)
+	: m_pid(pid)
 {}
 
 process::~process() {
-	if (_pid == -1)
+	if (m_pid == -1)
 		return;
 
 	auto status = int{};
-	std::ignore = waitpid(_pid, &status, WEXITED);
+	std::ignore = waitpid(m_pid, &status, WEXITED);
 }
 
-process::process(process &&) noexcept = default;
-auto process::operator=(process &&) noexcept -> process& = default;
+process::process(process &&other) noexcept
+	: m_pid(std::exchange(other.m_pid, -1))
+{
+}
+
+auto process::operator=(this process &self, process &&other) noexcept
+	-> process &
+{
+	if (&self != &other) {
+		self.m_pid = std::exchange(other.m_pid, -1);
+	}
+
+	return self;
+}
 
 // Get the child's process id.
 auto process::pid(this process const &self) noexcept -> ::pid_t
 {
-	return self._pid;
+	return self.m_pid;
 }
 
-auto process::wait(this process &&self) -> wait_result
+auto process::wait(this process &&self) -> std::expected<wait_result, error>
 {
 	auto status = int{};
-	auto ret = waitpid(self._pid, &status, WEXITED);
-	if (ret != -1)
-		return wait_result(status);
+	auto ret = waitpid(self.m_pid, &status, WEXITED);
+	if (ret == -1)
+		return std::unexpected(error(std::errc(errno)));
 
-	throw waitpid_error(self._pid,
-			    std::make_error_code(std::errc(errno)));
+	return wait_result(status);
 }
 
 auto process::release(this process &&self) -> ::pid_t
 {
 	auto const ret = self.pid();
-	self._pid = -1;
+	self.m_pid = -1;
 	return ret;
 }
 

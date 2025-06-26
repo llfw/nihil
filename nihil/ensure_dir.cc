@@ -4,6 +4,7 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <system_error>
@@ -12,16 +13,16 @@ module nihil;
 
 namespace nihil {
 
-auto ensure_dir(std::filesystem::path const &dir) -> void
+auto ensure_dir(std::filesystem::path const &dir) -> std::expected<void, error>
 {
-	std::error_code err;
+	auto err = std::error_code();
 
-	if (std::filesystem::create_directories(dir, err))
-		return;
-
+	std::filesystem::create_directories(dir, err);
+	
 	if (err)
-		throw generic_error(std::format("{}: mkdir: {}",
-				    dir.string(), err.message()));
+		return std::unexpected(error(err));
+
+	return {};
 }
 
 } // namespace nihil

@@ -228,9 +228,10 @@ struct expected_promise<void, E> : expected_promise_base<void, E> {
 		self.data->emplace(std::move(err));
 	}
 
-	void return_value(this expected_promise &self, int)
+	void return_value(this expected_promise &self,
+			  std::expected<void, E> o)
 	{
-		self.data->emplace();
+		self.data->emplace(std::move(o));
 	}
 };
 

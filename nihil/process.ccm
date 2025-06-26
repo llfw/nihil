@@ -4,6 +4,7 @@
 
 module;
 
+#include <expected>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -12,28 +13,9 @@ module;
 
 export module nihil:process;
 
-import :generic_error;
+import :error;
 
 namespace nihil {
-
-/*
- * Exception thrown when a process operation fails.
- */
-export struct process_error : generic_error {
-	process_error(std::string what);
-};
-
-// A waitpid() call failed.
-export struct waitpid_error : process_error {
-	waitpid_error(::pid_t pid, std::error_code error);
-
-	auto pid(this waitpid_error const &self) -> ::pid_t;
-	auto error(this waitpid_error const &self) -> std::error_code;
-
-private:
-	::pid_t _pid;
-	std::error_code _error;
-};
 
 /*
  * wait_result: the exit status of a process.
@@ -77,11 +59,11 @@ export struct process final {
 
 	// Movable.
 	process(process &&) noexcept;
-	auto operator=(process &&) noexcept -> process&;
+	auto operator=(this process &, process &&) noexcept -> process &;
 
 	// Not copyable.
 	process(process const &) = delete;
-	auto operator=(process const &) -> process& = delete;
+	auto operator=(this process &, process const &) -> process & = delete;
 
 	// Get the child's process id.
 	auto pid(this process const &self) noexcept -> ::pid_t;
@@ -91,7 +73,7 @@ export struct process final {
 	 * its exit status.  This destroys the process state, leaving this
 	 * object in a moved-from state.
 	 */
-	auto wait(this process &&self) -> wait_result;
+	auto wait(this process &&self) -> std::expected<wait_result, error>;
 
 	/*
 	 * Release this process so we won't try to wait for it when
@@ -100,7 +82,7 @@ export struct process final {
 	auto release(this process &&self) -> ::pid_t;
 
 private:
-	::pid_t _pid;
+	::pid_t m_pid;
 };
 
 } // namespace nihil

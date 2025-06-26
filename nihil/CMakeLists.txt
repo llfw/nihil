@@ -32,6 +32,7 @@ target_sources(nihil
 	write_file.ccm
 
 	PRIVATE
+	argv.cc
 	command_map.cc
 	ensure_dir.cc
 	error.cc

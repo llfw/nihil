@@ -10,6 +10,8 @@ module;
 
 export module nihil:getenv;
 
+import :error;
+
 namespace nihil {
 
 /*
@@ -17,6 +19,6 @@ namespace nihil {
  */
 
 export auto getenv(std::string_view varname)
-	-> std::expected<std::string, std::error_code>;
+	-> std::expected<std::string, error>;
 
 } // namespace nihil

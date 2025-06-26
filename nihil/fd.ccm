@@ -4,6 +4,7 @@
 
 module;
 
+#include <coroutine>
 #include <expected>
 #include <ranges>
 #include <span>
@@ -41,38 +42,38 @@ export struct fd final {
 
 	// Move from another fd, leaving the moved-from fd in an invalid state.
 	fd(fd &&other) noexcept;
-	auto operator=(fd &&other) noexcept -> fd &;
+	auto operator=(this fd &, fd &&other) noexcept -> fd &;
 
 	// Not copyable.
 	fd(fd const &) = delete;
-	fd& operator=(fd const &) = delete;
+	fd& operator=(this fd &, fd const &) = delete;
 
 	// Return true if this fd is valid (open).
-	explicit operator bool(this fd const &self) noexcept;
+	[[nodiscard]] explicit operator bool(this fd const &self) noexcept;
 
 	// Close the wrapped fd.
-	auto close(this fd &self) -> std::expected<void, error>;
+	[[nodiscard]] auto close(this fd &self) -> std::expected<void, error>;
 
 	// Return the stored fd.
-	auto get(this fd const &self) -> int;
+	[[nodiscard]] auto get(this fd const &self) -> int;
 
 	// Release the stored fd and return it.  The caller must close it.
-	auto release(this fd &&self) -> int;
+	[[nodiscard]] auto release(this fd &&self) -> int;
 
 	// Write data from the provided buffer to the fd.  Returns the
 	// number of bytes written.
-	auto write(this fd &self, std::span<std::byte const>) 
+	[[nodiscard]] auto write(this fd &self, std::span<std::byte const>) 
 		-> std::expected<std::size_t, error>;
 
-	// Read data from the fd to the provided buffer.  Returns the
-	// number of bytes read.
-	auto read(this fd &self, std::span<std::byte>)
-		-> std::expected<std::size_t, error>;
+	// Read data from the fd to the provided buffer.  Returns a
+	// subspan containing the data which was read.
+	[[nodiscard]] auto read(this fd &self, std::span<std::byte>)
+		-> std::expected<std::span<std::byte>, error>;
 
 private:
-	static constexpr int _invalid_fd = -1;
+	static constexpr int invalid_fileno = -1;
 
-	int _fd = _invalid_fd;
+	int m_fileno = invalid_fileno;
 };
 
 // Create a copy of this fd by calling dup().
@@ -125,24 +126,28 @@ export auto pipe() -> std::expected<std::pair<fd, fd>, error>;
 
 /*
  * Write data to a file descriptor from the provided range.  Returns the
- * number of bytes (not objects) written.  Incomplete writes may cause a
- * partial object to be written.
+ * number of bytes written.
  */
 export auto write(fd &file, std::ranges::contiguous_range auto &&range)
 	-> std::expected<std::size_t, error>
+requires(sizeof(std::ranges::range_value_t<decltype(range)>) == 1)
 {
 	return file.write(as_bytes(std::span(range)));
 }
 
 /*
- * Read data from a file descriptor into the provided buffer.  Returns the
- * number of bytes (not objects) read.  Incomplete reads may cause a partial
- * object to be read.
+ * Read data from a file descriptor into the provided buffer.  Returns a
+ * span containing the data that was read.
  */
 export auto read(fd &file, std::ranges::contiguous_range auto &&range)
-	-> std::expected<std::size_t, error>
+	-> std::expected<
+		std::span<std::ranges::range_value_t<decltype(range)>>,
+		error>
+requires(sizeof(std::ranges::range_value_t<decltype(range)>) == 1)
 {
-	return file.read(as_writable_bytes(std::span(range)));
+	auto bspan = as_writable_bytes(std::span(range));
+	auto rspan = co_await file.read(bspan);
+	co_return std::span(range).subspan(0, rspan.size());
 }
 
 } // namespace nihil

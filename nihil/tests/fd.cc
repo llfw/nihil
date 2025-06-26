@@ -191,10 +191,7 @@ TEST_CASE("fd: pipe, read, write", "[fd]") {
 	REQUIRE(*ret == test_string.size());
 
 	auto readbuf = std::array<char, test_string.size() * 2>{};
-	ret = read(fd2, readbuf);
-	REQUIRE(ret);
-	REQUIRE(*ret == test_string.size());
-
-	auto read_string = std::string_view(std::span(readbuf).subspan(0, *ret));
-	REQUIRE(read_string == test_string);
+	auto read_buf = read(fd2, readbuf);
+	REQUIRE(read_buf);
+	REQUIRE(std::string_view(*read_buf) == test_string);
 }

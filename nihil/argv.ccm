@@ -25,82 +25,53 @@ export struct argv {
 	/*
 	 * Create a new argv from a range.
 	 */
-	static auto from_range(std::ranges::range auto &&args) -> argv
+	argv(std::from_range_t, std::ranges::range auto &&args)
 	{
-		auto ret = argv{};
-
 		for (auto &&arg : args)
-			ret._add_arg(std::string_view(arg));
+			add_arg(std::string_view(arg));
 
-		ret._args.push_back(nullptr);
-		return ret;
+		m_args.push_back(nullptr);
 	}
 
+	/*
+	 * Create an argv from an initializer list.
+	 */
 	template<typename T>
-	static auto from_args(std::initializer_list<T> &&args)
+	explicit argv(std::initializer_list<T> &&args)
+		: argv(std::from_range, std::forward<decltype(args)>(args))
 	{
-		return from_range(std::move(args));
 	}
 
-	argv(argv &&) noexcept = default;
-	auto operator=(this argv &, argv &&other) -> argv& = default;
+	// Movable.
+	argv(argv &&) noexcept;
+	auto operator=(this argv &, argv &&other) -> argv &;
 
 	// Not copyable.  TODO: for completeness, it probably should be.
 	argv(argv const &) = delete;
 	auto operator=(this argv &, argv const &other) -> argv& = delete;
 
-	~argv()
-	{
-		for (auto *arg : _args)
-			delete[] arg;
-	}
+	~argv();
 
 	// Access the stored arguments.
-	auto data(this argv const &self) -> char const * const *
-	{
-		return self._args.data();
-	}
-
-	auto data(this argv &self) -> char * const *
-	{
-		return self._args.data();
-	}
-
-	auto size(this argv const &self)
-	{
-		return self._args.size();
-	}
+	[[nodiscard]] auto data(this argv const &self) -> char const * const *;
+	[[nodiscard]] auto data(this argv &self) -> char * const *;
+	[[nodiscard]] auto size(this argv const &self);
 
 	// Range access
-	auto begin(this argv const &self)
-	{
-		return self._args.begin();
-	}
-
-	auto end(this argv const &self)
-	{
-		return self._args.end();
-	}
+	[[nodiscard]] auto begin(this argv const &self);
+	[[nodiscard]] auto end(this argv const &self);
 
 private:
 	// Use the from_range() factory method to create new instances.
-	argv() = default;
+	argv();
 
 	// The argument pointers, including the null terminator.
-	std::vector<char *> _args;
+	// This can't be a vector<unique_ptr> because we need an array of
+	// char pointers to pass to exec.
+	std::vector<char *> m_args;
 
 	// Add a new argument to the array.
-	auto _add_arg(this argv &self, std::string_view arg) -> void
-	{
-		// Create a nul-terminated C string.
-		auto ptr = std::make_unique<char[]>(arg.size() + 1);
-		std::ranges::copy(arg, ptr.get());
-		ptr[arg.size()] = '\0';
-
-		// Ensure we won't throw when emplacing the pointer.
-		self._args.reserve(self._args.size() + 1);
-		self._args.emplace_back(ptr.release());
-	}
+	auto add_arg(this argv &self, std::string_view arg) -> void;
 };
 
 } // namespace nihil

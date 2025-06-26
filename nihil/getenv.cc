@@ -17,8 +17,7 @@ module nihil;
 
 namespace nihil {
 
- auto getenv(std::string_view varname)
--> std::expected<std::string, std::error_code>
+auto getenv(std::string_view varname) -> std::expected<std::string, error>
 {
 	// Start with a buffer of this size, and double it every iteration.
 	constexpr auto bufinc = std::size_t{1024};
@@ -37,7 +36,7 @@ namespace nihil {
 			continue;
 		}
 
-		return std::unexpected(std::make_error_code(std::errc(errno)));
+		return std::unexpected(error(std::errc(errno)));
 	}
 }
 

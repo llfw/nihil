@@ -4,17 +4,20 @@
 
 module;
 
+#include <expected>
 #include <filesystem>
 
 export module nihil:ensure_dir;
 
+import :error;
+
 namespace nihil {
 
 /*
- * Create the given directory and any parent directories; throws
- * generic_error on failure.
+ * Create the given directory and any parent directories.
  */
-export auto ensure_dir(std::filesystem::path const &dir) -> void;
+export [[nodiscard]] auto ensure_dir(std::filesystem::path const &dir)
+	-> std::expected<void, error>;
 
 } // namespace nihil
 

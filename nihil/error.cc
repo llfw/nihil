@@ -62,6 +62,14 @@ auto error::cause(this error const &self) -> std::optional<error>
 	return {};
 }
 
+auto error::root_cause(this error const &self) -> error const &
+{
+	if (self.m_cause)
+		return self.m_cause->root_cause();
+
+	return self;
+}
+
 auto error::str(this error const &self) -> std::string
 {
 	return self.m_error | match {

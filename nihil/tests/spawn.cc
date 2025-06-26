@@ -6,60 +6,112 @@
 
 import nihil;
 
-TEST_CASE("spawn: system", "[spawn]") {
+TEST_CASE("spawn: system", "[spawn]")
+{
 	using namespace nihil;
-	auto output = std::string();
-	auto result = spawn(shell("x=1; echo $x"),
-			    capture(stdout_fileno, output)).wait();
 
-	REQUIRE(result.okay());
+	auto exec = shell("x=1; echo $x");
+	REQUIRE(exec);
+
+	auto output = std::string();
+	auto capture = make_capture(stdout_fileno, output);
+	REQUIRE(capture);
+
+	auto proc = spawn(*exec, *capture);
+	REQUIRE(proc);
+
+	auto status = std::move(*proc).wait();
+	REQUIRE(status);
+
+	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");
 }
 
 TEST_CASE("spawn: execv", "[spawn]") {
 	using namespace nihil;
-	auto output = std::string();
-	auto args = argv::from_args({"sh", "-c", "x=1; echo $x"});
-	auto result = spawn(execv("/bin/sh", std::move(args)),
-			    capture(stdout_fileno, output)).wait();
 
-	REQUIRE(result.okay());
+	auto args = argv({"sh", "-c", "x=1; echo $x"});
+	auto exec = execv("/bin/sh", std::move(args));
+	REQUIRE(exec);
+
+	auto output = std::string();
+	auto capture = make_capture(stdout_fileno, output);
+	REQUIRE(capture);
+
+	auto proc = spawn(*exec, *capture);
+	REQUIRE(proc);
+
+	auto status = std::move(*proc).wait();
+	REQUIRE(status);
+
+	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");
 }
 
 TEST_CASE("spawn: execvp", "[spawn]") {
 	using namespace nihil;
-	auto output = std::string();
-	auto args = argv::from_args({"sh", "-c", "x=1; echo $x"});
-	auto result = spawn(execvp("sh", std::move(args)),
-			    capture(stdout_fileno, output)).wait();
 
-	REQUIRE(result.okay());
+	auto args = argv({"sh", "-c", "x=1; echo $x"});
+	auto exec = execvp("sh", std::move(args));
+	REQUIRE(exec);
+
+	auto output = std::string();
+	auto capture = make_capture(stdout_fileno, output);
+	REQUIRE(capture);
+
+	auto proc = spawn(*exec, *capture);
+	REQUIRE(proc);
+
+	auto status = std::move(*proc).wait();
+	REQUIRE(status);
+
+	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");
 }
 
 TEST_CASE("spawn: execl", "[spawn]") {
 	using namespace nihil;
-	auto output = std::string();
-	auto result = spawn(execl("/bin/sh", "sh", "-c", "x=1; echo $x"),
-			    capture(stdout_fileno, output)).wait();
 
-	REQUIRE(result.okay());
+	auto exec = execl("/bin/sh", "sh", "-c", "x=1; echo $x");
+	REQUIRE(exec);
+
+	auto output = std::string();
+	auto capture = make_capture(stdout_fileno, output);
+	REQUIRE(capture);
+
+	auto proc = spawn(*exec, *capture);
+	REQUIRE(proc);
+
+	auto status = std::move(*proc).wait();
+	REQUIRE(status);
+
+	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");
 }
 
 TEST_CASE("spawn: execlp", "[spawn]") {
 	using namespace nihil;
-	auto output = std::string();
-	auto result = spawn(execlp("sh", "sh", "-c", "x=1; echo $x"),
-			    capture(stdout_fileno, output)).wait();
 
-	REQUIRE(result.okay());
+	auto exec = execlp("sh", "sh", "-c", "x=1; echo $x");
+	REQUIRE(exec);
+
+	auto output = std::string();
+	auto capture = make_capture(stdout_fileno, output);
+	REQUIRE(capture);
+
+	auto proc = spawn(*exec, *capture);
+	REQUIRE(proc);
+
+	auto status = std::move(*proc).wait();
+	REQUIRE(status);
+
+	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");
 }
 
 TEST_CASE("spawn: execlp failure", "[spawn]") {
 	using namespace nihil;
-	REQUIRE_THROWS_AS(execlp("lfjail_nonesuch_executable", "x"),
-			  executable_not_found);
+
+	auto exec = execlp("nihil_no_such_executable", "x");
+	REQUIRE(!exec);
 }

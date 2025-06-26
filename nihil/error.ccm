@@ -97,19 +97,25 @@ export struct error {
 	auto operator=(this error &, error &&) noexcept -> error &;
 
 	// Return the cause of this error.
-	auto cause(this error const &) -> std::optional<error>;
+	[[nodiscard]] auto cause(this error const &) -> std::optional<error>;
+
+	// Return the root cause of this error, which may be this object.
+	// For errors caused by an OS error, this will typically be the
+	// error_code error.
+	[[nodiscard]] auto root_cause(this error const &) -> error const &;
 
 	// Format this error and its cause(s) as a string.
-	auto what(this error const &) -> std::string;
+	[[nodiscard]] auto what(this error const &) -> std::string;
 
 	// Format this error as a string.
-	auto str(this error const &) -> std::string;
+	[[nodiscard]] auto str(this error const &) -> std::string;
 
 	// Return this error's error_code, if any.
-	auto code(this error const &) -> std::optional<std::error_code>;
+	[[nodiscard]] auto code(this error const &)
+		-> std::optional<std::error_code>;
 
 	// Return this error's error_condition, if any.
-	auto condition(this error const &)
+	[[nodiscard]] auto condition(this error const &)
 		-> std::optional<std::error_condition>;
 
 private:
@@ -123,31 +129,37 @@ private:
 
 // Compare an error to another error.  This only compares the error itself,
 // not any nested causes.
-export auto operator==(error const &, error const &) -> bool;
-export auto operator<=>(error const &, error const &) -> std::strong_ordering;
+export [[nodiscard]] auto operator==(error const &, error const &)
+	-> bool;
+export [[nodiscard]] auto operator<=>(error const &, error const &)
+	-> std::strong_ordering;
 
 // Compare an error to an std::error_code.
-export auto operator==(error const &, std::error_code const &) -> bool;
+export [[nodiscard]] auto operator==(error const &, std::error_code const &)
+	-> bool;
 
 // Compare an error to an std::error_condition.
-export auto operator==(error const &, std::error_condition const &) -> bool;
+export [[nodiscard]] auto operator==(error const &,
+				     std::error_condition const &)
+	-> bool;
 
 // Compare an error to an std::error_code enum.
-export auto operator==(error const &lhs, auto rhs) -> bool
+export [[nodiscard]] auto operator==(error const &lhs, auto rhs) -> bool
 requires(std::is_error_code_enum<decltype(rhs)>::value)
 {
 	return lhs.code() == rhs;
 }
 
 // Compare an error to an std::error_condition enum.
-export auto operator==(error const &lhs, auto rhs) -> bool
+export [[nodiscard]] auto operator==(error const &lhs, auto rhs) -> bool
 requires(std::is_error_condition_enum<decltype(rhs)>::value)
 {
 	return lhs.condition() == rhs;
 }
 
 // Print an error to an ostream.
-export auto operator<<(std::ostream &, error const &) -> std::ostream &;
+export [[nodiscard]] auto operator<<(std::ostream &, error const &)
+	-> std::ostream &;
 
 } // namespace nihil
 

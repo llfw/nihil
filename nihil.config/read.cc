@@ -4,6 +4,7 @@
 
 module;
 
+#include <coroutine>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -27,7 +28,7 @@ auto read_from(std::filesystem::path const &filename)
 	if (!err) {
 		// Ignore ENOENT, it simply means we haven't created the
 		// config file yet, so default values will be used.
-		if (err.error() == std::errc::no_such_file_or_directory)
+		if (err.error().root_cause() == std::errc::no_such_file_or_directory)
 			return {};
 		auto errstr = std::format("cannot read {}", filename.string());
 		return std::unexpected(nihil::error(errstr, err.error()));
