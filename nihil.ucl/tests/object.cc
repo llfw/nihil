@@ -26,12 +26,19 @@ TEST_CASE("ucl object: compare", "[ucl]")
 	using namespace std::literals;
 
 	auto obj_41 = nihil::ucl::parse("int = 41;"sv);
-	auto obj_42 = nihil::ucl::parse("int = 42;"sv);
-	auto obj_42_2 = nihil::ucl::parse("int = 42;"sv);
-	auto obj_43 = nihil::ucl::parse("int = 43;"sv);
+	REQUIRE(obj_41);
 
-	REQUIRE(obj_42 == obj_42_2);
-	REQUIRE(obj_42 != obj_43);
-	REQUIRE(obj_42 < obj_43);
-	REQUIRE(obj_42 > obj_41);
+	auto obj_42 = nihil::ucl::parse("int = 42;"sv);
+	REQUIRE(obj_42);
+
+	auto obj_42_2 = nihil::ucl::parse("int = 42;"sv);
+	REQUIRE(obj_42_2);
+
+	auto obj_43 = nihil::ucl::parse("int = 43;"sv);
+	REQUIRE(obj_43);
+
+	REQUIRE(*obj_42 == *obj_42_2);
+	REQUIRE(*obj_42 != *obj_43);
+	REQUIRE(*obj_42 < *obj_43);
+	REQUIRE(*obj_42 > *obj_41);
 }

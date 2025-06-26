@@ -7,9 +7,9 @@ module;
 #include <expected>
 #include <filesystem>
 
-import nihil;
-
 export module nihil.config:write;
+
+import nihil;
 
 export namespace nihil::config {
 
@@ -17,6 +17,6 @@ export namespace nihil::config {
  * Write all config values (except defaults) to disk.
  */
 auto write_to(std::filesystem::path const &filename) ->
-	std::expected<void, nihil::error>;
+	std::expected<void, error>;
 
 };

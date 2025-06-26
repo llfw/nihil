@@ -4,16 +4,21 @@
 
 module;
 
+#include <expected>
 #include <format>
 #include <string>
 
 export module nihil.config:string;
 
+import nihil;
 import nihil.ucl;
 import :option;
 
 namespace nihil::config {
 
+/*
+ * A string option.  The backing type is std::string.
+ */
 export struct string final : option
 {
 	string(std::string &storage,
@@ -22,14 +27,31 @@ export struct string final : option
 
 	~string();
 
-	auto get_string() const -> std::string override;
-	auto set_string(std::string_view new_value) -> void override;
+	/*
+	 * Get this option as a string; simply returns the storage.
+	 */
+	[[nodiscard]] auto get_string() const -> std::string override;
 
-	auto to_ucl() const -> ucl::object override;
-	auto from_ucl(ucl::object const &uclobj) -> void override;
+	/*
+	 * Set this option to a string value; assigns to the storage.
+	 */
+	[[nodiscard]] auto set_string(std::string_view new_value)
+		-> std::expected<void, error> override;
+
+	/*
+	 * Convert this option to a UCL object.
+	 */
+	[[nodiscard]] auto get_ucl() const
+		-> std::expected<ucl::object, error> override;
+
+	/*
+	 * Set this option from a UCL object.
+	 */
+	[[nodiscard]] auto set_ucl(ucl::object const &uclobj)
+		-> std::expected<void, error> override;
 
 private:
-	std::string &_storage;
+	std::string &m_storage;
 };
 
 } // namespace nihil::config

@@ -109,8 +109,11 @@ TEST_CASE("ucl: string: key()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto obj = parse("a_string = \"test\"");
-	REQUIRE(object_cast<string>(obj["a_string"]).key() == "a_string");
+	auto err = parse("a_string = \"test\"");
+	REQUIRE(err);
+
+	auto obj = *err;
+	REQUIRE(object_cast<string>(obj["a_string"])->key() == "a_string");
 
 	auto s = nihil::ucl::string("test");
 	REQUIRE(s.key() == "");
@@ -188,7 +191,10 @@ TEST_CASE("ucl: string: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto obj = nihil::ucl::parse("value = \"te\\\"st\""sv);
+	auto err = nihil::ucl::parse("value = \"te\\\"st\""sv);
+	REQUIRE(err);
+
+	auto obj = *err;
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
 	REQUIRE(object_cast<nihil::ucl::string>(v) == "te\"st");
@@ -204,9 +210,10 @@ TEST_CASE("ucl: string: emit", "[ucl]")
 TEST_CASE("ucl: string: parse and emit", "[ucl]")
 {
 	auto ucl = nihil::ucl::parse("str = \"te\\\"st\";");
+	REQUIRE(ucl);
 
 	auto output = std::string();
-	emit(ucl, nihil::ucl::emitter::configuration,
+	emit(*ucl, nihil::ucl::emitter::configuration,
 	     std::back_inserter(output));
 
 	REQUIRE(output == "str = \"te\\\"st\";\n");

@@ -4,58 +4,86 @@
 
 module;
 
+#include <coroutine>
+#include <expected>
 #include <iostream>
 #include <string>
 
 module nihil.config;
 
+import nihil;
+import nihil.ucl;
+
 namespace nihil::config {
 
+option::option(std::string_view name, std::string_view description)
+	: m_name(name)
+	, m_description(description)
+{
+	auto okay = store::get().register_option(this);
+	if (okay)
+		return;
+
+	std::print(std::cerr,
+		   "INTERNAL ERROR: failed to register "
+		   "configuration option '{}': {}",
+		   m_name, okay.error());
+	std::exit(1);
+}
+
+option::~option()
+{
+	std::ignore = store::get().unregister_option(this);
+}
+
 auto option::name(this option const &self) noexcept
--> std::string_view
+	-> std::string_view
 {
-	return self._name;
+	return self.m_name;
 }
 
-// Human-readable description of this option.
 auto option::description(this option const &self) noexcept
--> std::string_view
+	-> std::string_view
 {
-	return self._description;
+	return self.m_description;
 }
 
-// If true, this option is set to its default value.
 auto option::is_default(this option const &self) noexcept
--> bool
+	-> bool
 {
-	return self._is_default;
+	return self.m_is_default;
 }
 
-// Get or set this option as a string.
-auto option::string(this option const &self)
--> std::string
+auto option::is_default(this option  &self, bool b) -> void
+{
+	self.m_is_default = b;
+}
+
+auto option::string(this option const &self) -> std::string
 {
 	return self.get_string();
 }
 
 auto option::string(this option &self, std::string_view value)
--> void
+	-> std::expected<void, error>
 {
-	self.set_string(value);
-	self._is_default = false;
+	co_await self.set_string(value);
+	self.is_default(false);
+	co_return {};
 }
 
-option::option(std::string_view name,
-       std::string_view description)
-	: _name(name)
-	, _description(description)
+auto option::ucl(this option const &self)
+	-> std::expected<nihil::ucl::object, error>
 {
+	return self.get_ucl();
 }
 
-auto option::is_default(bool b)
--> void
+auto option::ucl(this option &self, nihil::ucl::object const &value)
+	-> std::expected<void, error>
 {
-	_is_default = b;
+	co_await self.set_ucl(value);
+	self.is_default(false);
+	co_return {};
 }
 
 auto operator<<(std::ostream &strm, option const &opt)

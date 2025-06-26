@@ -4,12 +4,14 @@
 
 #include <algorithm>
 #include <concepts>
+#include <expected>
 #include <ranges>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
+import nihil;
 import nihil.ucl;
 
 TEST_CASE("ucl: array: invariants", "[ucl]")
@@ -154,8 +156,14 @@ TEST_CASE("ucl: array: parse", "[ucl]")
 	using namespace std::literals;
 	using namespace nihil::ucl;
 
-	auto obj = parse("value = [1, 42, 666]"sv);
-	auto arr = object_cast<array<integer>>(obj["value"]);
+	auto obj_err = parse("value = [1, 42, 666]"sv);
+	REQUIRE(obj_err);
+	auto obj = *obj_err;
+
+	auto err = object_cast<array<integer>>(obj["value"]);
+	REQUIRE(err);
+
+	auto arr = *err;
 	REQUIRE(arr.size() == 3);
 	REQUIRE(arr[0] == 1);
 	REQUIRE(arr[1] == 42);
@@ -167,7 +175,9 @@ TEST_CASE("ucl: array: emit", "[ucl]")
 	using namespace nihil::ucl;
 
 	auto ucl = parse("array = [1, 42, 666];");
-	auto output = std::format("{:c}", ucl);
+	REQUIRE(ucl);
+
+	auto output = std::format("{:c}", *ucl);
 	REQUIRE(output == 
 "array [\n"
 "    1,\n"
@@ -211,7 +221,8 @@ TEST_CASE("ucl: array: bad object_cast", "[ucl]")
 
 	auto arr = array<integer>();
 
-	REQUIRE_THROWS_AS(object_cast<integer>(arr), type_mismatch);
+	auto cast_ok = object_cast<integer>(arr);
+	REQUIRE(!cast_ok);
 }
 
 TEST_CASE("ucl: array: heterogeneous elements", "[ucl]")
@@ -219,19 +230,27 @@ TEST_CASE("ucl: array: heterogeneous elements", "[ucl]")
 	using namespace std::literals;
 	using namespace nihil::ucl;
 
-	auto obj = parse("array [ 42, true, \"test\" ];");
-	auto arr = object_cast<array<>>(obj["array"]);
+	auto obj_err = parse("array [ 42, true, \"test\" ];");
+	REQUIRE(obj_err);
+	auto obj = *obj_err;
 
+	auto err = object_cast<array<>>(obj["array"]);
+	REQUIRE(err);
+
+	auto arr = *err;
 	REQUIRE(arr.size() == 3);
 
 	auto int_obj = object_cast<integer>(arr[0]);
-	REQUIRE(int_obj == 42);
+	REQUIRE(int_obj);
+	REQUIRE(*int_obj == 42);
 
 	auto bool_obj = object_cast<boolean>(arr[1]);
-	REQUIRE(bool_obj == true);
+	REQUIRE(bool_obj);
+	REQUIRE(*bool_obj == true);
 
 	auto string_obj = object_cast<string>(arr[2]);
-	REQUIRE(string_obj == "test");
+	REQUIRE(string_obj);
+	REQUIRE(*string_obj == "test");
 }
 
 TEST_CASE("ucl: array: heterogenous cast", "[ucl]")
@@ -243,10 +262,14 @@ TEST_CASE("ucl: array: heterogenous cast", "[ucl]")
 	arr.push_back(boolean(true));
 
 	// Converting to an array<integer> should fail.
-	REQUIRE_THROWS_AS(object_cast<array<integer>>(arr), type_mismatch);
+	auto cast_ok = object_cast<array<integer>>(arr);
+	REQUIRE(!cast_ok);
 
 	// Converting to array<object> should succeed.
-	auto obj_arr = object_cast<array<object>>(arr);
+	auto err = object_cast<array<object>>(arr);
+	REQUIRE(err);
+
+	auto obj_arr = *err;
 	REQUIRE(obj_arr[0] == integer(42));
 }
 
@@ -261,10 +284,14 @@ TEST_CASE("ucl: array: homogeneous cast", "[ucl]")
 	auto obj = object(ref, arr.get_ucl_object());
 
 	// Converting to array<string> should fail.
-	REQUIRE_THROWS_AS(object_cast<array<string>>(obj), type_mismatch);
+	auto cast_ok = object_cast<array<string>>(obj);
+	REQUIRE(!cast_ok);
 
 	// Converting to an array<integer> should succeed.
-	auto obj_arr = object_cast<array<integer>>(obj);
+	auto err = object_cast<array<integer>>(obj);
+	REQUIRE(err);
+
+	auto obj_arr = *err;
 	REQUIRE(obj_arr[0] == 1);
 	REQUIRE(obj_arr[1] == 42);
 }

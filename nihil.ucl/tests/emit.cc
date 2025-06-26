@@ -15,11 +15,13 @@ TEST_CASE("ucl: emit to std::ostream", "[ucl]")
 	using namespace std::literals;
 
 	auto obj = nihil::ucl::parse("int = [1, 42, 666]"sv);
+	REQUIRE(obj);
+
 	auto strm = std::ostringstream();
-	strm << obj;
+	strm << *obj;
 
 	// The ostream emitter produces JSON.
-	REQUIRE(strm.str() == std::format("{:j}", obj));
+	REQUIRE(strm.str() == std::format("{:j}", *obj));
 }
 
 TEST_CASE("ucl: emit JSON with std::format", "[ucl]")
@@ -27,7 +29,9 @@ TEST_CASE("ucl: emit JSON with std::format", "[ucl]")
 	using namespace std::literals;
 
 	auto obj = nihil::ucl::parse("int = [1, 42, 666]"sv);
-	auto str = std::format("{:j}", obj);
+	REQUIRE(obj);
+
+	auto str = std::format("{:j}", *obj);
 
 	REQUIRE(str ==
 "{\n"
@@ -39,7 +43,7 @@ TEST_CASE("ucl: emit JSON with std::format", "[ucl]")
 "}");
 
 	// Make sure JSON is the default format.
-	auto str2 = std::format("{}", obj);
+	auto str2 = std::format("{}", *obj);
 	REQUIRE(str == str2);
 }
 
@@ -48,7 +52,9 @@ TEST_CASE("ucl: emit compact JSON with std::format", "[ucl]")
 	using namespace std::literals;
 
 	auto obj = nihil::ucl::parse("int = [1, 42, 666]"sv);
-	auto str = std::format("{:J}", obj);
+	REQUIRE(obj);
+
+	auto str = std::format("{:J}", *obj);
 
 	REQUIRE(str == "{\"int\":[1,42,666]}");
 }
@@ -58,7 +64,9 @@ TEST_CASE("ucl: emit configuration with std::format", "[ucl]")
 	using namespace std::literals;
 
 	auto obj = nihil::ucl::parse("int = [1, 42, 666]"sv);
-	auto str = std::format("{:c}", obj);
+	REQUIRE(obj);
+
+	auto str = std::format("{:c}", *obj);
 
 	REQUIRE(str ==
 "int [\n"
@@ -73,7 +81,9 @@ TEST_CASE("ucl: emit YAML with std::format", "[ucl]")
 	using namespace std::literals;
 
 	auto obj = nihil::ucl::parse("int = [1, 42, 666]"sv);
-	auto str = std::format("{:y}", obj);
+	REQUIRE(obj);
+
+	auto str = std::format("{:y}", *obj);
 
 	REQUIRE(str ==
 "int: [\n"

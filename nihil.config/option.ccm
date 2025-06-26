@@ -4,46 +4,67 @@
 
 module;
 
+#include <expected>
 #include <iosfwd>
 #include <string>
 
 export module nihil.config:option;
 
+import nihil;
 import nihil.ucl;
-import :error;
 
 namespace nihil::config {
 
 /*
  * Base class for options; this is what config_store interacts with.
+ *
+ * Base classes should override the four protected functions:
+ *
+ * 	get_string()
+ * 	set_string()
+ * 	get_ucl()
+ * 	set_ucl()
+ *
+ * Overriding any other members is not permitted.
  */
 
 export struct option
 {
+	virtual ~option();
+
 	// Short name of this option.
-	auto name(this option const &self) noexcept -> std::string_view;
+	[[nodiscard]] auto name(this option const &) noexcept
+		-> std::string_view;
 
 	// Human-readable description of this option.
-	auto description(this option const &self) noexcept -> std::string_view;
+	[[nodiscard]] auto description(this option const &) noexcept
+		-> std::string_view;
 
 	// If true, this option is set to its default value.
-	auto is_default(this option const &self) noexcept -> bool;
+	[[nodiscard]] auto is_default(this option const &) noexcept
+		-> bool;
 
-	// Get or set this option as a string.
-	auto string(this option const &self) -> std::string;
-	auto string(this option &self, std::string_view value) -> void;
+	/*
+	 * Get or set this option as a string.  The specific conversion
+	 * method depends on the derived option type.
+	 */
+	[[nodiscard]] auto string(this option const &) -> std::string;
+	[[nodiscard]] auto string(this option &, std::string_view value)
+		-> std::expected<void, error>;
 
 	/*
 	 * Return this object as a UCL object.  This is used when writing the
 	 * configuration file.
 	 */
-	virtual auto to_ucl() const -> ucl::object = 0;
+	[[nodiscard]] auto ucl(this option const &)
+		-> std::expected<ucl::object, error>;
 
 	/*
 	 * Set this object from a UCL object.  This is used when reading the
 	 * configuration file.
 	 */
-	virtual auto from_ucl(ucl::object const &) -> void = 0;
+	[[nodiscard]] auto ucl(this option &, ucl::object const &)
+		-> std::expected<void, error>;
 
 	// Not copyable or movable.
 	option(option const &) = delete;
@@ -52,18 +73,28 @@ export struct option
 protected:
 	option(std::string_view name, std::string_view description);
 
-	auto is_default(bool b) -> void;
+	auto is_default(this option &, bool) -> void;
 
 	/*
 	 * Get or set this option as a string.
 	 */
-	virtual auto get_string() const -> std::string = 0;
-	virtual auto set_string(std::string_view) -> void = 0;
+	virtual auto get_string() const
+		-> std::string = 0;
+	virtual auto set_string(std::string_view)
+		-> std::expected<void, error> = 0;
+
+	/*
+	 * Get or set this option as a UCL object.
+	 */
+	virtual auto get_ucl() const
+		-> std::expected<ucl::object, error> = 0;
+	virtual auto set_ucl(ucl::object const &)
+		-> std::expected<void, error> = 0;
 
 private:
-	std::string _name;
-	std::string _description;
-	bool _is_default = true;
+	std::string	m_name;
+	std::string	m_description;
+	bool		m_is_default = true;
 };
 
 /*

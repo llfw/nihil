@@ -9,51 +9,50 @@ module;
  */
 
 #include <coroutine>
+#include <expected>
 #include <string>
 #include <map>
 
 export module nihil.config:store;
 
 import nihil;
-import :error;
 import :option;
 
 namespace nihil::config {
-
-// Exception thrown on an attempt to fetch an undefined option.
-export struct unknown_option final : error {
-	unknown_option(std::string_view option_name);
-	auto option_name(this unknown_option const &self) -> std::string_view;
-
-private:
-	std::string _option_name;
-};
 
 struct store final {
 	/*
 	 * Get the global config store.
 	 */
-	static auto get() -> store &;
+	[[nodiscard]] static auto get() -> store &;
 
 	/*
 	 * Register a new value with the config store.
 	 */
-	auto register_option(this store &self, option *object) -> void;
+	[[nodiscard]] auto register_option(this store &, option *object)
+		-> std::expected<void, error>;
 
 	/*
 	 * Remove a value from the config store.
 	 */
-	auto unregister_option(this store &self, option *object) -> void;
+	[[nodiscard]] auto unregister_option(this store &, option *object)
+		-> std::expected<void, error>;
 
 	/*
 	 * Fetch an existing value in the config store.
 	 */
-	auto fetch(this store const &self, std::string_view name) -> option &;
+	[[nodiscard]] auto fetch(this store const &, std::string_view name)
+		-> std::expected<option const *, error>;
+	[[nodiscard]] auto fetch(this store &, std::string_view name)
+		-> std::expected<option *, error>;
 
 	/*
 	 * Fetch all values in the configuration store.
 	 */
-	auto all(this store const &self) -> nihil::generator<option const &>;
+	[[nodiscard]] auto all(this store const &self)
+		-> nihil::generator<option const *>;
+	[[nodiscard]] auto all(this store &self)
+		-> nihil::generator<option *>;
 
 	// Not movable or copyable.
 	store(store const &) = delete;
@@ -62,19 +61,15 @@ struct store final {
 	store& operator=(store &&) = delete;
 
 private:
-	/*
-	 * The global configuration store, created by init() and accessed via
-	 * get().
-	 */
-	inline static store *instance = nullptr;
+	store();
 
-	std::map<std::string_view, option *> options;
-	store() = default;
+	std::map<std::string_view, option *> m_options;
 };
 
 /*
  * The public API.
  */
-export auto get_option(std::string_view option_name) -> option &;
+export auto get_option(std::string_view option_name)
+	-> std::expected<option *, error>;
 
 } // namespace nihil::config

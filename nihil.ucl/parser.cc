@@ -4,6 +4,7 @@
 
 module;
 
+#include <expected>
 #include <functional>
 #include <string>
 
@@ -11,15 +12,23 @@ module;
 
 module nihil.ucl;
 
+import nihil;
+
 namespace nihil::ucl {
 
-parse_error::parse_error(std::string what)
-	: error(std::move(what))
+auto make_parser(int flags) -> std::expected<parser, nihil::error>
 {
+	auto *p = ::ucl_parser_new(flags);
+	if (p != nullptr)
+		return p;
+
+	// TODO: Is there a way to get the actual error here?
+	return std::unexpected(nihil::error("failed to create parser"));
 }
 
-auto macro_handler::handle(unsigned char const *data, std::size_t len, void *ud)
--> bool
+auto macro_handler::handle(unsigned char const *data,
+			   std::size_t len, void *ud)
+	-> bool
 {
 	auto handler = static_cast<macro_handler *>(ud);
 	auto string = std::string_view(
@@ -28,48 +37,66 @@ auto macro_handler::handle(unsigned char const *data, std::size_t len, void *ud)
 	return handler->callback(string);
 }
 
-parser::parser(int flags)
-{
-	if ((_parser = ::ucl_parser_new(flags)) != nullptr)
-		return;
-
-	throw error("failed to create UCL parser");
-}
-
-parser::parser()
-	: parser(0)
+parser::parser(::ucl_parser *uclp)
+	: m_parser(uclp)
 {
 }
 
 parser::~parser()
 {
-	if (_parser)
-		::ucl_parser_free(_parser);
+	if (m_parser)
+		::ucl_parser_free(m_parser);
+}
+
+parser::parser(parser &&other) noexcept
+	: m_parser(std::exchange(other.m_parser, nullptr))
+	, m_macros(std::move(other.m_macros))
+{
+}
+
+auto parser::operator=(this parser &self, parser &&other) noexcept
+	-> parser &
+{
+	if (&self != &other) {
+		if (self.m_parser)
+			::ucl_parser_free(self.m_parser);
+
+		self.m_parser = std::exchange(other.m_parser, nullptr);
+		self.m_macros = std::move(other.m_macros);
+	}
+
+	return self;
 }
 
 auto parser::register_value(
 	this parser &self,
 	std::string_view variable,
 	std::string_view value)
--> void
+	-> void
 {
 	::ucl_parser_register_variable(
-		self._parser,
+		self.get_parser(),
 		std::string(variable).c_str(),
 		std::string(value).c_str());
 }
 
 auto parser::top(this parser &self) -> map<object>
 {
-	if (self._parser == nullptr)
-		throw error("attempt to call top() on an empty parser");
+	auto obj = ::ucl_parser_get_object(self.get_parser());
+	if (obj != nullptr)
+		// ucl_parser_get_object() refs the object for us.
+		return {noref, obj};
 
-	auto obj = ::ucl_parser_get_object(self._parser);
-	if (obj == nullptr)
-		throw error("attempt to call top() on an empty parser");
+	throw std::logic_error(
+		"attempt to call top() on an invalid ucl::parser");
+}
 
-	// ucl_parser_get_objects() refs the object for us.
-	return {noref, obj};
+auto parser::get_parser(this parser &self) -> ::ucl_parser *
+{
+	if (self.m_parser == nullptr)
+		throw std::logic_error("attempt to fetch a null ucl::parser");
+	
+	return self.m_parser;
 }
 
 } // namespace nihil::ucl

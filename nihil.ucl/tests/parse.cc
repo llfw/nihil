@@ -15,13 +15,18 @@ TEST_CASE("ucl parse: iterate array", "[ucl]")
 	using namespace std::literals;
 	using namespace nihil::ucl;
 
-	auto obj = parse("value = [1, 42, 666];"sv);
+	auto err = parse("value = [1, 42, 666];"sv);
+	REQUIRE(err);
+
+	auto obj = *err;
 
 	auto arr = obj["value"];
 	REQUIRE(arr.key() == "value");
 
-	auto vec = std::vector(std::from_range,
-			       object_cast<array<integer>>(arr));
+	auto ints = object_cast<array<integer>>(arr);
+	REQUIRE(ints);
+
+	auto vec = std::vector(std::from_range, *ints);
 
 	REQUIRE(vec.size() == 3);
 	REQUIRE(vec[0] == 1);
@@ -36,8 +41,9 @@ TEST_CASE("ucl parse: iterate hash", "[ucl]")
 
 	auto input = "int = 42; bool = true; str = \"test\";"sv;
 	auto obj = parse(input);
+	REQUIRE(obj);
 
-	for (auto &&[key, value] : obj) {
+	for (auto &&[key, value] : *obj) {
 		REQUIRE(key == value.key());
 
 		if (key == "int")

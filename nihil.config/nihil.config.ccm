@@ -6,7 +6,6 @@ module;
 
 export module nihil.config;
 
-export import :error;
 export import :option;
 export import :read;
 export import :store;

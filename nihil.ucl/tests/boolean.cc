@@ -62,8 +62,11 @@ TEST_CASE("ucl: boolean: key()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto obj = parse("a_bool = true");
-	REQUIRE(object_cast<boolean>(obj["a_bool"]).key() == "a_bool");
+	auto err = parse("a_bool = true");
+	REQUIRE(err);
+
+	auto obj = *err;
+	REQUIRE(object_cast<boolean>(obj["a_bool"])->key() == "a_bool");
 
 	auto b = nihil::ucl::boolean(true);
 	REQUIRE(b.key() == "");
@@ -95,10 +98,14 @@ TEST_CASE("ucl: boolean: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto obj = nihil::ucl::parse("value = true"sv);
+	auto err = nihil::ucl::parse("value = true"sv);
+	REQUIRE(err);
+
+	auto obj = *err;
+
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE(object_cast<nihil::ucl::boolean>(v) == true);
+	REQUIRE(*object_cast<nihil::ucl::boolean>(v) == true);
 }
 
 TEST_CASE("ucl: boolean: emit", "[ucl]")
@@ -111,9 +118,10 @@ TEST_CASE("ucl: boolean: emit", "[ucl]")
 TEST_CASE("ucl: boolean: parse and emit", "[ucl]")
 {
 	auto ucl = nihil::ucl::parse("bool = true;");
+	REQUIRE(ucl);
 
 	auto output = std::string();
-	emit(ucl, nihil::ucl::emitter::configuration,
+	emit(*ucl, nihil::ucl::emitter::configuration,
 	     std::back_inserter(output));
 
 	REQUIRE(output == "bool = true;\n");

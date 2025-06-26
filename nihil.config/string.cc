@@ -4,11 +4,14 @@
 
 module;
 
+#include <coroutine>
+#include <expected>
 #include <format>
 #include <string>
 
 module nihil.config;
 
+import nihil;
 import nihil.ucl;
 
 namespace nihil::config {
@@ -18,40 +21,41 @@ string::string(
 	std::string_view name,
 	std::string_view description) noexcept
 	: option(name, description)
-	, _storage(storage)
+	, m_storage(storage)
 {
-	store::get().register_option(this);
 }
 
-string::~string()
-{
-	store::get().unregister_option(this);
-}
+string::~string() = default;
 
 auto string::get_string() const -> std::string
 {
-	return _storage;
+	return m_storage;
 }
 
-auto string::set_string(std::string_view new_value) -> void
+auto string::set_string(std::string_view new_value)
+	-> std::expected<void, error>
 {
-	_storage = new_value;
+	m_storage = new_value;
+	return {};
 }
 
-auto string::to_ucl() const -> ucl::object
+auto string::get_ucl() const -> std::expected<ucl::object, error>
 {
-	return ucl::string(_storage);
+	return ucl::string(m_storage);
 }
 
-auto string::from_ucl(ucl::object const &uclobj) -> void
+auto string::set_ucl(ucl::object const &uclobj) -> std::expected<void, error>
 {
-	try {
-		_storage = object_cast<ucl::string>(uclobj).value();
-		is_default(false);
-	} catch (ucl::type_mismatch const &exc) {
-		throw error(std::format("'{}': expected string, not {}",
-			    name(), str(exc.actual_type())));
-	}
+	auto obj = co_await object_cast<ucl::string>(uclobj)
+		.transform_error([&] (ucl::type_mismatch const &m) {
+			return error(std::format(
+				"'{}': expected string, not {}",
+				name(), str(m.actual_type())));
+		});
+
+	m_storage = obj.value();
+	is_default(false);
+	co_return {};
 }
 
 } // namespace nihil::config

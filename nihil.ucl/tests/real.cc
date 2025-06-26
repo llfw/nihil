@@ -31,7 +31,7 @@ TEST_CASE("ucl: real: invariants", "[ucl]")
 TEST_CASE("ucl: real: construct", "[ucl]")
 {
 	auto obj = nihil::ucl::real(42.1);
-	REQUIRE_THAT(object_cast<nihil::ucl::real>(obj).value(),
+	REQUIRE_THAT(object_cast<nihil::ucl::real>(obj)->value(),
 		     Catch::Matchers::WithinRel(42.1));
 }
 
@@ -80,19 +80,26 @@ TEST_CASE("ucl: real: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto obj = nihil::ucl::parse("value = 42.1"sv);
+	auto err = nihil::ucl::parse("value = 42.1"sv);
+	REQUIRE(err);
+
+	auto obj = *err;
+
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE_THAT(object_cast<nihil::ucl::real>(v).value(),
+	REQUIRE_THAT(object_cast<nihil::ucl::real>(v)->value(),
 		     Catch::Matchers::WithinRel(42.1));
 }
 
 TEST_CASE("ucl: real: emit", "[ucl]")
 {
-	auto ucl = nihil::ucl::parse("real = 42.2");
+	auto err = nihil::ucl::parse("real = 42.2");
+	REQUIRE(err);
+
+	auto obj = *err;
 
 	auto output = std::string();
-	emit(ucl, nihil::ucl::emitter::configuration,
+	emit(obj, nihil::ucl::emitter::configuration,
 	     std::back_inserter(output));
 
 	REQUIRE(output == "real = 42.2;\n");

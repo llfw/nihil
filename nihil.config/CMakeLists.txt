@@ -5,7 +5,6 @@ target_link_libraries(nihil.config PUBLIC nihil nihil.ucl)
 target_sources(nihil.config
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.config.ccm
-	error.ccm
 	read.ccm
 	store.ccm
 	write.ccm

@@ -4,6 +4,8 @@
 
 module;
 
+#include <coroutine>
+#include <expected>
 #include <format>
 #include <functional>
 #include <memory>
@@ -20,13 +22,6 @@ import :object;
 import :map;
 
 namespace nihil::ucl {
-
-/*
- * Exception thrown when an issue occurs parsing UCL.
- */
-export struct parse_error : error {
-	parse_error(std::string what);
-};
 
 // UCL parser flags.
 export inline constexpr int parser_key_lower = UCL_PARSER_KEY_LOWERCASE;
@@ -49,16 +44,23 @@ struct macro_handler {
 
 /*
  * A UCL parser.  This wraps the C ucl_parser API.
+ *
+ * parser itself is not exported; use make_parser() to create one.
  */
-export struct parser {
-	// Create a new parser with the given flags.
-	parser(int flags);
-
-	// Create a new parser with the default flags.
-	parser();
+struct parser {
+	// Create a parser from a UCL parser.
+	parser(::ucl_parser *);
 
 	// Destroy our parser when we're destroyed.
 	~parser();
+
+	// Not copyable.
+	parser(parser const &) = delete;
+	auto operator=(this parser &, parser const &) -> parser & = delete;
+
+	// Movable.
+	parser(parser &&) noexcept;
+	auto operator=(this parser &, parser &&) noexcept -> parser &;
 
 	// Add a parser macro.  Unlike ucl_parser_register_macro, this doesn't
 	// take a userdata parameter; it's assumed the user will use lambda
@@ -66,71 +68,94 @@ export struct parser {
 	template<std::invocable<std::string_view> F>
 	auto register_macro(this parser &self,
 			    std::string_view name,
-			    F &&func) -> void
+			    F &&func)
+		-> void
 	requires (std::same_as<bool, std::invoke_result<F>>)
 	{
 		auto handler = std::make_unique<macro_handler>(
 					std::move(func));
 
 		auto cname = std::string(name);
-		::ucl_parser_register_macro(self._parser, cname.c_str(),
-					    &macro_handler::handle,
-					    handler.get());
+		::ucl_parser_register_macro(
+			self.get_parser(), cname.c_str(),
+			&macro_handler::handle, handler.get());
 
-		self._macros.emplace_back(std::move(handler));
+		self.m_macros.emplace_back(std::move(handler));
 	}
 
 	// Add a parser variable.
 	auto register_value(this parser &self,
 			    std::string_view variable,
-			    std::string_view value) -> void;
+			    std::string_view value)
+		-> void;
 
 	// Add data to the parser.
-	auto add(this parser &self,
-		 std::ranges::contiguous_range auto &&data)
-	-> void
+	[[nodiscard]] auto add(this parser &self,
+			       std::ranges::contiguous_range auto &&data)
+		-> std::expected<void, nihil::error>
 	// Only bytes (chars) are permitted.
 	requires(sizeof(std::ranges::range_value_t<decltype(data)>) == 1)
 	{
-		// UCL accepts unsigned chars, but this is quite unhelpful
-		// when reading from files or strings.
+		auto *p = self.get_parser();
 		auto dptr = reinterpret_cast<unsigned char const *>(
 					std::ranges::data(data));
 
-		auto ret = ::ucl_parser_add_chunk(self._parser, dptr,
-						  std::ranges::size(data));
-		if (ret == false)
-			throw parse_error(::ucl_parser_get_error(self._parser));
+		auto ret = ::ucl_parser_add_chunk(
+			p, dptr, std::ranges::size(data));
+
+		if (ret == true)
+			return {};
+
+		return std::unexpected(nihil::error(::ucl_parser_get_error(p)));
 	}
 
-	auto add(this parser &self, std::ranges::range auto &&data)
-	-> void
+	[[nodiscard]] auto add(this parser &self,
+			       std::ranges::range auto &&data)
+		-> std::expected<void, nihil::error>
 	requires (!std::ranges::contiguous_range<decltype(data)>)
 	{
 		auto cdata = std::vector<char>(
 				std::from_range,
 				std::forward<decltype(data)>(data));
-		return self.add(std::move(cdata));
+		co_await self.add(std::move(cdata));
+		co_return {};
 	}
 
 	// Return the top object of this parser.
-	auto top(this parser &self) -> map<object>;
+	[[nodiscard]] auto top(this parser &self) -> map<object>;
+
+	// Return the stored parser object.
+	[[nodiscard]] auto get_parser(this parser &self) -> ::ucl_parser *;
 
 private:
 	// The parser object.  Should never be null, unless we've been
 	// moved-from.
-	ucl_parser *_parser = nullptr;
+	ucl_parser *m_parser;
 
 	// Functions added by register_macro.  We have to store these as
 	// pointers because we pass the address to libucl.
-	std::vector<std::unique_ptr<macro_handler>> _macros;
+	std::vector<std::unique_ptr<macro_handler>> m_macros;
 };
 
+// Create a parser with the given flags.
+export [[nodiscard]] auto
+make_parser(int flags = 0) -> std::expected<parser, nihil::error>;
+
 // Utility function to parse something and return the top-level object.
-export auto parse(std::ranges::range auto &&data) -> map<object> {
-	auto p = parser();
-	p.add(std::forward<decltype(data)>(data));
-	return p.top();
+export [[nodiscard]] auto
+parse(int flags, std::ranges::range auto &&data)
+	-> std::expected<map<object>, nihil::error> 
+{
+	auto p = co_await make_parser(flags);
+	co_await p.add(std::forward<decltype(data)>(data));
+	co_return p.top();
+}
+
+export [[nodiscard]] auto
+parse(std::ranges::range auto &&data)
+	-> std::expected<map<object>, nihil::error> 
+{
+	co_return co_await parse(0, std::forward<decltype(data)>(data));
 }
 
 } // namespace nihil::ucl

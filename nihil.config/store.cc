@@ -5,6 +5,7 @@
 module;
 
 #include <coroutine>
+#include <expected>
 #include <filesystem>
 #include <format>
 #include <map>
@@ -15,75 +16,78 @@ import nihil;
 
 namespace nihil::config {
 
-unknown_option::unknown_option(std::string_view option_name)
-	: error(std::format("unknown configuration variable '{}'",
-			    option_name))
-	, _option_name(option_name)
-{
-}
+store::store() = default;
 
-auto unknown_option::option_name(this unknown_option const &self)
--> std::string_view
+auto store::get() -> store &
 {
-	return self._option_name;
-}
-
-auto store::get()
--> store&
-{
-	if (instance == nullptr)
-		instance = new store;
-
-	return *instance;
+	static auto instance = store();
+	return instance;
 }
 
 
 auto store::register_option(this store &self, option *object)
--> void
+	-> std::expected<void, error>
 {
-	auto [it, okay] = self.options.insert(
+	auto [it, okay] = self.m_options.insert(
 				std::pair{object->name(), object});
 
-	if (!okay)
-		throw error(std::format(
-			"INTERNAL ERROR: attempt to register "
-			"duplicate config value '{0}'",
-			object->name()));
+	if (okay)
+		return {};
+
+	return std::unexpected(error(std::format(
+			"attempt to register duplicate "
+			"configuration option '{0}'",
+			object->name())));
 }
 
 auto store::unregister_option(this store &self, option *object)
--> void
+	-> std::expected<void, error>
 {
-	auto it = self.options.find(object->name());
-	if (it == self.options.end())
-		throw error(std::format(
-			"INTERNAL ERROR: attempt to unregister "
-			"non-existent config value '{}'",
-			object->name()));
+	auto it = self.m_options.find(object->name());
+	if (it == self.m_options.end())
+		return std::unexpected(error(std::format(
+			"attempt to unregister non-existent "
+			"configuration option '{}'",
+			object->name())));
 
-	self.options.erase(it);
+	self.m_options.erase(it);
+	return {};
 }
 
 auto store::fetch(this store const &self, std::string_view name)
--> option &
+	-> std::expected<option const *, error>
 {
-	if (auto it = self.options.find(name); it != self.options.end())
-		return *it->second;
+	if (auto it = self.m_options.find(name); it != self.m_options.end())
+		return it->second;
 
-	throw unknown_option(name);
+	return std::unexpected(error(std::format(
+		"unknown configuration option '{}'",
+		name)));
 }
 
-auto store::all(this store const &self)
--> nihil::generator<option const &>
+auto store::fetch(this store &self, std::string_view name)
+	-> std::expected<option *, error>
 {
-	for (auto &&it : self.options)
-		co_yield *it.second;
+	auto opt = co_await static_cast<store const &>(self).fetch(name);
+	co_return const_cast<option *>(opt);
+}
+
+auto store::all(this store const &self) -> nihil::generator<option const *>
+{
+	for (auto &&it : self.m_options)
+		co_yield it.second;
+}
+
+auto store::all(this store &self) -> nihil::generator<option *>
+{
+	for (auto &&it : self.m_options)
+		co_yield it.second;
 }
 
 auto get_option(std::string_view option_name)
--> option &
+	-> std::expected<option *, error>
 {
-	return store::get().fetch(option_name);
+	co_return co_await store::get().fetch(option_name);
 }
 
 } // namespace nihil::config

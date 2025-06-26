@@ -63,8 +63,11 @@ TEST_CASE("ucl: integer: key()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto obj = parse("an_int = 42");
-	REQUIRE(object_cast<integer>(obj["an_int"]).key() == "an_int");
+	auto err = parse("an_int = 42");
+	REQUIRE(err);
+
+	auto obj = *err;
+	REQUIRE(object_cast<integer>(obj["an_int"])->key() == "an_int");
 
 	auto i = nihil::ucl::integer(42);
 	REQUIRE(i.key() == "");
@@ -96,7 +99,11 @@ TEST_CASE("ucl: integer: parse", "[ucl]")
 {
 	using namespace std::literals;
 
-	auto obj = nihil::ucl::parse("value = 42"sv);
+	auto err = nihil::ucl::parse("value = 42"sv);
+	REQUIRE(err);
+
+	auto obj = *err;
+
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
 	REQUIRE(object_cast<nihil::ucl::integer>(v) == 42);
@@ -112,9 +119,10 @@ TEST_CASE("ucl: integer: emit", "[ucl]")
 TEST_CASE("ucl: integer: parse and emit", "[ucl]")
 {
 	auto ucl = nihil::ucl::parse("int = 42;");
+	REQUIRE(ucl);
 
 	auto output = std::string();
-	emit(ucl, nihil::ucl::emitter::configuration,
+	emit(*ucl, nihil::ucl::emitter::configuration,
 	     std::back_inserter(output));
 
 	REQUIRE(output == "int = 42;\n");

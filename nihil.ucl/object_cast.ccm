@@ -4,12 +4,15 @@
 
 module;
 
+#include <coroutine>
 #include <cstdlib>
+#include <expected>
 
 #include <ucl.h>
 
 export module nihil.ucl:object_cast;
 
+import nihil;
 import :type;
 import :object;
 import :array;
@@ -25,21 +28,22 @@ namespace nihil::ucl {
 template<datatype To>
 struct convert_check
 {
-	auto check(::ucl_object_t const *from) -> void
+	[[nodiscard]] auto check(::ucl_object_t const *from)
+		-> std::expected<void, type_mismatch>
 	{
 		auto from_type = static_cast<object_type>(::ucl_object_type(from));
 		auto to_type = To::ucl_type;
 
 		// Converting from anything to object is permitted.
 		if (to_type == object_type::object)
-			return;
+			return {};
 
 		// Converting between two equal types is permitted.
 		if (from_type == to_type)
-			return;
+			return {};
 
 		// Otherwise, this is an error.
-		throw type_mismatch(to_type, from_type);
+		return std::unexpected(type_mismatch(to_type, from_type));
 	}
 };
 
@@ -47,7 +51,8 @@ struct convert_check
 template<typename T>
 struct convert_check<array<T>>
 {
-	auto check(::ucl_object_t const *from) -> void
+	[[nodiscard]] auto check(::ucl_object_t const *from)
+		-> std::expected<void, type_mismatch>
 	{
 		using To = array<T>;
 		auto from_type = static_cast<object_type>(::ucl_object_type(from));
@@ -55,13 +60,17 @@ struct convert_check<array<T>>
 
 		// If the source type is not an array, this is an error.
 		if (from_type != object_type::array)
-			throw type_mismatch(to_type, from_type);
+			co_return std::unexpected(
+				type_mismatch(to_type, from_type));
 
 		for (std::size_t i = 0, size = ::ucl_array_size(from);
 		     i < size; ++i) {
 			auto const *arr_obj = ::ucl_array_find_index(from, i);
-			convert_check<typename To::value_type>{}.check(arr_obj);
+			co_await convert_check<typename To::value_type>{}
+					.check(arr_obj);
 		}
+
+		co_return {};
 	}
 };
 
@@ -69,12 +78,12 @@ struct convert_check<array<T>>
  * Convert a UCL object to another type.
  */
 export template<datatype To>
-auto object_cast(object const &from) -> To
+auto object_cast(object const &from) -> std::expected<To, type_mismatch>
 {
 	auto uobj = from.get_ucl_object();
 
-	convert_check<To>{}.check(uobj);
-	return To(nihil::ucl::ref, uobj);
+	co_await convert_check<To>{}.check(uobj);
+	co_return To(nihil::ucl::ref, uobj);
 }
 
 } // namespace nihil::ucl

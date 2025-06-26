@@ -12,23 +12,25 @@ TEST_CASE("nihil.config: string option", "[nihil][nihil.config]")
 {
 	std::string storage;
 
-	REQUIRE_THROWS_AS(nihil::config::get_option("test_option"),
-			  nihil::config::unknown_option);
+	auto opt = nihil::config::get_option("test_option");
+	REQUIRE(!opt);
 
 	{
 		auto string_option = nihil::config::string(
 			storage, "test_option", "This is a test option");
 
-		auto &opt = nihil::config::get_option("test_option");
-		REQUIRE(opt.name() == "test_option");
-		REQUIRE(opt.description() == "This is a test option");
-		REQUIRE(opt.is_default() == true);
-		REQUIRE(opt.string() == "");
+		auto opt = nihil::config::get_option("test_option");
+		REQUIRE(opt);
 
-		opt.string("testing");
+		REQUIRE((*opt)->name() == "test_option");
+		REQUIRE((*opt)->description() == "This is a test option");
+		REQUIRE((*opt)->is_default() == true);
+		REQUIRE((*opt)->string() == "");
+
+		REQUIRE((*opt)->string("testing"));
 		REQUIRE(storage == "testing");
 	}
 
-	REQUIRE_THROWS_AS(nihil::config::get_option("test_option"),
-			  nihil::config::unknown_option);
+	opt = nihil::config::get_option("test_option");
+	REQUIRE(!opt);
 }
