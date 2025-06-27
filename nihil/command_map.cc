@@ -12,6 +12,8 @@ module;
 #include <string>
 #include <utility>
 
+#include <unistd.h>
+
 module nihil;
 
 /*
@@ -104,6 +106,17 @@ struct command_tree_node final {
 		self._value = std::move(value);
 	}
 
+	/*
+	 * Print this node's children in a form useful to humans.
+	 */
+	auto print_commands(this command_tree_node const &self,
+			    std::string_view prefix) -> void
+	{
+		for (auto &&[name, node] : self.children) {
+			std::print("  {} {}\n", prefix, name);
+		}
+	}
+
 private:
 	std::string _this_word;
 	std::optional<command> _value;
@@ -141,26 +154,57 @@ struct command_tree {
 	 * Find a node in the tree.  Unlike insert(), iteration stops when
 	 * we find any node with a value.
 	 */
-	auto find(this command_tree const &self,
-		  std::ranges::range auto &&path)
+	auto find(this command_tree const &self, int &argc, char **&argv)
 		-> std::optional<command>
 	{
 		auto *this_node = &self._root_node;
 
-		// Find the node for this key.
-		for (auto &&next : path) {
-			this_node = this_node->get_child(next);
+		// Assume the caller already stripped the program name from
+		// argv.  This is usually the case since they would have
+		// called getopt().
 
-			if (this_node == nullptr)
-				// The node doesn't exist.
+		// Store the command bits we got so far, so we can print them
+		// in the usage error if needed.
+		auto path = std::string();
+
+		while (argv[0] != nullptr) {
+			auto next = std::string_view(argv[0]);
+
+			auto *next_node = this_node->get_child(next);
+
+			if (next_node == nullptr) {
+				// The node doesn't exist, so this command is
+				// not valid.  Print a list of valid commands.
+				std::print(std::cerr,
+					   "{}: unknown command: {} {}\n",
+					   ::getprogname(), path, next);
+				std::print(std::cerr,
+					   "{}: expected one of:\n",
+					   ::getprogname());
+
+				this_node->print_commands(path);
 				return {};
+			}
+
+			this_node = next_node;
 
 			if (this_node->value())
 				// This node has a value, so return it.
 				return {this_node->value()};
+
+			if (!path.empty())
+				path += ' ';
+			path += next;
+			--argc;
+			++argv;
 		}
 
 		// We didn't find a value, so the key was incomplete.
+		std::print(std::cerr, "{}: {} command; expected:\n",
+			   ::getprogname(),
+			   path.empty() ? "missing" : "incomplete");
+		this_node->print_commands(path);
+
 		return {};
 	}
 
@@ -191,12 +235,28 @@ try {
 auto dispatch_command(int argc, char **argv) -> int
 {
 	auto &commands = get_commands();
-	auto node = commands.find(std::span(argv, argv + argc));
-	if (node)
-		return node->invoke(argc, argv);
 
-	std::print("unknown command\n");
-	return 1;
+	// The caller should have stripped argv[0] already.  find() will
+	// strip all the remaining elements except the last, which means
+	// argv[0] will be set to something reasonable for the next call
+	// to getopt().
+
+	auto node = commands.find(argc, argv);
+
+	if (!node)
+		// find() already printed the error message
+		return 1;
+
+	// Reset getopt here for the command to use.
+	optreset = 1;
+	optind = 1;
+
+	// Calling setprogname() makes error messages more relevant.
+	auto cprogname = std::format("{} {}", ::getprogname(),
+				     node->path());
+	::setprogname(cprogname.c_str());
+
+	return node->invoke(argc, argv);
 }
 
 void print_usage(std::string_view)
