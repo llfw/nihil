@@ -24,20 +24,21 @@ namespace nihil {
 export struct ctype_is final {
 	ctype_is(std::ctype_base::mask mask_,
 		 std::locale const &locale_ = std::locale())
-	    : mask(mask_)
-	    , locale(locale_)
+	    : m_mask(mask_)
+	    , m_locale(locale_)
 	{}
 
-	auto operator()(this ctype_is const &self, std::integral auto c)
+	[[nodiscard]] auto operator()(this ctype_is const &self,
+				      std::integral auto c)
 	{
 		using ctype = std::ctype<decltype(c)>;
-		auto &facet = std::use_facet<ctype>(self.locale);
-		return facet.is(self.mask, c);
+		auto &facet = std::use_facet<ctype>(self.m_locale);
+		return facet.is(self.m_mask, c);
 	}
 
 private:
-	std::ctype_base::mask mask;
-	std::locale locale;
+	std::ctype_base::mask	m_mask;
+	std::locale		m_locale;
 };
 
 // Predefined tests for the current global locale. 

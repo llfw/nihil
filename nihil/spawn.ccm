@@ -56,9 +56,17 @@ export struct fd_pipe final {
 
 	auto run_in_child(this fd_pipe &self, process &) -> void
 	{
-		std::ignore = self.m_parent_fd.close();
+		auto err = raw_dup(self.m_child_fd, self.m_fdno);
+		if (!err) {
+			std::print("dup: {}\n", err.error());
+			_exit(1);
+		}
 
-		raw_dup(self.m_child_fd, self.m_fdno);
+		/*
+		 * We don't care about errors from close() since the fd
+		 * is still closed.
+		 */
+		std::ignore = self.m_parent_fd.close();
 		std::ignore = self.m_child_fd.close();
 	}
 
@@ -67,7 +75,7 @@ export struct fd_pipe final {
 		std::ignore = self.m_child_fd.close();
 	}
 
-	auto parent_fd(this fd_pipe &self) -> fd &
+	[[nodiscard]] auto parent_fd(this fd_pipe &self) -> fd &
 	{
 		return self.m_parent_fd;
 	}
@@ -103,7 +111,12 @@ export struct fd_file final {
 
 	auto run_in_child(this fd_file &self, process &) -> void
 	{
-		raw_dup(self.m_file_fd, self.m_fdno);
+		auto err = raw_dup(self.m_file_fd, self.m_fdno);
+		if (!err) {
+			std::print("dup: {}\n", err.error());
+			_exit(1);
+		}
+
 		std::ignore = self.m_file_fd.close();
 	}
 
@@ -221,7 +234,7 @@ spawn(executor auto &&executor, auto &&...actions)
 		// try to wait for ourselves, then run child handlers and
 		// exec the process.
 
-		std::move(proc).release();
+		std::ignore = std::move(proc).release();
 		(actions.run_in_child(proc), ...);
 
 		auto err = executor.exec();

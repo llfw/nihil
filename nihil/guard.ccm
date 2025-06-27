@@ -20,23 +20,23 @@ namespace nihil {
 export template<std::invocable F>
 struct guard final {
 	// Initialise the guard with a callable we will invoke later.
-	guard(F func) : _func(std::move(func)) {}
+	guard(F func) : m_func(std::move(func)) {}
 
 	/*
 	 * We are being destroyed, so call the callable.
 	 * If the callable throws, std::terminate() will be called.
 	 */
 	~guard() {
-		if (_func)
-			std::invoke(*_func);
+		if (m_func)
+			std::invoke(*m_func);
 	}
 
 	// Release the guard.  This turns the destructor into a no-op.
 	void release() noexcept {
-		_func.reset();
+		m_func.reset();
 	}
 
-	// Not default-constructible or copyable.
+	// Not default-constructible, movable or copyable.
 	guard() = delete;
 	guard(guard const &) = delete;
 	guard(guard &&) noexcept = delete;
@@ -45,7 +45,7 @@ struct guard final {
 
 private:
 	// The callable to be invoked when we are destroyed.
-	std::optional<F> _func;
+	std::optional<F> m_func;
 };
 
 } // namespace nihil

@@ -19,7 +19,7 @@ namespace nihil {
  * Remove leading whitespace from a string.
  */
 
-export template<typename Char>
+export template<typename Char> [[nodiscard]]
 auto skipws(std::basic_string_view<Char> text,
 	    std::locale const &locale = std::locale())
 	-> std::basic_string_view<Char>

@@ -30,12 +30,13 @@ struct command_base {
 	{
 	}
 
-	auto path(this command_base const &self) -> std::string_view
+	[[nodiscard]] auto path(this command_base const &self)
+		-> std::string_view
 	{
 		return self._path;
 	}
 
-	virtual auto invoke(int argc, char **argv) -> int = 0;
+	[[nodiscard]] virtual auto invoke(int argc, char **argv) -> int = 0;
 
 private:
 	std::string_view _path;
@@ -59,7 +60,7 @@ struct command final : command_base {
 		register_command(path, this);
 	}
 
-	auto invoke(int argc, char **argv) -> int override
+	[[nodiscard]] auto invoke(int argc, char **argv) -> int final
 	{
 		return std::invoke(_func, argc, argv);
 	}
@@ -69,7 +70,7 @@ private:
 };
 
 // The public API.
-export auto dispatch_command(int argc, char **argv) -> int;
-export void print_usage(std::string_view prefix);
+export [[nodiscard]] auto dispatch_command(int argc, char **argv) -> int;
+export auto print_usage(std::string_view prefix) -> void;
 
 } // namespace nihil

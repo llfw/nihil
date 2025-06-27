@@ -25,6 +25,8 @@ TEST_CASE("command_map: basic", "[command_map]")
 		"cmd", "sub1", nullptr
 	};
 	auto argv = const_cast<char **>(args.data());
-	nihil::dispatch_command(args.size() - 1, argv);
+
+	int ret = nihil::dispatch_command(args.size() - 1, argv);
+	REQUIRE(ret == 0);
 	REQUIRE(cmd_sub1_called == true);
 }

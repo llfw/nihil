@@ -11,12 +11,12 @@ export module nihil.config:write;
 
 import nihil;
 
-export namespace nihil::config {
+namespace nihil::config {
 
 /*
  * Write all config values (except defaults) to disk.
  */
-auto write_to(std::filesystem::path const &filename) ->
+export [[nodiscard]] auto write_to(std::filesystem::path const &filename) ->
 	std::expected<void, error>;
 
 };

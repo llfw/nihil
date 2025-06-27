@@ -23,14 +23,16 @@ namespace nihil {
 export struct wait_result final {
 	// Return true if the process exited normally with an exit code of
 	// zero, otherwise false.
-	auto okay(this wait_result const &self) -> bool;
-	explicit operator bool(this wait_result const &self);
+	[[nodiscard]] auto okay(this wait_result const &self) -> bool;
+	[[nodiscard]] explicit operator bool(this wait_result const &self);
 
 	// Return the exit status, if any.
-	auto status(this wait_result const &self) -> std::optional<int>;
+	[[nodiscard]] auto status(this wait_result const &self)
+		-> std::optional<int>;
 
 	// Return the exit signal, if any.
-	auto signal(this wait_result const &self) -> std::optional<int>;
+	[[nodiscard]] auto signal(this wait_result const &self)
+		-> std::optional<int>;
 
 private:
 	friend struct process;
@@ -66,20 +68,21 @@ export struct process final {
 	auto operator=(this process &, process const &) -> process & = delete;
 
 	// Get the child's process id.
-	auto pid(this process const &self) noexcept -> ::pid_t;
+	[[nodiscard]] auto pid(this process const &self) noexcept -> ::pid_t;
 
 	/*
 	 * Wait for this process to exit (by calling waitpid()) and return
 	 * its exit status.  This destroys the process state, leaving this
 	 * object in a moved-from state.
 	 */
-	auto wait(this process &&self) -> std::expected<wait_result, error>;
+	[[nodiscard]] auto wait(this process &&self)
+		-> std::expected<wait_result, error>;
 
 	/*
 	 * Release this process so we won't try to wait for it when
 	 * destroying this object.
 	 */
-	auto release(this process &&self) -> ::pid_t;
+	[[nodiscard]] auto release(this process &&self) -> ::pid_t;
 
 private:
 	::pid_t m_pid;

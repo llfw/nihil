@@ -11,13 +11,14 @@ export module nihil:rename_file;
 
 import :error;
 
-export namespace nihil {
+namespace nihil {
 
 /*
  * Rename a file (or directory).
  */
-auto rename_file(std::filesystem::path const &oldp,
-		 std::filesystem::path const &newp)
+export [[nodiscard]] auto
+rename_file(std::filesystem::path const &oldp,
+	    std::filesystem::path const &newp)
 	-> std::expected<void, error>;
 
 } // namespace nihil

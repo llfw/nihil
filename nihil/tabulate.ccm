@@ -50,43 +50,70 @@ export struct table_spec_error : error {
  */
 template<typename Char>
 struct field_spec {
-	std::basic_string_view<Char> name;
-	std::size_t width = 0;
-	enum { left, right } align = left;
+	enum align_t { left, right };
+
+	// Get the name of this field.
+	auto name(this field_spec const &self)
+		-> std::basic_string_view<Char>
+	{
+		return self.m_name;
+	}
+
+	// Set the name of this field.
+	auto name(this field_spec &self,
+		  std::basic_string_view<Char> new_name)
+		-> void
+	{
+		self.m_name = new_name;
+	}
+
+	// Set this field's alignment.
+	auto align(this field_spec &self, align_t new_align) -> void
+	{
+		self.m_align = new_align;
+	}
 
 	// Ensure the length of this field is at least the given width.
-	auto ensure_width(std::size_t newwidth) -> void
+	auto ensure_width(this field_spec &self, std::size_t newwidth)
+		-> void
 	{
-		width = std::max(width, newwidth);
+		self.m_width = std::max(self.m_width, newwidth);
 	}
 
 	// Format an object to a string based on our field spec.
-	auto format(auto &&obj) const -> std::basic_string<Char>
+	[[nodiscard]] auto format(this field_spec const &, auto &&obj)
+		-> std::basic_string<Char>
 	{
-		std::basic_string<Char> format_string{'{', '}'};
+		auto format_string = std::basic_string<Char>{'{', '}'};
 		return std::format(std::runtime_format(format_string), obj);
 	}
 
 	// Print a column value to an output iterator according to our field
 	// spec.  If is_last is true, this is the last field on the line, so
 	// we won't output any trailling padding.
-	auto print(std::basic_string_view<Char> value,
+	auto print(this field_spec const &self,
+		   std::basic_string_view<Char> value,
 		   std::output_iterator<Char> auto &out,
 		   bool is_last)
-		const
+		-> void
 	{
-		auto padding = width - value.size();
+		auto padding = self.m_width - value.size();
 
-		if (align == right)
+		if (self.m_align == right)
 			for (std::size_t i = 0; i < padding; ++i)
 				*out++ = ' ';
 
 		std::ranges::copy(value, out);
 
-		if (!is_last && align == left)
+		if (!is_last && self.m_align == left)
 			for (std::size_t i = 0; i < padding; ++i)
 				*out++ = ' ';
 	}
+
+private:
+	std::basic_string_view<Char>	m_name;
+	std::size_t			m_width = 0;
+	align_t				m_align = left;
 };
 
 /*
@@ -95,34 +122,36 @@ struct field_spec {
 template<typename Char>
 struct table_spec {
 	// Add a new field spec to this table.
-	auto add(field_spec<Char> field)
+	auto add(this table_spec &self, field_spec<Char> field) -> void
 	{
-		_fields.emplace_back(std::move(field));
+		self.m_fields.emplace_back(std::move(field));
 	}
 
 	// Return the field spec for a given field.  If the field doesn't
 	// exist, this field and any intermediate fields will be created.
-	auto field(std::size_t fieldnr) -> field_spec<Char>&
+	[[nodiscard]] auto field(this table_spec &self, std::size_t fieldnr)
+		-> field_spec<Char> &
 	{
-		if (_fields.size() < fieldnr + 1)
-			_fields.resize(fieldnr + 1);
-		return _fields.at(fieldnr);
+		if (fieldnr >= self.m_fields.size())
+			self.m_fields.resize(fieldnr + 1);
+		return self.m_fields.at(fieldnr);
 	}
 
 	// The number of columns in this table.
-	auto columns() const -> std::size_t
+	[[nodiscard]] auto columns(this table_spec const &self) -> std::size_t
 	{
-		return _fields.size();
+		return self.m_fields.size();
 	}
 
 	// Return all the fields in this table.
-	auto fields() const
+	[[nodiscard]] auto fields(this table_spec const &self)
+		    -> std::vector<field_spec<Char>> const &
 	{
-		return _fields;
+		return self.m_fields;
 	}
 
 private:
-	std::vector<field_spec<Char>> _fields;
+	std::vector<field_spec<Char>> m_fields;
 };
 
 // Parse the field flags, e.g. '<'.
@@ -134,10 +163,10 @@ auto parse_field_flags(field_spec<Char> &field, Iterator &pos, Sentinel end)
 	while (pos < end) {
 		switch (*pos) {
 		case '<':
-			field.align = field_spec<Char>::left;
+			field.align(field_spec<Char>::left);
 			break;
 		case '>':
-			field.align = field_spec<Char>::right;
+			field.align(field_spec<Char>::right);
 			break;
 		case ':':
 			++pos;
@@ -158,7 +187,7 @@ auto parse_field_flags(field_spec<Char> &field, Iterator &pos, Sentinel end)
 // Parse a complete field spec, e.g. "{<:NAME}".
 template<typename Char,
 	std::input_iterator Iterator, std::sentinel_for<Iterator> Sentinel>
-auto parse_field(Iterator &pos, Sentinel end)
+[[nodiscard]] auto parse_field(Iterator &pos, Sentinel end)
 	-> field_spec<Char>
 {
 	auto field = field_spec<Char>{};
@@ -180,17 +209,18 @@ auto parse_field(Iterator &pos, Sentinel end)
 	if (brace == end)
 		throw table_spec_error("Invalid table spec: expected '}'");
 
-	field.name = std::basic_string_view<Char>(pos, brace);
+	field.name(std::basic_string_view<Char>(pos, brace));
 	pos = std::next(brace);
 
 	// The field must be at least as wide as its header.
-	field.width = field.name.size();
+	field.ensure_width(field.name().size());
 
 	return field;
 }
 
 template<typename Char>
-auto parse_table_spec(std::basic_string_view<Char> spec) -> table_spec<Char>
+[[nodiscard]] auto parse_table_spec(std::basic_string_view<Char> spec)
+	-> table_spec<Char>
 {
 	auto table = table_spec<Char>();
 
@@ -215,8 +245,8 @@ export template<typename Char,
 		std::ranges::range Range,
 		std::output_iterator<Char> Iterator>
 auto basic_tabulate(std::basic_string_view<Char> table_spec,
-			   Range &&range,
-			   Iterator &&out)
+		    Range &&range,
+		    Iterator &&out)
 	-> void
 {
 	// Parse the table spec.
@@ -243,7 +273,7 @@ auto basic_tabulate(std::basic_string_view<Char> table_spec,
 
 	// Add the header row.
 	for (auto &&field : table.fields())
-		data.at(0).emplace_back(std::from_range, field.name);
+		data.at(0).emplace_back(std::from_range, field.name());
 
 	// Print the values.
 	for (auto &&row : data) {

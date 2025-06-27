@@ -18,7 +18,7 @@ namespace nihil {
  * Find a variable by the given name in the environment by calling getenv_r().
  */
 
-export auto getenv(std::string_view varname)
+export [[nodiscard]] auto getenv(std::string_view varname)
 	-> std::expected<std::string, error>;
 
 } // namespace nihil

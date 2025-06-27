@@ -121,7 +121,7 @@ export struct error : std::exception {
 	[[nodiscard]] auto condition(this error const &)
 		-> std::optional<std::error_condition>;
 
-	auto what() const noexcept -> char const * final;
+	[[nodiscard]] auto what() const noexcept -> char const * final;
 
 private:
 	friend auto operator==(error const &, error const &) -> bool;

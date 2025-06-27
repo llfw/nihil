@@ -78,17 +78,17 @@ protected:
 	/*
 	 * Get or set this option as a string.
 	 */
-	virtual auto get_string() const
+	[[nodiscard]] virtual auto get_string() const
 		-> std::string = 0;
-	virtual auto set_string(std::string_view)
+	[[nodiscard]] virtual auto set_string(std::string_view)
 		-> std::expected<void, error> = 0;
 
 	/*
 	 * Get or set this option as a UCL object.
 	 */
-	virtual auto get_ucl() const
+	[[nodiscard]] virtual auto get_ucl() const
 		-> std::expected<ucl::object, error> = 0;
-	virtual auto set_ucl(ucl::object const &)
+	[[nodiscard]] virtual auto set_ucl(ucl::object const &)
 		-> std::expected<void, error> = 0;
 
 private:

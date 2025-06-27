@@ -22,7 +22,7 @@ namespace nihil {
  * calling this repeatedly will return each word from the string.
  */
 
-export template<typename Char>
+export template<typename Char> [[nodiscard]]
 auto next_word(std::basic_string_view<Char> text,
 	       std::locale const &locale = std::locale())
 	-> std::pair<std::basic_string_view<Char>,

@@ -10,10 +10,10 @@ export module nihil:match;
 
 namespace nihil {
 
-template<class... Ts>
+export template<class... Ts>
 struct match : Ts... { using Ts::operator()...; };
 
-template<typename... Ts, typename... Fs>
+export template<typename... Ts, typename... Fs>
 constexpr decltype(auto) operator| (std::variant<Ts...> const &v,
 				    match<Fs...> const &match)
 {
