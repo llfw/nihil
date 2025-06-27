@@ -12,29 +12,31 @@ module;
 
 module nihil.ucl;
 
+import nihil;
+
 namespace nihil::ucl {
 
 object::object(ref_t, ::ucl_object_t const *object)
-	: _object(::ucl_object_ref(object))
+	: m_object(::ucl_object_ref(object))
 {
 }
 
 object::object(noref_t, ::ucl_object_t *object)
-	: _object(object)
+	: m_object(object)
 {
 }
 
 object::~object() {
-	if (_object != nullptr)
-		::ucl_object_unref(_object);
+	if (m_object != nullptr)
+		::ucl_object_unref(m_object);
 }
 
 object::object(object &&other) noexcept
-	: _object(std::exchange(other._object, nullptr))
+	: m_object(std::exchange(other.m_object, nullptr))
 {}
 
 object::object(object const &other) noexcept
-	: _object(nullptr)
+	: m_object(nullptr)
 {
 	*this = other;
 }
@@ -43,7 +45,7 @@ auto object::operator=(this object &self, object &&other) noexcept
 	-> object &
 {
 	if (&self != &other)
-		self._object = std::exchange(other._object, nullptr);
+		self.m_object = std::exchange(other.m_object, nullptr);
 	return self;
 }
 
@@ -53,11 +55,11 @@ auto object::operator=(this object &self, object const &other)
 	if (&self != &other) {
 		auto *new_uobj = ::ucl_object_copy(other.get_ucl_object());
 		if (new_uobj == nullptr)
-			throw error("failed to copy UCL object");
+			throw std::runtime_error("failed to copy UCL object");
 
-		if (self._object != nullptr)
-			::ucl_object_unref(self._object);
-		self._object = new_uobj;
+		if (self.m_object != nullptr)
+			::ucl_object_unref(self.m_object);
+		self.m_object = new_uobj;
 	}
 
 	return self;
@@ -76,16 +78,16 @@ auto object::type(this object const &self) -> object_type
 
 auto object::get_ucl_object(this object &self) -> ::ucl_object_t *
 {
-	if (self._object == nullptr)
-		throw error("attempt to access empty UCL object");
-	return self._object;
+	if (self.m_object == nullptr)
+		throw std::logic_error("attempt to access empty UCL object");
+	return self.m_object;
 }
 
 auto object::get_ucl_object(this object const &self) -> ::ucl_object_t const *
 {
-	if (self._object == nullptr)
-		throw error("attempt to access empty UCL object");
-	return self._object;
+	if (self.m_object == nullptr)
+		throw std::logic_error("attempt to access empty UCL object");
+	return self.m_object;
 }
 
 // Return the key of this object.
@@ -99,7 +101,7 @@ auto object::key(this object const &self) -> std::string_view
 
 auto swap(object &a, object &b) -> void
 {
-	std::swap(a._object, b._object);
+	std::swap(a.m_object, b.m_object);
 }
 
 auto operator<=>(object const &lhs, object const &rhs) -> std::strong_ordering

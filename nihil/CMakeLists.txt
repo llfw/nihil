@@ -14,7 +14,6 @@ target_sources(nihil
 	find_in_path.ccm
 	format_filesystem.ccm
 	generator.ccm
-	generic_error.ccm
 	getenv.ccm
 	guard.ccm
 	match.ccm

@@ -4,20 +4,19 @@
 
 module;
 
-#include <format>
-#include <utility>
+#include <string>
 
 export module nihil:usage_error;
 
-import :generic_error;
+import :error;
 
 namespace nihil {
 
 /*
  * Exception thrown to indicate invalid command-line arguments.
  */
-export struct usage_error : generic_error {
-	usage_error(std::string what) : generic_error(std::move(what)) {}
+export struct usage_error : error {
+	usage_error(std::string_view what) : error(what) {}
 };
 
 } // namespace nihil

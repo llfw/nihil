@@ -7,26 +7,28 @@ module;
 #include <cassert>
 #include <compare>
 #include <cstdlib>
+#include <expected>
 #include <string>
+#include <system_error>
 
 #include <ucl.h>
 
 module nihil.ucl;
 
+import nihil;
+
 namespace nihil::ucl {
 
-real::real(ref_t, ::ucl_object_t const *uobj)
-	: object(nihil::ucl::ref, uobj)
+auto make_real(real::contained_type value)
+	-> std::expected<real, error>
 {
-	if (type() != ucl_type)
-		throw type_mismatch(ucl_type, type());
-}
+	auto *uobj = ::ucl_object_fromdouble(value);
+	if (uobj == nullptr)
+		return std::unexpected(error(
+			errc::failed_to_create_object,
+			error(std::errc(errno))));
 
-real::real(noref_t, ::ucl_object_t *uobj)
-	: object(noref, uobj)
-{
-	if (type() != ucl_type)
-		throw type_mismatch(ucl_type, type());
+	return real(noref, uobj);
 }
 
 real::real()
@@ -35,10 +37,36 @@ real::real()
 }
 
 real::real(contained_type value)
-	: object(noref, ::ucl_object_fromdouble(value))
+	: real(noref, [&] {
+		auto *uobj = ::ucl_object_fromdouble(value);
+		if (uobj == nullptr)
+			throw std::system_error(
+				std::make_error_code(std::errc(errno)));
+		return uobj;
+	}())
 {
-	if (_object == nullptr)
-		throw error("failed to create UCL object");
+}
+
+real::real(ref_t, ::ucl_object_t const *uobj)
+	: object(nihil::ucl::ref, [&] {
+		auto actual_type = static_cast<object_type>(
+					::ucl_object_type(uobj));
+		if (actual_type != real::ucl_type)
+			throw type_mismatch(real::ucl_type, actual_type);
+		return uobj;
+	}())
+{
+}
+
+real::real(noref_t, ::ucl_object_t *uobj)
+	: object(nihil::ucl::noref, [&] {
+		auto actual_type = static_cast<object_type>(
+					::ucl_object_type(uobj));
+		if (actual_type != real::ucl_type)
+			throw type_mismatch(real::ucl_type, actual_type);
+		return uobj;
+	}())
+{
 }
 
 auto real::value(this real const &self) -> contained_type
@@ -52,26 +80,23 @@ auto real::value(this real const &self) -> contained_type
 	std::abort();
 }
 
-auto operator== (real const &a, real const &b)
--> bool
+auto operator== (real const &a, real const &b) -> bool
 {
 	return a.value() == b.value();
 }
 
-auto operator<=> (real const &a, real const &b)
--> std::partial_ordering
+auto operator<=> (real const &a, real const &b) -> std::partial_ordering
 {
 	return a.value() <=> b.value();
 }
 
-auto operator== (real const &a, real::contained_type b)
--> bool
+auto operator== (real const &a, real::contained_type b) -> bool
 {
 	return a.value() == b;
 }
 
 auto operator<=> (real const &a, real::contained_type b)
--> std::partial_ordering
+	-> std::partial_ordering
 {
 	return a.value() <=> b;
 }

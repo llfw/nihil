@@ -14,9 +14,24 @@ module nihil;
 
 namespace nihil {
 
+auto to_string(error const &self) -> std::string
+{
+	auto ret = self.str();
+
+	auto cause = self.cause();
+	while (cause) {
+		ret += ": " + cause->str();
+		cause = cause->cause();
+	}
+
+	return ret;
+}
+
 error::error()
 {
 }
+
+error::~error() = default;
 
 error::error(std::string_view what, error cause)
 	: m_error(std::string(what))
@@ -55,10 +70,10 @@ error::error(error &&) noexcept = default;
 auto error::operator=(this error &, error const &) -> error & = default;
 auto error::operator=(this error &, error &&) noexcept -> error & = default;
 
-auto error::cause(this error const &self) -> std::optional<error>
+auto error::cause(this error const &self) -> std::shared_ptr<error>
 {
 	if (self.m_cause)
-		return *self.m_cause;
+		return self.m_cause;
 	return {};
 }
 
@@ -88,19 +103,6 @@ auto error::str(this error const &self) -> std::string
 	};
 }
 
-auto error::what(this error const &self) -> std::string
-{
-	auto ret = self.str();
-
-	auto cause = self.m_cause;
-	while (cause) {
-		ret += ": " + cause->str();
-		cause = cause->m_cause;
-	}
-
-	return ret;
-}
-
 auto error::code(this error const &self) -> std::optional<std::error_code>
 {
 	auto const *code = std::get_if<std::error_code>(&self.m_error);
@@ -116,6 +118,14 @@ auto error::condition(this error const &self)
 	if (condition)
 		return {*condition};
 	return {};
+}
+
+auto error::what() const noexcept -> char const *
+{
+	if (!m_what)
+		m_what = to_string(*this);
+
+	return m_what->c_str();
 }
 
 auto operator==(error const &lhs, error const &rhs) -> bool
@@ -141,7 +151,7 @@ auto operator==(error const &lhs, std::error_condition const &rhs) -> bool
 
 auto operator<<(std::ostream &strm, error const &e) -> std::ostream &
 {
-	return strm << e.what();
+	return strm << to_string(e);
 }
 
 } // namespace nihil

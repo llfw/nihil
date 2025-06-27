@@ -6,13 +6,14 @@ module;
 
 #include <concepts>
 #include <format>
+#include <stdexcept>
 #include <string>
 
 #include <ucl.h>
 
 export module nihil.ucl:type;
 
-import :error;
+import nihil;
 
 namespace nihil::ucl {
 
@@ -50,8 +51,8 @@ export struct type_mismatch : error {
 	auto actual_type(this type_mismatch const &self) -> object_type;
 	
 private:
-	object_type _expected_type;
-	object_type _actual_type;
+	object_type m_expected_type;
+	object_type m_actual_type;
 };
 
 } // namespace nihil::ucl

@@ -6,40 +6,69 @@ module;
 
 #include <compare>
 #include <cstdlib>
+#include <expected>
+#include <system_error>
 
 #include <ucl.h>
 
 module nihil.ucl;
 
+import nihil;
+
 namespace nihil::ucl {
 
-boolean::boolean() : boolean(false)
+auto make_boolean(boolean::contained_type value)
+	-> std::expected<boolean, error>
+{
+	auto *uobj = ::ucl_object_frombool(value);
+	if (uobj == nullptr)
+		return std::unexpected(error(
+			errc::failed_to_create_object,
+			error(std::errc(errno))));
+
+	return boolean(noref, uobj);
+}
+
+boolean::boolean()
+	: boolean(false)
+{
+}
+
+boolean::boolean(contained_type value)
+	: object(noref, [&] {
+		auto *uobj = ::ucl_object_frombool(value);
+		if (uobj == nullptr)
+			throw std::system_error(
+				std::make_error_code(std::errc(errno)));
+		return uobj;
+	}())
 {
 }
 
 boolean::boolean(ref_t, ::ucl_object_t const *uobj)
-	: object(nihil::ucl::ref, uobj)
+	: object(nihil::ucl::ref, [&] {
+		auto actual_type = static_cast<object_type>(
+					::ucl_object_type(uobj));
+		if (actual_type != boolean::ucl_type)
+			throw type_mismatch(boolean::ucl_type, actual_type);
+		return uobj;
+	}())
 {
-	if (type() != ucl_type)
-		throw type_mismatch(ucl_type, type());
 }
 
 boolean::boolean(noref_t, ::ucl_object_t *uobj)
-	: object(noref, uobj)
+	: object(nihil::ucl::noref, [&] {
+		auto actual_type = static_cast<object_type>(
+					::ucl_object_type(uobj));
+		if (actual_type != boolean::ucl_type)
+			throw type_mismatch(boolean::ucl_type, actual_type);
+		return uobj;
+	}())
 {
-	if (type() != ucl_type)
-		throw type_mismatch(ucl_type, type());
-}
-
-boolean::boolean(contained_type value)
-	: object(noref, ::ucl_object_frombool(value))
-{
-	if (_object == nullptr)
-		throw error("failed to create UCL object");
 }
 
 auto boolean::value(this boolean const &self)
--> contained_type
+	-> contained_type
 {
 	auto v = contained_type{};
 	auto const *uobj = self.get_ucl_object();
@@ -51,25 +80,25 @@ auto boolean::value(this boolean const &self)
 }
 
 auto operator== (boolean const &a, boolean const &b)
--> bool
+	-> bool
 {
 	return a.value() == b.value();
 }
 
 auto operator<=> (boolean const &a, boolean const &b)
--> std::strong_ordering
+	-> std::strong_ordering
 {
 	return a.value() <=> b.value();
 }
 
 auto operator== (boolean const &a, boolean::contained_type b)
--> bool
+	-> bool
 {
 	return a.value() == b;
 }
 
 auto operator<=> (boolean const &a, boolean::contained_type b)
--> std::strong_ordering
+	-> std::strong_ordering
 {
 	return a.value() <=> b;
 }

@@ -27,16 +27,71 @@ TEST_CASE("ucl: boolean: invariants", "[ucl]")
 	static_assert(std::swappable<boolean>);
 }
 
-TEST_CASE("ucl: boolean: default construct", "[ucl]")
+TEST_CASE("ucl: boolean: constructor", "[ucl]")
 {
-	auto b = nihil::ucl::boolean();
-	REQUIRE(b == false);
+	using namespace nihil::ucl;
+
+	SECTION("default") {
+		auto b = boolean();
+		REQUIRE(b == false);
+	}
+
+	SECTION("with value") {
+		auto b = boolean(true);
+		REQUIRE(b == true);
+	}
 }
 
-TEST_CASE("ucl: boolean: construct from value", "[ucl]")
+TEST_CASE("ucl: boolean: construct from UCL object", "[ucl]")
 {
-	auto b = nihil::ucl::boolean(true);
-	REQUIRE(b == true);
+	using namespace nihil::ucl;
+
+	SECTION("ref, correct type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		auto i = boolean(ref, uobj);
+		REQUIRE(i == true);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, correct type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		auto i = boolean(noref, uobj);
+		REQUIRE(i == true);
+	}
+
+	SECTION("ref, wrong type") {
+		auto uobj = ::ucl_object_fromint(1);
+
+		REQUIRE_THROWS_AS(boolean(ref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, wrong type") {
+		auto uobj = ::ucl_object_fromint(1);
+
+		REQUIRE_THROWS_AS(boolean(noref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+}
+
+TEST_CASE("ucl: boolean: make_boolean", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("default value") {
+		auto b = make_boolean().value();
+		REQUIRE(b == false);
+	}
+
+	SECTION("explicit value") {
+		auto b = make_boolean(true).value();
+		REQUIRE(b == true);
+	}
 }
 
 TEST_CASE("ucl: boolean: swap", "[ucl]")
@@ -72,57 +127,98 @@ TEST_CASE("ucl: boolean: key()", "[ucl]")
 	REQUIRE(b.key() == "");
 }
 
-TEST_CASE("ucl: boolean: operator==", "[ucl]")
+TEST_CASE("ucl: boolean: comparison", "[ucl]")
 {
-	auto b = nihil::ucl::boolean(true);
+	using namespace nihil::ucl;
 
-	REQUIRE(b == true);
-	REQUIRE(b == nihil::ucl::boolean(true));
+	auto b = boolean(true);
 
-	REQUIRE(b != false);
-	REQUIRE(b != nihil::ucl::boolean(false));
-}
+	SECTION("operator==") {
+		REQUIRE(b == true);
+		REQUIRE(b == boolean(true));
+	}
 
-TEST_CASE("ucl: boolean: operator<=>", "[ucl]")
-{
-	auto b = nihil::ucl::boolean(false);
+	SECTION("operator!=") {
+		REQUIRE(b != false);
+		REQUIRE(b != boolean(false));
+	}
 
-	REQUIRE(b < true);
-	REQUIRE(b < nihil::ucl::boolean(true));
+	SECTION("operator<") {
+		REQUIRE(b <= true);
+		REQUIRE(b <= nihil::ucl::boolean(true));
+	}
 
-	REQUIRE(b >= false);
-	REQUIRE(b >= nihil::ucl::boolean(false));
+	SECTION("operator>") {
+		REQUIRE(b > false);
+		REQUIRE(b > nihil::ucl::boolean(false));
+	}
 }
 
 TEST_CASE("ucl: boolean: parse", "[ucl]")
 {
-	using namespace std::literals;
+	using namespace nihil::ucl;
 
-	auto err = nihil::ucl::parse("value = true"sv);
-	REQUIRE(err);
-
-	auto obj = *err;
+	auto obj = parse("value = true").value();
 
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE(*object_cast<nihil::ucl::boolean>(v) == true);
-}
-
-TEST_CASE("ucl: boolean: emit", "[ucl]")
-{
-	auto b = nihil::ucl::boolean(true);
-	auto str = std::format("{}", b);
-	REQUIRE(str == "true");
+	REQUIRE(object_cast<boolean>(v).value() == true);
 }
 
 TEST_CASE("ucl: boolean: parse and emit", "[ucl]")
 {
-	auto ucl = nihil::ucl::parse("bool = true;");
-	REQUIRE(ucl);
+	using namespace nihil::ucl;
+
+	auto ucl = parse("bool = true;").value();
 
 	auto output = std::string();
-	emit(*ucl, nihil::ucl::emitter::configuration,
+	emit(ucl, nihil::ucl::emitter::configuration,
 	     std::back_inserter(output));
 
 	REQUIRE(output == "bool = true;\n");
+}
+
+TEST_CASE("ucl: boolean: format", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare boolean") {
+		auto str = std::format("{}", boolean(true));
+		REQUIRE(str == "true");
+	}
+
+	SECTION("parsed boolean") {
+		auto obj = parse("bool = true;").value();
+		auto b = object_cast<boolean>(obj["bool"]).value();
+
+		auto str = std::format("{}", b);
+		REQUIRE(str == "true");
+	}
+
+	SECTION("with format string") {
+		auto str = std::format("{: >5}", boolean(true));
+		REQUIRE(str == " true");
+	}
+}
+
+TEST_CASE("ucl: boolean: print to ostream", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare boolean") {
+		auto strm = std::ostringstream();
+		strm << boolean(true);
+
+		REQUIRE(strm.str() == "true");
+	}
+
+	SECTION("parsed boolean") {
+		auto obj = parse("bool = true;").value();
+		auto i = object_cast<boolean>(obj["bool"]).value();
+
+		auto strm = std::ostringstream();
+		strm << i;
+
+		REQUIRE(strm.str() == "true");
+	}
 }

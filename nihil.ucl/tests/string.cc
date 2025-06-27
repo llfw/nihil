@@ -4,6 +4,7 @@
 
 #include <concepts>
 #include <list>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -32,58 +33,188 @@ TEST_CASE("ucl: string: invariants", "[ucl]")
 	static_assert(std::same_as<char, std::ranges::range_value_t<string>>);
 }
 
-TEST_CASE("ucl: string: default construct", "[ucl]")
+TEST_CASE("ucl: string: literal", "[ucl]")
 {
-	auto str = nihil::ucl::string();
-	REQUIRE(str == "");
+	SECTION("with namespace nihil::ucl::literals") {
+		using namespace nihil::ucl::literals;
+
+		auto s = "testing"_ucl;
+		REQUIRE(s.type() == nihil::ucl::object_type::string);
+		REQUIRE(s == "testing");
+	}
+
+	SECTION("with namespace nihil::literals") {
+		using namespace nihil::literals;
+
+		auto s = "testing"_ucl;
+		REQUIRE(s.type() == nihil::ucl::object_type::string);
+		REQUIRE(s == "testing");
+	}
 }
 
-TEST_CASE("ucl: string: construct from string literal", "[ucl]")
+TEST_CASE("ucl: string: construct", "[ucl]")
 {
-	auto str = nihil::ucl::string("testing");
-	REQUIRE(str == "testing");
+	using namespace nihil::ucl;
+	using namespace std::literals;
+
+	SECTION("empty string") {
+		auto str = string();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "");
+	}
+
+	SECTION("with integer-like value") {
+		auto str = "42"_ucl;
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "42");
+	}
+
+	SECTION("with boolean-like value") {
+		auto str = "true"_ucl;
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "true");
+	}
+
+	SECTION("from string literal") {
+		auto str = string("testing");
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from std::string") {
+		auto str = string("testing"s);
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from std::string_view") {
+		auto str = string("testing"sv);
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from contiguous range") {
+		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = string(s);
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from non-contiguous range") {
+		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = string(s);
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from contiguous iterator pair") {
+		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = string(s.begin(), s.end());
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from non-contiguous iterator pair") {
+		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = string(s.begin(), s.end());
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
 }
 
-TEST_CASE("ucl: string: construct from std::string", "[ucl]")
+TEST_CASE("ucl: string: construct from UCL object", "[ucl]")
 {
-	auto str = nihil::ucl::string(std::string("testing"));
-	REQUIRE(str == "testing");
+	using namespace nihil::ucl;
+
+	SECTION("ref, correct type") {
+		auto uobj = ::ucl_object_fromstring("testing");
+
+		auto s = string(ref, uobj);
+		REQUIRE(s == "testing");
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, correct type") {
+		auto uobj = ::ucl_object_fromstring("testing");
+
+		auto s = string(noref, uobj);
+		REQUIRE(s == "testing");
+	}
+
+	SECTION("ref, wrong type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		REQUIRE_THROWS_AS(string(ref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, wrong type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		REQUIRE_THROWS_AS(string(noref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
 }
 
-TEST_CASE("ucl: string: construct from std::string_view", "[ucl]")
+TEST_CASE("ucl: string: make_string", "[ucl]")
 {
-	auto str = nihil::ucl::string(std::string_view("testing"));
-	REQUIRE(str == "testing");
-}
+	using namespace nihil::ucl;
+	using namespace std::literals;
 
-TEST_CASE("ucl: string: construct from contiguous range", "[ucl]")
-{
-	auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
-	auto str = nihil::ucl::string(std::from_range, s);
-	REQUIRE(str == "testing");
-}
+	SECTION("empty string") {
+		auto str = make_string().value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "");
+	}
 
-TEST_CASE("ucl: string: construct from non-contiguous range", "[ucl]")
-{
-	auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
-	auto str = nihil::ucl::string(std::from_range, s);
-	REQUIRE(str == "testing");
-}
+	SECTION("from string literal") {
+		auto str = make_string("testing").value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
 
-TEST_CASE("ucl: string: construct from contiguous iterator", "[ucl]")
-{
-	auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
-	auto str = nihil::ucl::string(std::ranges::begin(s),
-				      std::ranges::end(s));
-	REQUIRE(str == "testing");
-}
+	SECTION("from std::string") {
+		auto str = make_string("testing"s).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
 
-TEST_CASE("ucl: string: construct from non-contiguous iterator", "[ucl]")
-{
-	auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
-	auto str = nihil::ucl::string(std::ranges::begin(s),
-				      std::ranges::end(s));
-	REQUIRE(str == "testing");
+	SECTION("from std::string_view") {
+		auto str = make_string("testing"sv).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from contiguous range") {
+		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = make_string(s).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from non-contiguous range") {
+		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = make_string(s).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from contiguous iterator pair") {
+		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = make_string(s.begin(), s.end()).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
+
+	SECTION("from non-contiguous iterator pair") {
+		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto str = make_string(s.begin(), s.end()).value();
+		REQUIRE(str.type() == object_type::string);
+		REQUIRE(str == "testing");
+	}
 }
 
 TEST_CASE("ucl: string: swap", "[ucl]")
@@ -101,7 +232,9 @@ TEST_CASE("ucl: string: swap", "[ucl]")
 
 TEST_CASE("ucl: string: value()", "[ucl]")
 {
-	auto s = nihil::ucl::string("te\"st");
+	using namespace nihil::ucl;
+
+	auto s = string("te\"st");
 	REQUIRE(s.value() == "te\"st");
 }
 
@@ -115,7 +248,7 @@ TEST_CASE("ucl: string: key()", "[ucl]")
 	auto obj = *err;
 	REQUIRE(object_cast<string>(obj["a_string"])->key() == "a_string");
 
-	auto s = nihil::ucl::string("test");
+	auto s = string("test");
 	REQUIRE(s.key() == "");
 }
 
@@ -135,86 +268,148 @@ TEST_CASE("ucl: string: empty", "[ucl]")
 	REQUIRE(string("test").empty() == false);
 }
 
-TEST_CASE("ucl: string: iterator", "[ucl]")
+TEST_CASE("ucl: string: iterate", "[ucl]")
 {
-	auto str = nihil::ucl::string("test");
+	using namespace nihil::ucl;
 
-	auto begin = std::ranges::begin(str);
-	static_assert(std::contiguous_iterator<decltype(begin)>);
+	auto str = "test"_ucl;
 
-	auto end = std::ranges::end(str);
-	static_assert(std::sentinel_for<decltype(end), decltype(begin)>);
+	SECTION("as iterator pair") {
+		auto begin = str.begin();
+		static_assert(std::contiguous_iterator<decltype(begin)>);
 
-	REQUIRE(*begin == 't');
-	++begin;
-	REQUIRE(*begin == 'e');
-	++begin;
-	REQUIRE(*begin == 's');
-	++begin;
-	REQUIRE(*begin == 't');
-	++begin;
+		auto end = str.end();
+		static_assert(std::sentinel_for<decltype(end),
+			      			decltype(begin)>);
 
-	REQUIRE(begin == end);
+		REQUIRE(*begin == 't');
+		++begin;
+		REQUIRE(*begin == 'e');
+		++begin;
+		REQUIRE(*begin == 's');
+		++begin;
+		REQUIRE(*begin == 't');
+		++begin;
+
+		REQUIRE(begin == end);
+	}
+
+	SECTION("as range") {
+		auto s = std::string(std::from_range, str);
+		REQUIRE(s == "test");
+	}
 }
 
-TEST_CASE("ucl: string: operator==", "[ucl]")
+TEST_CASE("ucl: string: comparison", "[ucl]")
 {
-	auto str = nihil::ucl::string("testing");
+	using namespace nihil::ucl;
 
-	REQUIRE(str == nihil::ucl::string("testing"));
-	REQUIRE(str == std::string_view("testing"));
-	REQUIRE(str == std::string("testing"));
-	REQUIRE(str == "testing");
+	auto str = "testing"_ucl;
 
-	REQUIRE(str != nihil::ucl::string("test"));
-	REQUIRE(str != std::string_view("test"));
-	REQUIRE(str != std::string("test"));
-	REQUIRE(str != "test");
-}
+	SECTION("operator==") {
+		REQUIRE(str == "testing"_ucl);
+		REQUIRE(str == std::string_view("testing"));
+		REQUIRE(str == std::string("testing"));
+		REQUIRE(str == "testing");
+	}
 
-TEST_CASE("ucl: string: operator<=>", "[ucl]")
-{
-	auto str = nihil::ucl::string("testing");
+	SECTION("operator!=") {
+		REQUIRE(str != "test"_ucl);
+		REQUIRE(str != std::string_view("test"));
+		REQUIRE(str != std::string("test"));
+		REQUIRE(str != "test");
+	}
 
-	REQUIRE(str < nihil::ucl::string("zzz"));
-	REQUIRE(str < std::string_view("zzz"));
-	REQUIRE(str < std::string("zzz"));
-	REQUIRE(str < "zzz");
+	SECTION("operator<") {
+		REQUIRE(str < "zzz"_ucl);
+		REQUIRE(str < std::string_view("zzz"));
+		REQUIRE(str < std::string("zzz"));
+		REQUIRE(str < "zzz");
+	}
 
-	REQUIRE(str > nihil::ucl::string("aaa"));
-	REQUIRE(str > std::string_view("aaa"));
-	REQUIRE(str > std::string("aaa"));
-	REQUIRE(str > "aaa");
+	SECTION("operator>") {
+		REQUIRE(str > "aaa"_ucl);
+		REQUIRE(str > std::string_view("aaa"));
+		REQUIRE(str > std::string("aaa"));
+		REQUIRE(str > "aaa");
+	}
 }
 
 TEST_CASE("ucl: string: parse", "[ucl]")
 {
-	using namespace std::literals;
+	using namespace nihil::ucl;
 
-	auto err = nihil::ucl::parse("value = \"te\\\"st\""sv);
-	REQUIRE(err);
+	auto obj = parse("value = \"te\\\"st\"").value();
 
-	auto obj = *err;
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE(object_cast<nihil::ucl::string>(v) == "te\"st");
+	REQUIRE(object_cast<nihil::ucl::string>(v).value() == "te\"st");
 }
 
 TEST_CASE("ucl: string: emit", "[ucl]")
 {
-	auto s = nihil::ucl::string("te\"st");
-	auto str = std::format("{}", s);
-	REQUIRE(str == "\"te\\\"st\"");
-}
+	using namespace nihil::ucl;
 
-TEST_CASE("ucl: string: parse and emit", "[ucl]")
-{
-	auto ucl = nihil::ucl::parse("str = \"te\\\"st\";");
-	REQUIRE(ucl);
+	auto ucl = parse("str = \"te\\\"st\";").value();
 
 	auto output = std::string();
-	emit(*ucl, nihil::ucl::emitter::configuration,
-	     std::back_inserter(output));
+	emit(ucl, emitter::configuration, std::back_inserter(output));
 
 	REQUIRE(output == "str = \"te\\\"st\";\n");
+}
+
+TEST_CASE("ucl: string: format", "[ucl]")
+{
+	using namespace nihil::ucl;
+	using namespace std::literals;
+
+	auto constexpr test_string = "te\"st"sv;
+
+	SECTION("bare string") {
+		auto str = std::format("{}", string(test_string));
+		REQUIRE(str == test_string);
+	}
+
+	SECTION("parsed string") {
+		auto obj = parse("string = \"te\\\"st\";").value();
+		auto s = object_cast<string>(obj["string"]).value();
+
+		auto str = std::format("{}", s);
+		REQUIRE(str == test_string);
+	}
+
+	SECTION("with format string") {
+		auto str = std::format("{: >10}", string(test_string));
+		REQUIRE(str == "     te\"st");
+	}
+}
+
+TEST_CASE("ucl: string: print to ostream", "[ucl]")
+{
+	using namespace nihil::ucl;
+	using namespace std::literals;
+
+	auto constexpr test_string = "te\"st"sv;
+
+	SECTION("bare string") {
+		auto strm = std::ostringstream();
+		strm << string(test_string);
+
+		REQUIRE(strm.str() == test_string);
+	}
+
+	SECTION("parsed string") {
+		auto obj = parse("string = \"te\\\"st\";").value();
+		auto s = object_cast<string>(obj["string"]).value();
+
+		auto strm = std::ostringstream();
+		strm << s;
+
+		REQUIRE(strm.str() == test_string);
+	}
+
+	SECTION("with format string") {
+		auto str = std::format("{: >10}", string(test_string));
+		REQUIRE(str == "     te\"st");
+	}
 }

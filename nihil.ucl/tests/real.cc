@@ -28,17 +28,90 @@ TEST_CASE("ucl: real: invariants", "[ucl]")
 	static_assert(std::swappable<real>);
 }
 
-TEST_CASE("ucl: real: construct", "[ucl]")
+TEST_CASE("ucl: real: constructor", "[ucl]")
 {
-	auto obj = nihil::ucl::real(42.1);
-	REQUIRE_THAT(object_cast<nihil::ucl::real>(obj)->value(),
-		     Catch::Matchers::WithinRel(42.1));
+	using namespace nihil::ucl;
+
+	SECTION("default") {
+		auto r = real();
+		REQUIRE(r == 0);
+	}
+
+	SECTION("with value") {
+		auto r = real(42.1);
+		REQUIRE_THAT(r.value(), Catch::Matchers::WithinRel(42.1));
+	}
 }
 
-TEST_CASE("ucl: real: default construct", "[ucl]")
+TEST_CASE("ucl: real: literal", "[ucl]")
 {
-	auto i = nihil::ucl::real();
-	REQUIRE(i == 0);
+	SECTION("with namespace nihil::ucl::literals") {
+		using namespace nihil::ucl::literals;
+
+		auto r = 42.5_ucl;
+		REQUIRE(r.type() == nihil::ucl::object_type::real);
+		REQUIRE_THAT(r.value(), Catch::Matchers::WithinRel(42.5));
+	}
+
+	SECTION("with namespace nihil::literals") {
+		using namespace nihil::literals;
+
+		auto r = 42.5_ucl;
+		REQUIRE(r.type() == nihil::ucl::object_type::real);
+		REQUIRE_THAT(r.value(), Catch::Matchers::WithinRel(42.5));
+	}
+}
+
+TEST_CASE("ucl: real: construct from UCL object", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("ref, correct type") {
+		auto uobj = ::ucl_object_fromdouble(42);
+
+		auto r = real(ref, uobj);
+		REQUIRE(r == 42);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, correct type") {
+		auto uobj = ::ucl_object_fromdouble(42);
+
+		auto r = real(noref, uobj);
+		REQUIRE(r == 42);
+	}
+
+	SECTION("ref, wrong type") {
+		auto uobj = ::ucl_object_fromint(42);
+
+		REQUIRE_THROWS_AS(real(ref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, wrong type") {
+		auto uobj = ::ucl_object_fromint(42);
+
+		REQUIRE_THROWS_AS(real(noref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+}
+
+TEST_CASE("ucl: real: make_real", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("default value") {
+		auto i = make_real().value();
+		REQUIRE(i == 0);
+	}
+
+	SECTION("explicit value") {
+		auto i = make_real(42).value();
+		REQUIRE(i == 42);
+	}
 }
 
 TEST_CASE("ucl: real: swap", "[ucl]")
@@ -54,53 +127,122 @@ TEST_CASE("ucl: real: swap", "[ucl]")
 	REQUIRE(r2 == 1.);
 }
 
-TEST_CASE("ucl: real: operator==", "[ucl]")
+TEST_CASE("ucl: real: value()", "[ucl]")
 {
-	auto i = nihil::ucl::real(42.5);
+	using namespace nihil::ucl;
 
-	REQUIRE(i == 42.5);
-	REQUIRE(i == nihil::ucl::real(42.5));
-
-	REQUIRE(i != 1);
-	REQUIRE(i != nihil::ucl::real(1));
+	auto r = 42.5_ucl;
+	REQUIRE_THAT(r.value(), Catch::Matchers::WithinRel(42.5));
 }
 
-TEST_CASE("ucl: real: operator<=>", "[ucl]")
+TEST_CASE("ucl: real: key()", "[ucl]")
 {
+	using namespace nihil::ucl;
+
+	SECTION("parsed with key") {
+		auto obj = parse("a_real = 42.5").value();
+		auto r = object_cast<real>(obj["a_real"]).value();
+		REQUIRE(r.key() == "a_real");
+	}
+
+	SECTION("bare real, no key") {
+		auto i = 42.5_ucl;
+		REQUIRE(i.key() == "");
+	}
+}
+
+TEST_CASE("ucl: real: comparison", "[ucl]")
+{
+	using namespace nihil::ucl;
+
 	auto i = nihil::ucl::real(42.5);
 
-	REQUIRE(i < 43);
-	REQUIRE(i < nihil::ucl::real(43));
+	SECTION("operator==") {
+		REQUIRE(i == 42.5);
+		REQUIRE(i == 42.5_ucl);
+	}
 
-	REQUIRE(i > 1);
-	REQUIRE(i > nihil::ucl::real(1));
+	SECTION("operator!=") {
+		REQUIRE(i != 1);
+		REQUIRE(i != 1._ucl);
+	}
+
+	SECTION("operator<") {
+		REQUIRE(i < 43);
+		REQUIRE(i < 43._ucl);
+	}
+
+	SECTION("operator>") {
+		REQUIRE(i > 1);
+		REQUIRE(i > 1._ucl);
+	}
 }
 
 TEST_CASE("ucl: real: parse", "[ucl]")
 {
-	using namespace std::literals;
+	using namespace nihil::ucl;
 
-	auto err = nihil::ucl::parse("value = 42.1"sv);
-	REQUIRE(err);
-
-	auto obj = *err;
+	auto obj = parse("value = 42.1").value();
 
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE_THAT(object_cast<nihil::ucl::real>(v)->value(),
+	REQUIRE_THAT(object_cast<real>(v).value().value(),
 		     Catch::Matchers::WithinRel(42.1));
 }
 
-TEST_CASE("ucl: real: emit", "[ucl]")
+TEST_CASE("ucl: real: parse and emit", "[ucl]")
 {
-	auto err = nihil::ucl::parse("real = 42.2");
-	REQUIRE(err);
+	using namespace nihil::ucl;
 
-	auto obj = *err;
+	auto ucl = parse("real = 42.2").value();
 
 	auto output = std::string();
-	emit(obj, nihil::ucl::emitter::configuration,
-	     std::back_inserter(output));
+	emit(ucl, emitter::configuration, std::back_inserter(output));
 
 	REQUIRE(output == "real = 42.2;\n");
+}
+
+TEST_CASE("ucl: real: format", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare real") {
+		auto str = std::format("{}", 42.5_ucl);
+		REQUIRE(str == "42.5");
+	}
+
+	SECTION("parsed real") {
+		auto obj = parse("real = 42.5;").value();
+		auto r = object_cast<real>(obj["real"]).value();
+
+		auto str = std::format("{}", r);
+		REQUIRE(str == "42.5");
+	}
+
+	SECTION("with format string") {
+		auto str = std::format("{:10.5f}", 42.5_ucl);
+		REQUIRE(str == "  42.50000");
+	}
+}
+
+TEST_CASE("ucl: real: print to ostream", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare real") {
+		auto strm = std::ostringstream();
+		strm << 42.5_ucl;
+
+		REQUIRE(strm.str() == "42.5");
+	}
+
+	SECTION("parsed real") {
+		auto obj = parse("real = 42.5;").value();
+		auto i = object_cast<real>(obj["real"]).value();
+
+		auto strm = std::ostringstream();
+		strm << i;
+
+		REQUIRE(strm.str() == "42.5");
+	}
 }

@@ -7,6 +7,8 @@ module;
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <expected>
+#include <format>
 #include <string>
 
 #include <ucl.h>
@@ -22,19 +24,35 @@ export struct boolean final : object {
 
 	inline static constexpr object_type ucl_type = object_type::boolean;
 
-	// Create a new boolean from a UCL object.
-	boolean(ref_t, ::ucl_object_t const *uobj);
-	boolean(noref_t, ::ucl_object_t *uobj);
-
-	// Create a new default-initialised boolean.
+	/*
+	 * Create a boolean holding the value false.  Throws std::system_error
+	 * on failure.
+	 */
 	boolean();
 
-	// Create a new boolean from a value.
-	explicit boolean(contained_type value);
+	/*
+	 * Create a boolean holding a specific value.  Throws std::system_error
+	 * on failure.
+	 */
+	explicit boolean(bool);
+
+	/*
+	 * Create a new boolean from a UCL object.  Throws type_mismatch
+	 * on failure.
+	 */
+	boolean(ref_t, ::ucl_object_t const *uobj);
+	boolean(noref_t, ::ucl_object_t *uobj);
 
 	// Return this object's value.
 	auto value(this boolean const &self) -> contained_type;
 };
+
+/*
+ * Boolean constructors.  These return an error instead of throwing.
+ */
+
+export [[nodiscard]] auto
+make_boolean(boolean::contained_type = false) -> std::expected<boolean, error>;
 
 /*
  * Comparison operators.
@@ -48,3 +66,26 @@ export auto operator<=> (boolean const &a, boolean::contained_type b)
 	-> std::strong_ordering;
 
 } // namespace nihil::ucl
+
+/*
+ * std::formatter for a boolean.  This provides the same format operations
+ * as std::formatter<bool>.
+ */
+export template<>
+struct std::formatter<nihil::ucl::boolean, char>
+{
+	std::formatter<bool> base_formatter;
+
+	template<class ParseContext>
+	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	{
+		return base_formatter.parse(ctx);
+	}
+
+	template<class FmtContext>
+	FmtContext::iterator format(nihil::ucl::boolean const &o,
+				    FmtContext& ctx) const
+	{
+		return base_formatter.format(o.value(), ctx);
+	}
+};

@@ -39,24 +39,24 @@ auto str(object_type type) -> std::string_view {
 	}
 }
 
-type_mismatch::type_mismatch(
-	object_type expected_type, object_type actual_type)
-	: error(std::format("UCL type mismatch: expected type '{}' "
-			    "!= actual type '{}'",
-			    str(expected_type), str(actual_type)))
-	, _expected_type(expected_type)
-	, _actual_type(actual_type)
+type_mismatch::type_mismatch(object_type expected_type,
+			     object_type actual_type)
+	: error(std::format(
+		"expected type '{}' != actual type '{}'",
+		ucl::str(expected_type), ucl::str(actual_type)))
+	, m_expected_type(expected_type)
+	, m_actual_type(actual_type)
 {
 }
 
 auto type_mismatch::expected_type(this type_mismatch const &self) -> object_type
 {
-	return self._expected_type;
+	return self.m_expected_type;
 }
 
 auto type_mismatch::actual_type(this type_mismatch const &self) -> object_type
 {
-	return self._actual_type;
+	return self.m_actual_type;
 }
 	
 } // namespace nihil::ucl

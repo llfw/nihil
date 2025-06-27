@@ -17,11 +17,6 @@ module nihil;
 
 namespace nihil {
 
-fd_logic_error::fd_logic_error(std::string what)
-	: std::logic_error(std::move(what))
-{
-}
-
 fd::fd() noexcept = default;
 
 fd::fd(int fileno) noexcept
@@ -67,14 +62,14 @@ auto fd::get(this fd const &self) -> int
 {
 	if (self)
 		return self.m_fileno;
-	throw fd_logic_error("Attempt to call get() on invalid fd");
+	throw std::logic_error("Attempt to call get() on invalid fd");
 }
 
 auto fd::release(this fd &&self) -> int
 {
 	if (self)
 		return std::exchange(self.m_fileno, invalid_fileno);
-	throw fd_logic_error("Attempt to release an invalid fd");
+	throw std::logic_error("Attempt to release an invalid fd");
 }
 
 auto dup(fd const &self) -> std::expected<fd, error>

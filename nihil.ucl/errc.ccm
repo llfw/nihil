@@ -1,0 +1,33 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <string>
+#include <system_error>
+
+export module nihil.ucl:errc;
+
+namespace nihil::ucl {
+
+export enum struct errc {
+	no_error = 0,
+
+	// ucl_object_new() or similar failed, e.g. out of memory
+	failed_to_create_object,
+	// Trying to create an object from a UCL object of the wrong type
+	type_mismatch,
+};
+
+export auto ucl_category() noexcept -> std::error_category &;
+export auto make_error_condition(errc ec) -> std::error_condition;
+
+} // namespace nihil::ucl
+
+namespace std {
+
+export template<>
+struct is_error_condition_enum<nihil::ucl::errc> : true_type {};
+
+} // namespace std

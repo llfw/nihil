@@ -3,6 +3,7 @@
  */
 
 #include <span>
+#include <stdexcept>
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -27,7 +28,7 @@ TEST_CASE("fd: construct empty", "[fd]") {
 	nihil::fd fd;
 
 	REQUIRE(!fd);
-	REQUIRE_THROWS_AS(fd.get(), nihil::fd_logic_error);
+	REQUIRE_THROWS_AS(fd.get(), std::logic_error);
 }
 
 TEST_CASE("fd: construct from fd", "[fd]") {

@@ -6,7 +6,6 @@ add_executable(nihil.test
 	error.cc
 	fd.cc
 	generator.cc
-	generic_error.cc
 	getenv.cc
 	guard.cc
 	monad.cc

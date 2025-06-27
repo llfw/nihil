@@ -17,7 +17,6 @@ module;
 export module nihil.ucl:parser;
 
 import nihil;
-import :error;
 import :object;
 import :map;
 
@@ -92,7 +91,7 @@ struct parser {
 	// Add data to the parser.
 	[[nodiscard]] auto add(this parser &self,
 			       std::ranges::contiguous_range auto &&data)
-		-> std::expected<void, nihil::error>
+		-> std::expected<void, error>
 	// Only bytes (chars) are permitted.
 	requires(sizeof(std::ranges::range_value_t<decltype(data)>) == 1)
 	{
@@ -106,12 +105,12 @@ struct parser {
 		if (ret == true)
 			return {};
 
-		return std::unexpected(nihil::error(::ucl_parser_get_error(p)));
+		return std::unexpected(error(::ucl_parser_get_error(p)));
 	}
 
 	[[nodiscard]] auto add(this parser &self,
 			       std::ranges::range auto &&data)
-		-> std::expected<void, nihil::error>
+		-> std::expected<void, error>
 	requires (!std::ranges::contiguous_range<decltype(data)>)
 	{
 		auto cdata = std::vector<char>(
@@ -139,12 +138,12 @@ private:
 
 // Create a parser with the given flags.
 export [[nodiscard]] auto
-make_parser(int flags = 0) -> std::expected<parser, nihil::error>;
+make_parser(int flags = 0) -> std::expected<parser, error>;
 
 // Utility function to parse something and return the top-level object.
 export [[nodiscard]] auto
 parse(int flags, std::ranges::range auto &&data)
-	-> std::expected<map<object>, nihil::error> 
+	-> std::expected<map<object>, error> 
 {
 	auto p = co_await make_parser(flags);
 	co_await p.add(std::forward<decltype(data)>(data));
@@ -153,7 +152,7 @@ parse(int flags, std::ranges::range auto &&data)
 
 export [[nodiscard]] auto
 parse(std::ranges::range auto &&data)
-	-> std::expected<map<object>, nihil::error> 
+	-> std::expected<map<object>, error> 
 {
 	co_return co_await parse(0, std::forward<decltype(data)>(data));
 }

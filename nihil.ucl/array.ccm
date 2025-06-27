@@ -5,9 +5,14 @@
 module;
 
 #include <cassert>
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
+#include <format>
+#include <iostream>
 #include <string>
+#include <system_error>
+#include <utility>
 
 #include <ucl.h>
 
@@ -20,7 +25,7 @@ namespace nihil::ucl {
 export template<datatype T>
 struct array;
 
-template<datatype T>
+export template<datatype T>
 struct array_iterator {
 	using difference_type = std::ptrdiff_t;
 	using value_type = T;
@@ -29,25 +34,39 @@ struct array_iterator {
 
 	array_iterator() = default;
 
-	auto operator* (this array_iterator const &self) -> T
+	[[nodiscard]] auto operator* (this array_iterator const &self) -> T
 	{
-		auto uobj = ::ucl_array_find_index(self._array, self._idx);
+		auto arr = self.get_array();
+		if (self.m_idx >= ::ucl_array_size(arr))
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"access past end of array");
+
+		auto uobj = ::ucl_array_find_index(arr, self.m_idx);
 		if (uobj == nullptr)
-			throw error("failed to fetch UCL array index");
+			throw std::runtime_error(
+				"nihil::ucl::array_iterator: "
+				"failed to fetch UCL array index");
 
 		return T(nihil::ucl::ref, uobj);
 	}
 
-	auto operator[] (this array_iterator const &self,
-			 difference_type idx)
+	[[nodiscard]] auto operator[] (this array_iterator const &self,
+				       difference_type idx)
 		-> T
 	{
 		return *(self + idx);
 	}
 
-	auto operator++ (this array_iterator &self) -> array_iterator&
+	auto operator++ (this array_iterator &self) -> array_iterator &
 	{
-		++self._idx;
+		auto arr = self.get_array();
+		if (self.m_idx == ::ucl_array_size(arr))
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"iterating past end of array");
+
+		++self.m_idx;
 		return self;
 	}
 
@@ -60,10 +79,11 @@ struct array_iterator {
 
 	auto operator-- (this array_iterator &self) -> array_iterator&
 	{
-		if (self._idx == 0)
-			throw std::out_of_range("attempt to iterate before "
-						"start of UCL array");
-		--self._idx;
+		if (self.m_idx == 0)
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"iterating before start of array");
+		--self.m_idx;
 		return self;
 	}
 
@@ -74,65 +94,110 @@ struct array_iterator {
 		return copy;
 	}
 
-	auto operator== (this array_iterator const &lhs,
-			 array_iterator const &rhs)
+	[[nodiscard]] auto operator== (this array_iterator const &lhs,
+				       array_iterator const &rhs)
 		-> bool
 	{
-		return lhs._idx == rhs._idx;
+		// Empty iterators should compare equal.
+		if (lhs.m_array == nullptr && rhs.m_array == nullptr)
+			return true;
+
+		if (lhs.get_array() != rhs.get_array())
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"comparing iterators of different arrays");
+
+		return lhs.m_idx == rhs.m_idx;
 	}
 
-	auto operator<=> (this array_iterator const &lhs,
-			 array_iterator const &rhs)
+	[[nodiscard]] auto operator<=> (this array_iterator const &lhs,
+					array_iterator const &rhs)
 	{
-		return lhs._idx <=> rhs._idx;
+		// Empty iterators should compare equal.
+		if (lhs.m_array == nullptr && rhs.m_array == nullptr)
+			return std::strong_ordering::equal;
+
+		if (lhs.get_array() != rhs.get_array())
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"comparing iterators of different arrays");
+
+		return lhs.m_idx <=> rhs.m_idx;
 	}
 
-	auto operator+= (this array_iterator &lhs,
-			 difference_type rhs)
+	auto operator+= (this array_iterator &lhs, difference_type rhs)
 		-> array_iterator &
 	{
-		lhs._idx += rhs;
+		auto arr = lhs.get_array();
+		// m_idx cannot be greater than the array size
+		auto max_inc = ::ucl_array_size(arr) - lhs.m_idx;
+
+		if (std::cmp_greater(rhs, max_inc))
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"iterating past end of array");
+
+		lhs.m_idx += rhs;
 		return lhs;
 	}
 
-	auto operator-= (this array_iterator &lhs,
-			 difference_type rhs)
+	auto operator-= (this array_iterator &lhs, difference_type rhs)
 		-> array_iterator &
 	{
-		lhs._idx -= rhs;
+		if (std::cmp_greater(rhs, lhs.m_idx))
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"iterating before start of array");
+		lhs.m_idx -= rhs;
 		return lhs;
 	}
 
-	auto operator- (this array_iterator const &lhs,
-			array_iterator const &rhs)
+	[[nodiscard]] auto operator- (this array_iterator const &lhs,
+				      array_iterator const &rhs)
 		-> difference_type
 	{
-		return lhs._idx - rhs._idx;
+		if (lhs.get_array() != rhs.get_array())
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"comparing iterators of different arrays");
+
+		return lhs.m_idx - rhs.m_idx;
 	}
 
 private:
 	friend struct array<T>;
 
-	::ucl_object_t const *_array{};
-	std::size_t _idx{};
+	::ucl_object_t const *	m_array{};
+	std::size_t		m_idx{};
 
+	[[nodiscard]] auto get_array(this array_iterator const &self)
+		-> ::ucl_object_t const *
+	{
+		if (self.m_array == nullptr)
+			throw std::logic_error(
+				"nihil::ucl::array_iterator: "
+				"attempt to access an empty iterator");
+
+		return self.m_array;
+	}
+		
 	array_iterator(::ucl_object_t const *array, std::size_t idx)
-		: _array(array)
-		, _idx(idx)
+		: m_array(array)
+		, m_idx(idx)
 	{}
 };
 
-export template<datatype T>
+export template<datatype T> [[nodiscard]]
 auto operator+(array_iterator<T> const &lhs,
 	       typename array_iterator<T>::difference_type rhs)
-	-> array_iterator<T>
+-> array_iterator<T>
 {
 	auto copy = lhs;
 	copy += rhs;
 	return copy;
 }
 
-export template<datatype T>
+export template<datatype T> [[nodiscard]]
 auto operator+(typename array_iterator<T>::difference_type lhs,
 	       array_iterator<T> const &rhs)
 	-> array_iterator<T>
@@ -140,7 +205,7 @@ auto operator+(typename array_iterator<T>::difference_type lhs,
 	return rhs - lhs;
 }
 
-export template<datatype T>
+export template<datatype T> [[nodiscard]]
 auto operator-(array_iterator<T> const &lhs,
 	       typename array_iterator<T>::difference_type rhs)
 	-> array_iterator<T>
@@ -157,27 +222,50 @@ struct array final : object {
 	using value_type = T;
 	using size_type = std::size_t;
 	using difference_type = std::ptrdiff_t;
+	using iterator = array_iterator<T>;
 
-	// Create an empty array.
-	array() : object(noref, ::ucl_object_typed_new(UCL_ARRAY))
+	/*
+	 * Create an empty array.  Throws std::system_error on failure.
+	 */
+	array()	: object(noref, [] {
+			auto *uobj = ::ucl_object_typed_new(UCL_ARRAY);
+			if (uobj == nullptr)
+				throw std::system_error(
+					std::make_error_code(std::errc(errno)));
+			return uobj;
+		}())
 	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
 	}
 
-	// Create a new array from a UCL object.
+	/*
+	 * Create an array from a UCL object.  Throws type_mismatch
+	 * on failure.
+	 *
+	 * Unlike object_cast<>, this does not check the type of the contained
+	 * elements, which means object access can throw type_mismatch.
+	 */
 	array(ref_t, ::ucl_object_t const *uobj)
-		: object(nihil::ucl::ref, uobj)
+		: object(nihil::ucl::ref, [&] {
+			auto actual_type = static_cast<object_type>(
+						::ucl_object_type(uobj));
+			if (actual_type != array::ucl_type)
+				throw type_mismatch(array::ucl_type,
+						    actual_type);
+			return uobj;
+		}())
 	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
 	}
 
 	array(noref_t, ::ucl_object_t *uobj)
-		: object(noref, uobj)
+		: object(nihil::ucl::noref, [&] {
+			auto actual_type = static_cast<object_type>(
+						::ucl_object_type(uobj));
+			if (actual_type != array::ucl_type)
+				throw type_mismatch(array::ucl_type,
+						    actual_type);
+			return uobj;
+		}())
 	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
 	}
 
 	/*
@@ -188,9 +276,6 @@ struct array final : object {
 	array(Iterator first, Iterator last)
 		 : array()
 	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
-
 		// This is exception safe, because if we throw here the
 		// base class destructor will free the array.
 		while (first != last) {
@@ -223,12 +308,12 @@ struct array final : object {
 	 * Array iterator access.
 	 */
 
-	auto begin(this array const &self) -> array_iterator<T>
+	[[nodiscard]] auto begin(this array const &self) -> iterator
 	{
 		return {self.get_ucl_object(), 0};
 	}
 
-	auto end(this array const &self) -> array_iterator<T>
+	[[nodiscard]] auto end(this array const &self) -> iterator
 	{
 		return {self.get_ucl_object(), self.size()};
 	}
@@ -236,7 +321,7 @@ struct array final : object {
 	/*
 	 * Return the size of this array.
 	 */
-	auto size(this array const &self) -> size_type
+	[[nodiscard]] auto size(this array const &self) -> size_type
 	{
 		return ::ucl_array_size(self.get_ucl_object());
 	}
@@ -244,7 +329,7 @@ struct array final : object {
 	/*
 	 * Test if this array is empty.
 	 */
-	auto empty(this array const &self) -> bool
+	[[nodiscard]] auto empty(this array const &self) -> bool
 	{
 		return self.size() == 0;
 	}
@@ -278,19 +363,20 @@ struct array final : object {
 	/*
 	 * Access an array element by index.
 	 */
-	auto at(this array const &self, size_type idx) -> T
+	[[nodiscard]] auto at(this array const &self, size_type idx) -> T
 	{
 		if (idx >= self.size())
 			throw std::out_of_range("UCL array index out of range");
 
 		auto uobj = ::ucl_array_find_index(self.get_ucl_object(), idx);
 		if (uobj == nullptr)
-			throw error("failed to fetch UCL array index");
+			throw std::runtime_error(
+				"failed to fetch UCL array index");
 
 		return T(nihil::ucl::ref, uobj);
 	}
 
-	auto operator[] (this array const &self, size_type idx) -> T
+	[[nodiscard]] auto operator[] (this array const &self, size_type idx) -> T
 	{
 		return self.at(idx);
 	}
@@ -298,7 +384,7 @@ struct array final : object {
 	/*
 	 * Return the first element.
 	 */
-	auto front(this array const &self) -> T
+	[[nodiscard]] auto front(this array const &self) -> T
 	{
 		return self.at(0);
 	}
@@ -306,7 +392,7 @@ struct array final : object {
 	/*
 	 * Return the last element.
 	 */
-	auto back(this array const &self) -> T
+	[[nodiscard]] auto back(this array const &self) -> T
 	{
 		if (self.empty())
 			throw std::out_of_range("attempt to access back() on "
@@ -319,7 +405,7 @@ struct array final : object {
  * Comparison operators.
  */
 
-export template<datatype T>
+export template<datatype T> [[nodiscard]]
 auto operator==(array<T> const &a, array<T> const &b) -> bool
 {
 	if (a.size() != b.size())
@@ -332,4 +418,51 @@ auto operator==(array<T> const &a, array<T> const &b) -> bool
 	return true;
 }
 
+/*
+ * Print an array to an ostream; uses the same format as std::format().
+ */
+export template<datatype T>
+auto operator<<(std::ostream &strm, array<T> const &a) -> std::ostream &
+{
+	return strm << std::format("{}", a);
+}
+
 } // namespace nihil::ucl
+
+/*
+ * std::formatter for an array.  The output format is a list of values
+ * on a single line: [1, 2, 3].
+ */
+export template<typename T>
+struct std::formatter<nihil::ucl::array<T>, char>
+{
+	template<class ParseContext>
+	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template<class FmtContext>
+	FmtContext::iterator format(nihil::ucl::array<T> const &o,
+				    FmtContext& ctx) const
+	{
+		auto it = ctx.out();
+		bool first = true;
+
+		*it++ = '[';
+
+		for (auto &&elm : o) {
+			if (first)
+				first = false;
+			else {
+				*it++ = ',';
+				*it++ = ' ';
+			}
+
+			it = std::format_to(it, "{}", elm);
+		}
+
+		*it++ = ']';
+		return it;
+	}
+};

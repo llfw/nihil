@@ -19,9 +19,12 @@ module;
  * Calling .str() will format the entire stack starting at that error,
  * for example: "failed to open /etc/somefile: No such file or directory".
  *
- * Errors may be copied, moved and thrown, although throwing errors is probably
- * not very useful since there's no way to distinguish different errors.
+ * Errors may be moved and (relatively) cheaply copied, since the cause
+ * chain is refcounted.
  *
+ * error derives from std::exception, so it may be thrown and caught and
+ * provides a useful what().  When throwing errors, creating a derived
+ * error will make it easier to distinguish errors when catching them.
  */
 
 #include <iosfwd>
@@ -45,9 +48,12 @@ using error_t = std::variant<
 			std::error_condition
 		>;
 
-export struct error {
+export struct error : std::exception {
 	// Create an empty error, representing success.
 	error();
+
+	// Destroy an error.
+	virtual ~error();
 
 	// Create an error from a freeform string.
 	error(std::string_view what, error cause);
@@ -71,23 +77,23 @@ export struct error {
 	// Create an error from an std::error_code enum.
 	error(auto errc, error cause)
 	requires(std::is_error_code_enum<decltype(errc)>::value)
-		: error(std::move(cause), std::make_error_code(errc))
+		: error(make_error_code(errc), std::move(cause))
 	{}
 
 	explicit error(auto errc)
 	requires(std::is_error_code_enum<decltype(errc)>::value)
-		: error(std::make_error_code(errc))
+		: error(make_error_code(errc))
 	{}
 
 	// Create an error from an std::error_condition enum.
 	error(auto errc, error cause)
 	requires(std::is_error_condition_enum<decltype(errc)>::value)
-		: error(std::move(cause), std::make_error_condition(errc))
+		: error(make_error_condition(errc), std::move(cause))
 	{}
 
 	explicit error(auto errc)
 	requires(std::is_error_condition_enum<decltype(errc)>::value)
-		: error(std::make_error_condition(errc))
+		: error(make_error_condition(errc))
 	{}
 
 	error(error const &);
@@ -97,15 +103,12 @@ export struct error {
 	auto operator=(this error &, error &&) noexcept -> error &;
 
 	// Return the cause of this error.
-	[[nodiscard]] auto cause(this error const &) -> std::optional<error>;
+	[[nodiscard]] auto cause(this error const &) -> std::shared_ptr<error>;
 
 	// Return the root cause of this error, which may be this object.
 	// For errors caused by an OS error, this will typically be the
 	// error_code error.
 	[[nodiscard]] auto root_cause(this error const &) -> error const &;
-
-	// Format this error and its cause(s) as a string.
-	[[nodiscard]] auto what(this error const &) -> std::string;
 
 	// Format this error as a string.
 	[[nodiscard]] auto str(this error const &) -> std::string;
@@ -118,14 +121,28 @@ export struct error {
 	[[nodiscard]] auto condition(this error const &)
 		-> std::optional<std::error_condition>;
 
+	auto what() const noexcept -> char const * final;
+
 private:
 	friend auto operator==(error const &, error const &) -> bool;
 	friend auto operator<=>(error const &, error const &)
 		-> std::strong_ordering;
 
-	error_t m_error = std::make_error_code(std::errc());
+	// This error.
+	error_t m_error = make_error_code(std::errc());
+
+	// The cause of this error, if any.
 	std::shared_ptr<error> m_cause;
+
+	// For std::exception::what(), we need to keep the string valid
+	// until we're destroyed.
+	mutable std::optional<std::string> m_what;
 };
+
+/*
+ * Format an error and its cause(s) as a string.
+ */
+export [[nodiscard]] auto to_string(error const &) -> std::string;
 
 // Compare an error to another error.  This only compares the error itself,
 // not any nested causes.
@@ -177,6 +194,6 @@ struct std::formatter<nihil::error, char>
 	auto format(nihil::error const &e, FormatContext &ctx) const
 		-> FormatContext::iterator
 	{
-		return std::ranges::copy(e.what(), ctx.out()).out;
+		return std::ranges::copy(to_string(e), ctx.out()).out;
 	}
 };

@@ -16,11 +16,9 @@ module;
 
 #include <ucl.h>
 
-import nihil;
-
 export module nihil.ucl:object;
 
-import :error;
+import nihil;
 import :type;
 
 namespace nihil::ucl {
@@ -56,22 +54,24 @@ export struct object {
 	auto operator=(this object &self, object const &other) -> object &;
 
 	// Increase the refcount of this object.
-	auto ref(this object const &self) -> object;
+	[[nodiscard]] auto ref(this object const &self) -> object;
 
 	// Return the type of this object.
-	auto type(this object const &self) -> object_type;
+	[[nodiscard]] auto type(this object const &self) -> object_type;
 
 	// Return the underlying object.
-	auto get_ucl_object(this object &self) -> ::ucl_object_t *;
+	[[nodiscard]] auto get_ucl_object(this object &self)
+		-> ::ucl_object_t *;
 
-	auto get_ucl_object(this object const &self) -> ::ucl_object_t const *;
+	[[nodiscard]] auto get_ucl_object(this object const &self)
+		-> ::ucl_object_t const *;
 
 	// Return the key of this object.
-	auto key(this object const &self) -> std::string_view;
+	[[nodiscard]] auto key(this object const &self) -> std::string_view;
 
 protected:
 	// The object we're wrapping.
-	::ucl_object_t *_object = nullptr;
+	::ucl_object_t *m_object = nullptr;
 
 	friend auto swap(object &a, object &b) -> void;
 };
@@ -80,8 +80,10 @@ protected:
  * Object comparison.
  */
 
-export auto operator==(object const &lhs, object const &rhs) -> bool;
-export auto operator<=>(object const &lhs, object const &rhs)
+export [[nodiscard]] auto operator==(object const &lhs, object const &rhs)
+	-> bool;
+
+export [[nodiscard]] auto operator<=>(object const &lhs, object const &rhs)
 	-> std::strong_ordering;
 
 } // namespace nihil::ucl

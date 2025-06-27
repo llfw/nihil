@@ -24,67 +24,77 @@ TEST_CASE("error: invariants", "[nihil]")
 
 TEST_CASE("error: construct from string", "[nihil]")
 {
-	auto e = nihil::error("an error");
-	REQUIRE(e.str() == e.what());
-	REQUIRE(e.what() == "an error");
-	REQUIRE(std::format("{}", e) == e.what());
+	using namespace nihil;
+
+	auto e = error("an error");
+	REQUIRE(e.str() == to_string(e));
+	REQUIRE(to_string(e) == "an error");
+	REQUIRE(std::format("{}", e) == to_string(e));
 }
 
 TEST_CASE("error: construct from std::error_condition", "[nihil]")
 {
-	auto code = std::make_error_condition(std::errc::invalid_argument);
-	auto e = nihil::error(code);
+	using namespace nihil;
 
-	REQUIRE(e.cause().has_value() == false);
+	auto code = std::make_error_condition(std::errc::invalid_argument);
+	auto e = error(code);
+
+	REQUIRE(!e.cause());
 	REQUIRE(e.code().has_value() == false);
 	REQUIRE(e.condition().has_value() == true);
 
 	REQUIRE(e == std::errc::invalid_argument);
 	REQUIRE(e != std::errc::no_such_file_or_directory);
 
-	REQUIRE(e.str() == e.what());
-	REQUIRE(e.what() == std::strerror(EINVAL));
-	REQUIRE(std::format("{}", e) == e.what());
+	REQUIRE(e.str() == to_string(e));
+	REQUIRE(to_string(e) == std::strerror(EINVAL));
+	REQUIRE(std::format("{}", e) == to_string(e));
 }
 
 TEST_CASE("error: construct from std::errc", "[nihil]")
 {
-	auto e = nihil::error(std::errc::invalid_argument);
+	using namespace nihil;
 
-	REQUIRE(e.cause().has_value() == false);
+	auto e = error(std::errc::invalid_argument);
+
+	REQUIRE(!e.cause());
 	REQUIRE(e.code().has_value() == false);
 	REQUIRE(e.condition().has_value() == true);
 
 	REQUIRE(e == std::errc::invalid_argument);
 	REQUIRE(e != std::errc::no_such_file_or_directory);
 
-	REQUIRE(e.str() == e.what());
-	REQUIRE(e.what() == std::strerror(EINVAL));
-	REQUIRE(std::format("{}", e) == e.what());
+	REQUIRE(e.str() == to_string(e));
+	REQUIRE(to_string(e) == std::strerror(EINVAL));
+	REQUIRE(std::format("{}", e) == to_string(e));
 }
 
 TEST_CASE("error: compound error", "[nihil]")
 {
 	using namespace std::literals;
+	using namespace nihil;
 
-	auto e = nihil::error("cannot open file",
-			nihil::error(std::errc::no_such_file_or_directory));
+	auto e = error("cannot open file",
+			error(std::errc::no_such_file_or_directory));
 
-	REQUIRE(e.cause().has_value() == true);
+	REQUIRE(e.cause());
 	REQUIRE(e.code().has_value() == false);
 	REQUIRE(e.condition().has_value() == false);
 
-	REQUIRE(e.cause() == std::errc::no_such_file_or_directory);
+	REQUIRE(*e.cause() == std::errc::no_such_file_or_directory);
 	REQUIRE(e.str() == "cannot open file");
-	REQUIRE(e.what() == ("cannot open file: "s + std::strerror(ENOENT)));
-	REQUIRE(std::format("{}", e) == e.what());
+	REQUIRE(to_string(e) == ("cannot open file: "s +
+				 std::strerror(ENOENT)));
+	REQUIRE(std::format("{}", e) == to_string(e));
 }
 
 TEST_CASE("error: operator== with strings", "[nihil]")
 {
-	auto e1 = nihil::error("error");
-	auto e2 = nihil::error("error");
-	auto e3 = nihil::error("an error");
+	using namespace nihil;
+
+	auto e1 = error("error");
+	auto e2 = error("error");
+	auto e3 = error("an error");
 
 	REQUIRE(e1 == e2);
 	REQUIRE(e1 != e3);
@@ -92,25 +102,31 @@ TEST_CASE("error: operator== with strings", "[nihil]")
 
 TEST_CASE("error: operator< with strings", "[nihil]")
 {
-	auto e1 = nihil::error("aaa");
-	auto e2 = nihil::error("zzz");
+	using namespace nihil;
+
+	auto e1 = error("aaa");
+	auto e2 = error("zzz");
 
 	REQUIRE(e1 < e2);
 }
 
 TEST_CASE("error: operator== with a cause", "[nihil]")
 {
-	auto e1 = nihil::error("error", nihil::error("cause 1"));
-	auto e2 = nihil::error("error", nihil::error("cause 2"));
+	using namespace nihil;
+
+	auto e1 = error("error", error("cause 1"));
+	auto e2 = error("error", error("cause 2"));
 
 	REQUIRE(e1 == e2);
 }
 
 TEST_CASE("error: operator== with error_conditions", "[nihil]")
 {
-	auto e1 = nihil::error(std::errc::invalid_argument);
-	auto e2 = nihil::error(std::errc::invalid_argument);
-	auto e3 = nihil::error(std::errc::permission_denied);
+	using namespace nihil;
+
+	auto e1 = error(std::errc::invalid_argument);
+	auto e2 = error(std::errc::invalid_argument);
+	auto e3 = error(std::errc::permission_denied);
 
 	REQUIRE(e1 == e2);
 	REQUIRE(e1 != e3);
@@ -118,19 +134,36 @@ TEST_CASE("error: operator== with error_conditions", "[nihil]")
 
 TEST_CASE("error: std::format with string", "[nihil]")
 {
-	auto err = nihil::error("an error");
+	using namespace nihil;
+
+	auto err = error("an error");
 	REQUIRE(std::format("{}", err) == "an error");
 }
 
 TEST_CASE("error: std::format with std::errc", "[nihil]")
 {
-	auto err = nihil::error(std::errc::invalid_argument);
+	using namespace nihil;
+
+	auto err = error(std::errc::invalid_argument);
 	REQUIRE(std::format("{}", err) == std::strerror(EINVAL));
 }
 
 TEST_CASE("error: std::format with cause", "[nihil]")
 {
-	auto err = nihil::error("an error", std::errc::invalid_argument);
+	using namespace nihil;
+
+	auto err = error("an error", std::errc::invalid_argument);
 	REQUIRE(std::format("{}", err) == "an error: Invalid argument");
 }
 
+TEST_CASE("error: throw and catch", "[nihil]")
+{
+	using namespace std::literals;
+	using namespace nihil;
+
+	try {
+		throw error("oh no", error(std::errc::invalid_argument));
+	} catch (std::exception const &exc) {
+		REQUIRE(exc.what() == "oh no: Invalid argument"s);
+	}
+}

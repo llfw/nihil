@@ -5,6 +5,9 @@
 module;
 
 #include <compare>
+#include <expected>
+#include <format>
+#include <utility>
 
 #include <ucl.h>
 
@@ -20,30 +23,90 @@ export struct real final : object {
 
 	inline static constexpr object_type ucl_type = object_type::real;
 
-	// Create a new real from a UCL object.
+	/*
+	 * Create a real holding the value 0.  Throws std::system_error
+	 * on failure.
+	 */
+	real();
+
+	/*
+	 * Create a real holding a specific value.  Throws std::system_error
+	 * on failure.
+	 */
+	explicit real(contained_type value);
+
+	/*
+	 * Create a new real from a UCL object.  Throws type_mismatch
+	 * on failure.
+	 */
 	real(ref_t, ::ucl_object_t const *uobj);
 	real(noref_t, ::ucl_object_t *uobj);
 
-	// Create a default-initialised real.
-	real();
-
-	// Create a new real from a value.
-	explicit real(contained_type value);
-
 	// Return the value of this real.
-	auto value(this real const &self) -> contained_type;
+	[[nodiscard]] auto value(this real const &self) -> contained_type;
 };
+
+/*
+ * Real constructors.  These return an error instead of throwing.
+ */
+
+export [[nodiscard]] auto
+make_real(real::contained_type = 0) -> std::expected<real, error>;
 
 /*
  * Comparison operators.
  */
 
-export auto operator== (real const &a, real const &b) -> bool;
-export auto operator== (real const &a, real::contained_type b) -> bool;
+export [[nodiscard]] auto operator== (real const &a, real const &b) -> bool;
 
-export auto operator<=> (real const &a, real const &b)
+export [[nodiscard]] auto operator== (real const &a,
+				      real::contained_type b) -> bool;
+
+export [[nodiscard]] auto operator<=> (real const &a, real const &b)
 	-> std::partial_ordering;
-export auto operator<=> (real const &a, real::contained_type b)
+
+export [[nodiscard]] auto operator<=> (real const &a, real::contained_type b)
 	-> std::partial_ordering;
+
+/*
+ * Literal operator.
+ */
+inline namespace literals {
+export constexpr auto operator""_ucl (long double d) -> real
+{
+	if (d > static_cast<long double>(std::numeric_limits<double>::max()) ||
+	    d < static_cast<long double>(std::numeric_limits<double>::min()))
+		throw std::out_of_range("literal out of range");
+
+	return real(d);
+}
+} // namespace nihil::ucl::literals
 
 } // namespace nihil::ucl
+
+namespace nihil { inline namespace literals {
+	export using namespace ::nihil::ucl::literals;
+}} // namespace nihil::literals
+
+/*
+ * std::formatter for a real.  This provides the same format operations
+ * as std::formatter<double>;
+ */
+export template<>
+struct std::formatter<nihil::ucl::real, char>
+{
+	std::formatter<double> base_formatter;
+
+	template<class ParseContext>
+	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	{
+		return base_formatter.parse(ctx);
+	}
+
+	template<class FmtContext>
+	FmtContext::iterator format(nihil::ucl::real const &o,
+				    FmtContext& ctx) const
+	{
+		return base_formatter.format(o.value(), ctx);
+	}
+};

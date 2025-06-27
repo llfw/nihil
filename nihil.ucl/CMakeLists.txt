@@ -9,7 +9,7 @@ target_sources(nihil.ucl
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.ucl.ccm
 	emit.ccm
-	error.ccm
+	errc.ccm
 	object.ccm
 	object_cast.ccm
 	parser.ccm
@@ -24,7 +24,7 @@ target_sources(nihil.ucl
 
 	PRIVATE
 	emit.cc
-	error.cc
+	errc.cc
 	parser.cc
 	type.cc
 

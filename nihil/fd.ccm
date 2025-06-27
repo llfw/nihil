@@ -14,17 +14,8 @@ module;
 export module nihil:fd;
 
 import :error;
-import :generic_error;
 
 namespace nihil {
-
-/*
- * Exception thrown when an internal fd error occurs.  This is not supposed
- * to be caught, since it indicates an internal logic error in the caller.
- */
-export struct fd_logic_error final : std::logic_error {
-	fd_logic_error(std::string what);
-};
 
 /*
  * fd: a file descriptor.

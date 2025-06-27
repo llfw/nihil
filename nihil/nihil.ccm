@@ -16,7 +16,6 @@ export import :fd;
 export import :find_in_path;
 export import :format_filesystem;
 export import :generator;
-export import :generic_error;
 export import :getenv;
 export import :guard;
 export import :match;

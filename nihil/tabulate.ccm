@@ -14,7 +14,7 @@ module;
 export module nihil:tabulate;
 
 import :ctype;
-import :generic_error;
+import :error;
 
 namespace nihil {
 
@@ -38,8 +38,11 @@ namespace nihil {
  */
 
 // Exception thrown when a table spec is invalid.
-export struct table_spec_error : generic_error {
-	table_spec_error(std::string what) : generic_error(std::move(what)) {}
+export struct table_spec_error : error {
+	table_spec_error(std::string_view what)
+		: error(what)
+	{
+	}
 };
 
 /*

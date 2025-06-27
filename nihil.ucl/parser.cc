@@ -16,14 +16,14 @@ import nihil;
 
 namespace nihil::ucl {
 
-auto make_parser(int flags) -> std::expected<parser, nihil::error>
+auto make_parser(int flags) -> std::expected<parser, error>
 {
 	auto *p = ::ucl_parser_new(flags);
 	if (p != nullptr)
 		return p;
 
 	// TODO: Is there a way to get the actual error here?
-	return std::unexpected(nihil::error("failed to create parser"));
+	return std::unexpected(error("failed to create parser"));
 }
 
 auto macro_handler::handle(unsigned char const *data,

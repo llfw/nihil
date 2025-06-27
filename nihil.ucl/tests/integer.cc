@@ -28,16 +28,90 @@ TEST_CASE("ucl: integer: invariants", "[ucl]")
 	static_assert(std::swappable<integer>);
 }
 
-TEST_CASE("ucl: integer: default construct", "[ucl]")
+TEST_CASE("ucl: integer: constructor", "[ucl]")
 {
-	auto i = nihil::ucl::integer();
-	REQUIRE(i == 0);
+	using namespace nihil::ucl;
+
+	SECTION("default") {
+		auto i = integer();
+		REQUIRE(i == 0);
+	}
+
+	SECTION("with value") {
+		auto i = integer(42);
+		REQUIRE(i == 42);
+	}
 }
 
-TEST_CASE("ucl: integer: construct", "[ucl]")
+TEST_CASE("ucl: integer: literal", "[ucl]")
 {
-	auto i = nihil::ucl::integer(42);
-	REQUIRE(i == 42);
+	SECTION("with namespace nihil::ucl::literals") {
+		using namespace nihil::ucl::literals;
+
+		auto i = 42_ucl;
+		REQUIRE(i.type() == nihil::ucl::object_type::integer);
+		REQUIRE(i == 42);
+	}
+
+	SECTION("with namespace nihil::literals") {
+		using namespace nihil::literals;
+
+		auto i = 42_ucl;
+		REQUIRE(i.type() == nihil::ucl::object_type::integer);
+		REQUIRE(i == 42);
+	}
+}
+
+TEST_CASE("ucl: integer: construct from UCL object", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("ref, correct type") {
+		auto uobj = ::ucl_object_fromint(42);
+
+		auto i = integer(ref, uobj);
+		REQUIRE(i == 42);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, correct type") {
+		auto uobj = ::ucl_object_fromint(42);
+
+		auto i = integer(noref, uobj);
+		REQUIRE(i == 42);
+	}
+
+	SECTION("ref, wrong type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		REQUIRE_THROWS_AS(integer(ref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+
+	SECTION("noref, wrong type") {
+		auto uobj = ::ucl_object_frombool(true);
+
+		REQUIRE_THROWS_AS(integer(noref, uobj), type_mismatch);
+
+		::ucl_object_unref(uobj);
+	}
+}
+
+TEST_CASE("ucl: integer: make_integer", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("default value") {
+		auto i = make_integer().value();
+		REQUIRE(i == 0);
+	}
+
+	SECTION("explicit value") {
+		auto i = make_integer(42).value();
+		REQUIRE(i == 42);
+	}
 }
 
 TEST_CASE("ucl: integer: swap", "[ucl]")
@@ -55,7 +129,9 @@ TEST_CASE("ucl: integer: swap", "[ucl]")
 
 TEST_CASE("ucl: integer: value()", "[ucl]")
 {
-	auto i = nihil::ucl::integer(42);
+	using namespace nihil::ucl;
+
+	auto i = 42_ucl;
 	REQUIRE(i.value() == 42);
 }
 
@@ -63,67 +139,109 @@ TEST_CASE("ucl: integer: key()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto err = parse("an_int = 42");
-	REQUIRE(err);
+	SECTION("parsed with key") {
+		auto obj = parse("an_int = 42").value();
+		auto i = object_cast<integer>(obj["an_int"]).value();
+		REQUIRE(i.key() == "an_int");
+	}
 
-	auto obj = *err;
-	REQUIRE(object_cast<integer>(obj["an_int"])->key() == "an_int");
-
-	auto i = nihil::ucl::integer(42);
-	REQUIRE(i.key() == "");
+	SECTION("bare integer, no key") {
+		auto i = 42_ucl;
+		REQUIRE(i.key() == "");
+	}
 }
 
-TEST_CASE("ucl: integer: operator==", "[ucl]")
+TEST_CASE("ucl: integer: comparison", "[ucl]")
 {
-	auto i = nihil::ucl::integer(42);
+	using namespace nihil::ucl;
 
-	REQUIRE(i == 42);
-	REQUIRE(i == nihil::ucl::integer(42));
+	auto i = 42_ucl;
 
-	REQUIRE(i != 1);
-	REQUIRE(i != nihil::ucl::integer(1));
-}
+	SECTION("operator==") {
+		REQUIRE(i == 42);
+		REQUIRE(i == 42_ucl);
+	}
 
-TEST_CASE("ucl: integer: operator<=>", "[ucl]")
-{
-	auto i = nihil::ucl::integer(42);
+	SECTION("operator!=") {
+		REQUIRE(i != 1);
+		REQUIRE(i != 1_ucl);
+	}
 
-	REQUIRE(i < 43);
-	REQUIRE(i < nihil::ucl::integer(43));
+	SECTION("operator<") {
+		REQUIRE(i < 43);
+		REQUIRE(i < 43_ucl);
+	}
 
-	REQUIRE(i > 1);
-	REQUIRE(i > nihil::ucl::integer(1));
+	SECTION("operator>") {
+		REQUIRE(i > 1);
+		REQUIRE(i > 1_ucl);
+	}
 }
 
 TEST_CASE("ucl: integer: parse", "[ucl]")
 {
-	using namespace std::literals;
+	using namespace nihil::ucl;
 
-	auto err = nihil::ucl::parse("value = 42"sv);
-	REQUIRE(err);
-
-	auto obj = *err;
+	auto obj = parse("value = 42").value();
 
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
-	REQUIRE(object_cast<nihil::ucl::integer>(v) == 42);
-}
-
-TEST_CASE("ucl: integer: emit", "[ucl]")
-{
-	auto i = nihil::ucl::integer(42);
-	auto str = std::format("{}", i);
-	REQUIRE(str == "42");
+	REQUIRE(object_cast<integer>(v) == 42);
 }
 
 TEST_CASE("ucl: integer: parse and emit", "[ucl]")
 {
-	auto ucl = nihil::ucl::parse("int = 42;");
-	REQUIRE(ucl);
+	using namespace nihil::ucl;
+
+	auto ucl = parse("int = 42;").value();
 
 	auto output = std::string();
-	emit(*ucl, nihil::ucl::emitter::configuration,
-	     std::back_inserter(output));
+	emit(ucl, emitter::configuration, std::back_inserter(output));
 
 	REQUIRE(output == "int = 42;\n");
+}
+
+TEST_CASE("ucl: integer: format", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare integer") {
+		auto str = std::format("{}", 42_ucl);
+		REQUIRE(str == "42");
+	}
+
+	SECTION("parsed integer") {
+		auto obj = parse("int = 42;").value();
+		auto i = object_cast<integer>(obj["int"]).value();
+
+		auto str = std::format("{}", i);
+		REQUIRE(str == "42");
+	}
+
+	SECTION("with format string") {
+		auto str = std::format("{:-05}", 42_ucl);
+		REQUIRE(str == "00042");
+	}
+}
+
+TEST_CASE("ucl: integer: print to ostream", "[ucl]")
+{
+	using namespace nihil::ucl;
+
+	SECTION("bare integer") {
+		auto strm = std::ostringstream();
+		strm << 42_ucl;
+
+		REQUIRE(strm.str() == "42");
+	}
+
+	SECTION("parsed integer") {
+		auto obj = parse("int = 42;").value();
+		auto i = object_cast<integer>(obj["int"]).value();
+
+		auto strm = std::ostringstream();
+		strm << i;
+
+		REQUIRE(strm.str() == "42");
+	}
 }

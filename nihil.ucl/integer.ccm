@@ -7,11 +7,15 @@ module;
 #include <compare>
 #include <cstdint>
 #include <cstdlib>
+#include <expected>
+#include <format>
+#include <utility>
 
 #include <ucl.h>
 
 export module nihil.ucl:integer;
 
+import nihil;
 import :object;
 import :type;
 
@@ -21,29 +25,92 @@ export struct integer final : object {
 	using contained_type = std::int64_t;
 	inline static constexpr object_type ucl_type = object_type::integer;
 
-	// Create a new integer from a UCL object.
+	/*
+	 * Create an integer holding the value 0.  Throws std::system_error
+	 * on failure.
+	 */
+	integer();
+
+	/*
+	 * Create an integer holding a specific value.  Throws std::system_error
+	 * on failure.
+	 */
+	explicit integer(contained_type value);
+
+	/*
+	 * Create a new integer from a UCL object.  Throws type_mismatch
+	 * on failure.
+	 */
 	integer(ref_t, ::ucl_object_t const *uobj);
 	integer(noref_t, ::ucl_object_t *uobj);
 
-	// Create a new default-initialised integer.
-	integer();
-
-	// Create a new integer from a value.
-	explicit integer(contained_type value);
-
 	// Return the value of this object.
-	auto value(this integer const &self) -> contained_type;
+	[[nodiscard]] auto value(this integer const &self) -> contained_type;
 };
+
+/*
+ * Integer constructors.  These return an error instead of throwing.
+ */
+
+export [[nodiscard]] auto
+make_integer(integer::contained_type = 0) -> std::expected<integer, error>;
 
 /*
  * Comparison operators.
  */
 
-export auto operator== (integer const &a, integer const &b) -> bool;
-export auto operator== (integer const &a, integer::contained_type b) -> bool;
-export auto operator<=> (integer const &a, integer const &b)
-	-> std::strong_ordering;
-export auto operator<=> (integer const &a, integer::contained_type b)
+export [[nodiscard]] auto operator== (integer const &a,
+				      integer const &b) -> bool;
+
+export [[nodiscard]] auto operator== (integer const &a,
+				      integer::contained_type b) -> bool;
+
+export [[nodiscard]] auto operator<=> (integer const &a,
+				       integer const &b)
 	-> std::strong_ordering;
 
+export [[nodiscard]] auto operator<=> (integer const &a,
+				       integer::contained_type b)
+	-> std::strong_ordering;
+
+/*
+ * Literal operator.
+ */
+inline namespace literals {
+export constexpr auto operator""_ucl (unsigned long long i) -> integer
+{
+	if (std::cmp_greater(i, std::numeric_limits<std::int64_t>::max()))
+		throw std::out_of_range("literal out of range");
+
+	return integer(i);
+}
+} // namespace nihil::ucl::literals
+
 } // namespace nihil::ucl
+
+namespace nihil { inline namespace literals {
+	export using namespace ::nihil::ucl::literals;
+}} // namespace nihil::literals
+
+/*
+ * std::formatter for an integer.  This provides the same format operations
+ * as std::formatter<std::int64_t>.
+ */
+export template<>
+struct std::formatter<nihil::ucl::integer, char>
+{
+	std::formatter<std::int64_t> base_formatter;
+
+	template<class ParseContext>
+	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	{
+		return base_formatter.parse(ctx);
+	}
+
+	template<class FmtContext>
+	FmtContext::iterator format(nihil::ucl::integer const &o,
+				    FmtContext& ctx) const
+	{
+		return base_formatter.format(o.value(), ctx);
+	}
+};

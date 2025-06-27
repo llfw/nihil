@@ -11,6 +11,7 @@ module;
 #include <memory>
 #include <optional>
 #include <string>
+#include <system_error>
 
 #include <ucl.h>
 
@@ -24,16 +25,16 @@ namespace nihil::ucl {
 export struct key_not_found : error {
 	key_not_found(std::string_view key)
 		: error(std::format("key '{}' not found in map", key))
-		, _key(key)
+		, m_key(key)
 	{}
 
 	auto key(this key_not_found const &self) -> std::string_view
 	{
-		return self._key;
+		return self.m_key;
 	}
 	
 private:
-	std::string _key;
+	std::string m_key;
 };
 
 export template<datatype T>
@@ -50,25 +51,28 @@ struct map_iterator {
 
 	struct sentinel{};
 
-	auto operator==(this map_iterator const &self, sentinel) -> bool
+	[[nodiscard]] auto operator==(this map_iterator const &self, sentinel)
+		-> bool
 	{
-		return (self._state->cur == nullptr);
+		return (self.m_state->cur == nullptr);
 	}
 
 	auto operator++(this map_iterator &self) -> map_iterator &
 	{
-		self._state->next();
+		self.m_state->next();
 		return self;
 	}
 
 	auto operator++(this map_iterator &self, int) -> map_iterator &
 	{
-		self._state->next();
+		self.m_state->next();
 		return self;
 	}
 
-	auto operator*(this map_iterator const &self) -> value_type {
-		auto obj = T(ref, self._state->cur);
+	[[nodiscard]] auto operator*(this map_iterator const &self)
+		-> value_type
+	{
+		auto obj = T(ref, self.m_state->cur);
 		return {obj.key(), std::move(obj)};
 	}
 
@@ -76,8 +80,8 @@ private:
 	friend struct map<T>;
 
 	map_iterator(::ucl_object_t const *obj)
+		: m_state(std::make_shared<state>(obj))
 	{
-		_state = std::make_shared<state>(obj);
 		++(*this);
 	}
 
@@ -85,18 +89,21 @@ private:
 		state(::ucl_object_t const *obj)
 		{
 			if ((iter = ::ucl_object_iterate_new(obj)) == nullptr)
-				throw error("failed to create UCL iterator");
+				throw std::system_error(make_error_code(
+					std::errc(errno)));
 		}
 
 		state(state const &) = delete;
 		auto operator=(this state &, state const &) -> state& = delete;
 
-		~state() {
+		~state()
+		{
 			if (iter != nullptr)
 				::ucl_object_iterate_free(iter);
 		}
 
-		auto next() -> void {
+		auto next() -> void
+		{
 			cur = ::ucl_object_iterate_safe(iter, true);
 		}
 
@@ -104,7 +111,7 @@ private:
 		ucl_object_t const *cur = nullptr;
 	};
 
-	std::shared_ptr<state> _state;
+	std::shared_ptr<state> m_state;
 };
 
 export template<datatype T = object>
@@ -116,26 +123,49 @@ struct map final : object {
 	using difference_type = std::ptrdiff_t;
 	using iterator = map_iterator<T>;
 
-	// Create an empty map
-	map() : object(noref, ::ucl_object_typed_new(UCL_OBJECT))
+	/*
+	 * Create an empty map.  Throws std::system_error on failure.
+	 */
+	map()	: object(noref, [] {
+			auto *uobj = ::ucl_object_typed_new(UCL_OBJECT);
+			if (uobj == nullptr)
+				throw std::system_error(
+					std::make_error_code(std::errc(errno)));
+			return uobj;
+		}())
 	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
 	}
 
-	// Create a new map from a UCL object.
+	/*
+	 * Create a map from a UCL object.  Throws type_mismatch on failure.
+	 *
+	 * Unlike object_cast<>, this does not check the type of the contained
+	 * elements, which means object access can throw type_mismatch.
+	 */
 	map(ref_t, ::ucl_object_t const *uobj)
-		: object(nihil::ucl::ref, uobj)
+		: object(nihil::ucl::ref, [&] {
+			auto actual_type = static_cast<object_type>(
+						::ucl_object_type(uobj));
+			if (actual_type != map::ucl_type)
+				throw type_mismatch(map::ucl_type,
+						    actual_type);
+			return uobj;
+		}())
 	{
 		if (type() != ucl_type)
 			throw type_mismatch(ucl_type, type());
 	}
 
 	map(noref_t, ::ucl_object_t *uobj)
-		: object(noref, uobj)
+		: object(nihil::ucl::noref, [&] {
+			auto actual_type = static_cast<object_type>(
+						::ucl_object_type(uobj));
+			if (actual_type != map::ucl_type)
+				throw type_mismatch(map::ucl_type,
+						    actual_type);
+			return uobj;
+		}())
 	{
-		if (type() != ucl_type)
-			throw type_mismatch(ucl_type, type());
 	}
 
 	/*
@@ -146,9 +176,6 @@ struct map final : object {
 	map(Iterator first, Iterator last)
 		 : map()
 	{
-		if (_object == nullptr)
-			throw error("failed to create UCL object");
-
 		// This is exception safe, because if we throw here the
 		// base class destructor will free the map.
 		while (first != last) {
@@ -165,7 +192,7 @@ struct map final : object {
 		 		     value_type>)
 	map(std::from_range_t, Range &&range)
 		 : map(std::ranges::begin(range),
-		   std::ranges::end(range))
+		       std::ranges::end(range))
 	{
 	}
 
@@ -181,12 +208,12 @@ struct map final : object {
 	 * Map iterator access.
 	 */
 
-	auto begin(this map const &self) -> iterator
+	[[nodiscard]] auto begin(this map const &self) -> iterator
 	{
 		return {self.get_ucl_object()};
 	}
 
-	auto end(this map const &) -> iterator::sentinel
+	[[nodiscard]] auto end(this map const &) -> iterator::sentinel
 	{
 		return {};
 	}
@@ -213,7 +240,7 @@ struct map final : object {
 	/*
 	 * Access a map element by key.
 	 */
-	auto find(this map const &self, std::string_view key)
+	[[nodiscard]] auto find(this map const &self, std::string_view key)
 		-> std::optional<T>
 	{
 		auto const *obj = ::ucl_object_lookup_len(
@@ -247,7 +274,13 @@ struct map final : object {
 		return {};
 	}
 
-	auto operator[] (this map const &self, std::string_view key) -> T
+	/*
+	 * Equivalent to find(), except it throws key_not_found if the key
+	 * doesn't exist in the map.
+	 */
+	[[nodiscard]] auto operator[] (this map const &self,
+				       std::string_view key)
+		-> T
 	{
 		auto obj = self.find(key);
 		if (obj)
