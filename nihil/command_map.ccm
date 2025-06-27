@@ -24,6 +24,13 @@ import :usage_error;
 
 namespace nihil {
 
+export struct command;
+
+/*
+ * Register a command; used by command<>::command().
+ */
+auto register_command(std::string_view path, command *) noexcept -> void;
+
 /*
  * A command that can be invoked.  Instantiating a command adds this command
  * to the global command table.  If an error occurs, the program will abort.
@@ -34,6 +41,7 @@ export struct command {
 		, m_usage(usage)
 		, m_handler(std::forward<decltype(fn)>(fn))
 	{
+		register_command(path, this);
 	}
 
 	[[nodiscard]] auto path(this command const &self) -> std::string_view
@@ -51,11 +59,6 @@ private:
 	std::string_view m_usage;
 	std::function<int (int, char **)> m_handler;
 };
-
-/*
- * Register a command; used by command<>::command().
- */
-auto register_command(std::string_view path, command *) noexcept -> void;
 
 // The public API.
 export [[nodiscard]] auto dispatch_command(int argc, char **argv) -> int;

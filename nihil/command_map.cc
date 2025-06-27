@@ -146,7 +146,7 @@ struct command_tree {
 		-> std::optional<command>
 	{
 		auto *this_node = &self._root_node;
-{}
+
 		// Find the node for this key.
 		for (auto &&next : path) {
 			this_node = this_node->get_child(next);
