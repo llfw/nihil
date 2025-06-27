@@ -38,6 +38,9 @@ read_file(std::filesystem::path const &filename,
 
 	for (;;) {
 		auto read_buf = co_await(read(file, buffer));
+		if (read_buf.empty())
+			co_return {};
+
 		std::ranges::copy(read_buf, iter);
 	}
 }
