@@ -10,6 +10,7 @@ add_executable(nihil.test
 	guard.cc
 	monad.cc
 	next_word.cc
+	parse_size.cc
 	skipws.cc
 	spawn.cc
 	tabulate.cc

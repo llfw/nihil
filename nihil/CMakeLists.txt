@@ -8,6 +8,7 @@ target_sources(nihil
 	command_map.ccm
 	ctype.ccm
 	ensure_dir.ccm
+	errc.ccm
 	error.ccm
 	exec.ccm
 	fd.ccm
@@ -20,6 +21,7 @@ target_sources(nihil
 	monad.ccm
 	next_word.ccm
 	open_file.ccm
+	parse_size.ccm
 	process.ccm
 	read_file.ccm
 	rename_file.ccm
@@ -34,6 +36,7 @@ target_sources(nihil
 	argv.cc
 	command_map.cc
 	ensure_dir.cc
+	errc.cc
 	error.cc
 	exec.cc
 	fd.cc
