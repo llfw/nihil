@@ -29,19 +29,19 @@ namespace nihil {
  * typically from argv.
  */
 
-template<typename T>
-struct string_tree_node final {
-	string_tree_node()
+struct command_tree_node final {
+	command_tree_node()
 		: _this_word("")
 	{
 	}
 
-	string_tree_node(std::string_view this_word)
+	command_tree_node(std::string_view this_word)
 		: _this_word(this_word)
 	{
 	}
 
-	string_tree_node(std::string_view this_word, T value)
+	command_tree_node(std::string_view this_word,
+			  command value)
 		: _this_word(this_word)
 		, _value(std::move(value))
 	{
@@ -50,9 +50,9 @@ struct string_tree_node final {
 	/*
 	 * Return a child node, or NULL if the child doesn't exist.
 	 */
-	auto get_child(this string_tree_node const &self,
+	auto get_child(this command_tree_node const &self,
 		       std::string_view child)
-		-> string_tree_node const *
+		-> command_tree_node const *
 	{
 		if (auto it = self.children.find(std::string(child));
 		    it != self.children.end())
@@ -61,9 +61,9 @@ struct string_tree_node final {
 		return nullptr;
 	}
 
-	auto get_child(this string_tree_node &self,
+	auto get_child(this command_tree_node &self,
 		       std::string_view child)
-		-> string_tree_node *
+		-> command_tree_node *
 	{
 		if (auto it = self.children.find(std::string(child));
 		    it != self.children.end())
@@ -75,23 +75,23 @@ struct string_tree_node final {
 	/*
 	 * Return a child node if it exists, or insert a new empty node.
 	 */
-	auto get_or_create_child(this string_tree_node &self,
+	auto get_or_create_child(this command_tree_node &self,
 				 std::string_view child)
-		-> string_tree_node *
+		-> command_tree_node *
 	{
 		if (auto ptr = self.get_child(child); ptr != nullptr)
 			return ptr;
 
 		auto [it, ok] = self.children.emplace(
-					child, string_tree_node(child));
+					child, command_tree_node(child));
 		return &it->second;
 	}
 
 	/*
 	 * Return this node's value.
 	 */
-	auto value(this string_tree_node const &self)
-		-> std::optional<T> const &
+	auto value(this command_tree_node const &self)
+		-> std::optional<command> const &
 	{
 		return self._value;
 	}
@@ -99,25 +99,24 @@ struct string_tree_node final {
 	/*
 	 * Set this node's value.
 	 */
-	auto value(this string_tree_node &self, T value) -> void
+	auto value(this command_tree_node &self, command value) -> void
 	{
 		self._value = std::move(value);
 	}
 
 private:
 	std::string _this_word;
-	std::optional<T> _value;
-	std::unordered_map<std::string, string_tree_node> children;
+	std::optional<command> _value;
+	std::unordered_map<std::string, command_tree_node> children;
 };
 
-template<typename T>
-struct string_tree {
+struct command_tree {
 	/*
 	 * Add a node to the tree.  Returns false if the node already exists.
 	 */
-	auto insert(this string_tree &self,
+	auto insert(this command_tree &self,
 		    std::ranges::range auto &&path,
-		    T value)
+		    command value)
 		-> bool
 	{
 		auto *this_node = &self._root_node;
@@ -142,9 +141,9 @@ struct string_tree {
 	 * Find a node in the tree.  Unlike insert(), iteration stops when
 	 * we find any node with a value.
 	 */
-	auto find(this string_tree const &self,
+	auto find(this command_tree const &self,
 		  std::ranges::range auto &&path)
-		-> std::optional<T>
+		-> std::optional<command>
 	{
 		auto *this_node = &self._root_node;
 {}
@@ -166,44 +165,35 @@ struct string_tree {
 	}
 
 private:
-	string_tree_node<T> _root_node;
+	command_tree_node _root_node;
 };
 
 /*
  * The global command map.
  */
-auto get_commands() -> string_tree<command_base *> & {
-	static auto commands = string_tree<command_base *>();
+auto get_commands() -> command_tree & {
+	static auto commands = command_tree();
 	return commands;
 }
 
-auto register_command(std::string_view path, command_base *cmd) noexcept
-	-> void
+auto register_command(std::string_view path, command *cmd) noexcept -> void
 try {
-{
 	auto &commands = get_commands();
-	if (commands.insert(path | std::views::split(' '), cmd) == false) {
+	if (commands.insert(path | std::views::split(' '), *cmd) == false) {
 		std::printf("command registration failed\n");
 		std::abort();
 	}
-}
 } catch (...) {
 	std::printf("command registration failed\n");
 	std::abort();
 }
 
-
 auto dispatch_command(int argc, char **argv) -> int
 {
-	if (argc == 0) {
-		std::print("not enough arguments\n");
-		return 1;
-	}
-
 	auto &commands = get_commands();
 	auto node = commands.find(std::span(argv, argv + argc));
 	if (node)
-		return (**node).invoke(argc, argv);
+		return node->invoke(argc, argv);
 
 	std::print("unknown command\n");
 	return 1;

@@ -24,50 +24,38 @@ import :usage_error;
 
 namespace nihil {
 
-struct command_base {
-	command_base(std::string_view path)
-		: _path(path)
+/*
+ * A command that can be invoked.  Instantiating a command adds this command
+ * to the global command table.  If an error occurs, the program will abort.
+ */
+export struct command {
+	command(std::string_view path, std::string_view usage, auto &&fn)
+		: m_path(path)
+		, m_usage(usage)
+		, m_handler(std::forward<decltype(fn)>(fn))
 	{
 	}
 
-	[[nodiscard]] auto path(this command_base const &self)
-		-> std::string_view
+	[[nodiscard]] auto path(this command const &self) -> std::string_view
 	{
-		return self._path;
+		return self.m_path;
 	}
 
-	[[nodiscard]] virtual auto invoke(int argc, char **argv) -> int = 0;
+	auto invoke(this command const &self, int argc, char **argv) -> int
+	{
+		return std::invoke(self.m_handler, argc, argv);
+	}
 
 private:
-	std::string_view _path;
+	std::string_view m_path;
+	std::string_view m_usage;
+	std::function<int (int, char **)> m_handler;
 };
 
 /*
  * Register a command; used by command<>::command().
  */
-auto register_command(std::string_view path, command_base *) noexcept -> void;
-
-/*
- * A command that can be invoked.  Instantiating a command adds this command
- * to the global command table.  If an error occurs, the program will abort.
- */
-export template<typename Fn>
-struct command final : command_base {
-	command(std::string_view path, Fn func) noexcept
-		: command_base(path)
-		, _func(func)
-	{
-		register_command(path, this);
-	}
-
-	[[nodiscard]] auto invoke(int argc, char **argv) -> int final
-	{
-		return std::invoke(_func, argc, argv);
-	}
-
-private:
-	Fn _func;
-};
+auto register_command(std::string_view path, command *) noexcept -> void;
 
 // The public API.
 export [[nodiscard]] auto dispatch_command(int argc, char **argv) -> int;

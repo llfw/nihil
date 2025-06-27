@@ -11,7 +11,7 @@ import nihil;
 namespace {
 
 auto cmd_sub1_called = false;
-auto cmd_sub1 = nihil::command("cmd sub1", [](int, char **) -> int
+auto cmd_sub1 = nihil::command("cmd sub1", "", [](int, char **) -> int
 {
 	cmd_sub1_called = true;
 	return 0;
