@@ -6,18 +6,26 @@ target_sources(nihil.cli
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.cli.ccm
 
-	command_map.ccm
+	command.ccm
+	command_tree.ccm
+	command_node.ccm
+	dispatch_command.ccm
+	registry.ccm
 	usage_error.ccm
 
 	PRIVATE
-	command_map.cc
+	command.cc
+	command_tree.cc
+	command_node.cc
+	dispatch_command.cc
+	registry.cc
 )
 
 if(NIHIL_TESTS)
 	enable_testing()
 
 	add_executable(nihil.cli.test
-		test_command_map.cc
+		test.cc
 	)
 	target_link_libraries(nihil.cli.test PRIVATE
 		nihil.cli

@@ -20,5 +20,3 @@ export struct usage_error : error {
 };
 
 } // namespace nihil
-
-

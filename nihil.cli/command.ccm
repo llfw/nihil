@@ -1,0 +1,48 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <functional>
+#include <string>
+
+export module nihil.cli:command;
+
+import nihil.error;
+import :command_node;
+
+namespace nihil {
+
+export struct command;
+
+/*
+ * A command that can be invoked.  Instantiating a command adds this command
+ * to the global command table.  If an error occurs, the program will abort.
+ */
+
+using command_handler_t = int (int, char **);
+using command_function_t = std::function<command_handler_t>;
+
+export struct command final : command_node {
+	command(std::string_view path, std::string_view usage,
+		command_function_t);
+
+	command(std::string_view path, std::string_view usage, auto &&fn)
+		: command(path, usage, command_function_t(fn))
+	{}
+
+	[[nodiscard]] auto usage(this command const &) noexcept
+		-> std::string_view;
+
+	[[nodiscard]] auto invoke(int argc, char **argv) const
+		-> std::expected<int, error> override;
+
+private:
+	std::string_view	m_path;
+	std::string_view	m_usage;
+	command_function_t	m_handler;
+};
+
+} // namespace nihil

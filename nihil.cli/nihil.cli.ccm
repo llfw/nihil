@@ -6,4 +6,9 @@ module;
 
 export module nihil.cli;
 
-export import :command_map;
+export import :command;
+export import :command_tree;
+export import :command_node;
+export import :dispatch_command;
+export import :registry;
+export import :usage_error;

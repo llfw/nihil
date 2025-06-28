@@ -1,0 +1,31 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <functional>
+#include <iostream>
+#include <map>
+#include <string>
+#include <utility>
+
+export module nihil.cli:dispatch_command;
+
+import nihil.util;
+import :command;
+import :usage_error;
+
+namespace nihil {
+
+/*
+ * Invoke a command (which must have been previously registered) using
+ * the provided argument vector.
+ *
+ * The caller should have already stripped the executable name from argv[0]
+ * so that the vector starts with the command name.  This is implicitly
+ * done if main() uses getopt().
+ */
+export [[nodiscard]] auto dispatch_command(int argc, char **argv) -> int;
+
+} // namespace nihil

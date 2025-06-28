@@ -6,6 +6,7 @@ target_sources(nihil.util
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.util.ccm
 
+	capture_stream.ccm
 	ctype.ccm
 	parse_size.ccm
 	next_word.ccm
@@ -17,6 +18,7 @@ if(NIHIL_TESTS)
 	enable_testing()
 
 	add_executable(nihil.util.test
+		test_capture_stream.cc
 		test_ctype.cc
 		test_parse_size.cc
 		test_next_word.cc

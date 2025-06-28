@@ -1,0 +1,61 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <iostream>
+
+export module nihil.util:capture_stream;
+
+namespace nihil {
+
+/*
+ * Capture output written to a stream and redirect it to an internal string
+ * buffer.  Call .str() to get the data written.  Call .release() to stop
+ * capturing (or simply delete the capture_stream object).
+ */
+export template<typename Char, typename Traits>
+struct capture_stream {
+	capture_stream(std::basic_ostream<Char, Traits> &stream)
+		: m_stream(&stream)
+	{
+		m_old_streambuf = m_stream->rdbuf();
+		m_stream->rdbuf(m_buffer.rdbuf());
+	}
+
+	~capture_stream() {
+		if (m_old_streambuf == nullptr)
+			return;
+		release();
+	}
+
+	/*
+	 * Release this capture, returning the stream to its previous state.
+	 */
+	auto release(this capture_stream &self) -> void
+	{
+		if (self.m_old_streambuf == nullptr)
+			throw std::logic_error(
+				"release() called on empty capture_stream");
+
+		self.m_stream->rdbuf(self.m_old_streambuf);
+		self.m_old_streambuf = nullptr;
+	}
+
+	/*
+	 * Get the data which has been written to the stream.
+	 */
+	[[nodiscard]] auto str(this capture_stream const &self)
+		-> std::basic_string_view<Char, Traits>
+	{
+		return self.m_buffer.view();
+	}
+
+private:
+	std::basic_ostringstream<Char, Traits>	 m_buffer;
+	std::basic_ostream<Char, Traits>	*m_stream;
+	std::streambuf				*m_old_streambuf;
+};
+
+} // namespace nihil

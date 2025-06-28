@@ -1,0 +1,35 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * command_node represents a possibly-invocable command.
+ */
+
+#include <expected>
+#include <string>
+
+export module nihil.cli:command_node;
+
+import nihil.error;
+
+namespace nihil {
+
+export struct command_node {
+	command_node(std::string_view path) noexcept;
+
+	virtual ~command_node();
+
+	[[nodiscard]] auto path(this command_node const &) noexcept
+		-> std::string_view;
+
+	[[nodiscard]] virtual auto invoke(int argc, char **argv) const
+		-> std::expected<int, error>;
+
+private:
+	std::string	m_path;
+};
+
+} // namespace nihil

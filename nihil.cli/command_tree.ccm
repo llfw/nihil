@@ -1,0 +1,107 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <map>
+#include <memory>
+#include <optional>
+#include <ranges>
+#include <vector>
+
+export module nihil.cli:command_tree;
+
+import :command;
+
+namespace nihil {
+
+/*
+ * command_tree_node represents a possibly-empty node in the command tree.
+ * For example, if two commands "add foo" and "add bar" are defined,
+ * then "add" will be implicitly created as an empty node.
+ */
+struct command_tree_node final {
+	command_tree_node();
+
+	command_tree_node(command_tree_node *parent,
+			  std::string_view this_word);
+
+	command_tree_node(command_tree_node *parent,
+			  std::string_view this_word,
+			  std::shared_ptr<command_node> command);
+
+	/*
+	 * Return a child node, or NULL if the child doesn't exist.
+	 */
+	[[nodiscard]] auto get_child(this command_tree_node const &self,
+				     std::string_view child)
+		-> command_tree_node const *;
+
+	[[nodiscard]] auto get_child(this command_tree_node &self,
+				     std::string_view child)
+		-> command_tree_node *;
+
+	/*
+	 * Return a child node if it exists, or insert a new empty node.
+	 */
+	[[nodiscard]] auto get_or_create_child(this command_tree_node &self,
+					       std::string_view child)
+		-> command_tree_node *;
+
+	/*
+	 * Set or get this node's command.
+	 */
+	[[nodiscard]] auto command(this command_tree_node const &self)
+		-> std::shared_ptr<command_node> const &;
+	auto command(this command_tree_node &self,
+		     std::shared_ptr<command_node>)
+		-> void;
+
+	/*
+	 * Get the path of this command_node.
+	 */
+	[[nodiscard]] auto path(this command_tree_node const &self)
+		-> std::string;
+
+	/*
+	 * Print this node's children in a form useful to humans.
+	 */
+	auto print_commands(this command_tree_node const &self) -> void;
+
+private:
+	command_tree_node		*m_parent = nullptr;
+	std::string			 m_this_word;
+	std::shared_ptr<command_node>	 m_command;
+	std::map<std::string, command_tree_node>
+				 m_children;
+};
+
+/*
+ * The command tree stores commands in a tree structure suitable for searching.
+ */
+struct command_tree {
+	/*
+	 * Add a node to the tree.  Returns false if the node already exists.
+	 */
+	auto insert(this command_tree &self,
+		    std::vector<std::string_view> const &path,
+		    std::shared_ptr<command_node> command)
+		-> void;
+
+	/*
+	 * Find a node in the tree.
+	 */
+	auto find(this command_tree const &self, int &argc, char **&argv)
+		-> command_tree_node const *;
+
+private:
+	command_tree_node m_root_node;
+};
+
+/*
+ * Build a command tree from the registry.
+ */
+[[nodiscard]] auto build_command_tree() -> command_tree;
+
+} // namespace nihil
