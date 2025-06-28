@@ -17,22 +17,16 @@ export import :argv;
 export import :ensure_dir;
 export import :exec;
 export import :fd;
+export import :getenv;
 export import :open;
 export import :process;
 export import :read_file;
 export import :rename;
 export import :spawn;
+export import :tempfile;
 export import :write_file;
 
 export namespace nihil {
-
-/*
- * Find a variable by the given name in the environment by calling getenv_r().
- */
-
-[[nodiscard]] auto getenv(std::string_view varname)
-	-> std::expected<std::string, error>;
-
 
 /*
  * Find an executable in $PATH, open it with O_EXEC and return the fd.

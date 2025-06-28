@@ -1,0 +1,85 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * tempfile: create a temporary file.
+ */
+
+#include <cstdint>
+#include <expected>
+#include <filesystem>
+#include <string>
+
+export module nihil.posix:tempfile;
+
+import nihil.error;
+import nihil.flagset;
+import :fd;
+
+namespace nihil {
+
+struct tempfile_flags_tag {};
+export using tempfile_flags_t = flagset<std::uint8_t, tempfile_flags_tag>;
+
+// No flags.
+export inline constexpr auto tempfile_none = tempfile_flags_t();
+
+// Unlink the tempfile immediately after creating it
+export inline constexpr auto tempfile_unlink = tempfile_flags_t::bit<0>();
+
+export struct temporary_file final {
+	/*
+	 * Fetch the file's fd.
+	 */
+	[[nodiscard]] auto fd(this temporary_file &) -> nihil::fd &;
+
+	/*
+	 * Fetch the name of this file.  If tempfile_unlink was specified,
+	 * throws std::logic_error.
+	 */
+	[[nodiscard]] auto path(this temporary_file const &)
+		-> std::filesystem::path const &;
+
+	/*
+	 * Release this temporary file, causing it to be deleted immediately.
+	 * Throws std::logic_error if the file has already been released.
+	 */
+	auto release(this temporary_file &) -> void;
+
+	/*
+	 * Destructor; unlink the file if we didn't already.
+	 */
+	~temporary_file();
+
+	// Not copyable.
+	temporary_file(temporary_file const &) = delete;
+	auto operator=(this temporary_file &, temporary_file const &)
+		-> temporary_file & = delete;
+
+	// Movable.
+	temporary_file(temporary_file &&other) noexcept;
+	auto operator=(this temporary_file &, temporary_file &&) noexcept
+		-> temporary_file &;
+
+private:
+	// The file descriptor for the file.
+	nihil::fd		m_fd;
+	std::filesystem::path	m_path;
+
+	temporary_file(nihil::fd &&fd, std::filesystem::path) noexcept;
+	temporary_file(nihil::fd &&fd) noexcept;
+
+	friend auto tempfile(tempfile_flags_t flags)
+		-> std::expected<temporary_file, error>;
+};
+
+/*
+ * Create a temporary file and return it.
+ */
+export [[nodiscard]] auto tempfile(tempfile_flags_t flags = tempfile_none)
+	-> std::expected<temporary_file, error>;
+
+} // namespace nihil
