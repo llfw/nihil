@@ -12,7 +12,7 @@ module;
 
 module nihil.ucl;
 
-import nihil;
+import nihil.error;
 
 namespace nihil::ucl {
 

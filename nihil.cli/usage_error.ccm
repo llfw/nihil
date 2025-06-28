@@ -1,0 +1,24 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <string>
+
+export module nihil.cli:usage_error;
+
+import nihil.error;
+
+namespace nihil {
+
+/*
+ * Exception thrown to indicate invalid command-line arguments.
+ */
+export struct usage_error : error {
+	usage_error(std::string_view what) : error(what) {}
+};
+
+} // namespace nihil
+
+

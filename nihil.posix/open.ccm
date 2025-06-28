@@ -1,0 +1,24 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <filesystem>
+
+export module nihil.posix:open;
+
+import nihil.error;
+import :fd;
+
+export namespace nihil {
+
+/*
+ * Open the given file and return an fd for it.
+ */
+[[nodiscard]] auto open(std::filesystem::path const &filename,
+			int flags, int mode = 0777)
+	-> std::expected<fd, error>;
+
+} // namespace nihil

@@ -12,8 +12,6 @@ module;
 
 module nihil.ucl;
 
-import nihil;
-
 namespace nihil::ucl {
 
 object::object(ref_t, ::ucl_object_t const *object)

@@ -13,9 +13,7 @@ add_executable(nihil.ucl.test
 	string.cc
 )
 
-target_link_libraries(nihil.ucl.test PRIVATE
-	nihil nihil.ucl
-	Catch2::Catch2WithMain)
+target_link_libraries(nihil.ucl.test PRIVATE nihil.ucl Catch2::Catch2WithMain)
 
 find_package(Catch2 REQUIRED)
 

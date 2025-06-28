@@ -9,8 +9,6 @@ module;
 
 module nihil.ucl;
 
-import nihil;
-
 namespace nihil::ucl {
 
 struct ucl_error_category final : std::error_category {

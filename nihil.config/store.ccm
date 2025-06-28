@@ -15,7 +15,7 @@ module;
 
 export module nihil.config:store;
 
-import nihil;
+import nihil.generator;
 import :option;
 
 namespace nihil::config {

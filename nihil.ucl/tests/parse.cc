@@ -7,7 +7,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-import nihil;
 import nihil.ucl;
 
 TEST_CASE("ucl parse: iterate array", "[ucl]")

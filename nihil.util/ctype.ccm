@@ -1,0 +1,87 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <concepts>
+#include <locale>
+
+export module nihil.util:ctype;
+
+namespace nihil {
+
+/*
+ * ctype_is: wrap std::ctype<T>::is() in a form suitable for use as an algorithm
+ * predicate, i.e., ctype_is(m) will return a functor object that takes any char
+ * type as an argument and returns bool.
+ *
+ * If the locale is not specified, the current global locale is used by default.
+ *
+ * ctype_is copies the locale, so passing a temporary is fine.
+ */
+
+export struct ctype_is final {
+	ctype_is(std::ctype_base::mask mask_,
+		 std::locale const &locale_ = std::locale())
+	    : m_mask(mask_)
+	    , m_locale(locale_)
+	{}
+
+	[[nodiscard]] auto operator()(this ctype_is const &self,
+				      std::integral auto c)
+	{
+		using ctype = std::ctype<decltype(c)>;
+		auto &facet = std::use_facet<ctype>(self.m_locale);
+		return facet.is(self.m_mask, c);
+	}
+
+private:
+	std::ctype_base::mask	m_mask;
+	std::locale		m_locale;
+};
+
+// Predefined tests for the current global locale. 
+
+export inline auto is_space = ctype_is(std::ctype_base::space);
+export inline auto is_print = ctype_is(std::ctype_base::print);
+export inline auto is_cntrl = ctype_is(std::ctype_base::cntrl);
+export inline auto is_upper = ctype_is(std::ctype_base::upper);
+export inline auto is_lower = ctype_is(std::ctype_base::lower);
+export inline auto is_alpha = ctype_is(std::ctype_base::alpha);
+export inline auto is_digit = ctype_is(std::ctype_base::digit);
+export inline auto is_punct = ctype_is(std::ctype_base::punct);
+export inline auto is_xdigit = ctype_is(std::ctype_base::xdigit);
+export inline auto is_blank = ctype_is(std::ctype_base::blank);
+export inline auto is_alnum = ctype_is(std::ctype_base::alnum);
+export inline auto is_graph = ctype_is(std::ctype_base::graph);
+
+// Predefined tests for the C locale.  The C locale is guaranteed to always be
+// available, so this doesn't create lifetime issues.
+
+export inline auto is_c_space =
+	ctype_is(std::ctype_base::space, std::locale::classic());
+export inline auto is_c_print =
+	ctype_is(std::ctype_base::print, std::locale::classic());
+export inline auto is_c_cntrl =
+	ctype_is(std::ctype_base::cntrl, std::locale::classic());
+export inline auto is_c_upper =
+	ctype_is(std::ctype_base::upper, std::locale::classic());
+export inline auto is_c_lower =
+	ctype_is(std::ctype_base::lower, std::locale::classic());
+export inline auto is_c_alpha =
+	ctype_is(std::ctype_base::alpha, std::locale::classic());
+export inline auto is_c_digit =
+	ctype_is(std::ctype_base::digit, std::locale::classic());
+export inline auto is_c_punct =
+	ctype_is(std::ctype_base::punct, std::locale::classic());
+export inline auto is_c_xdigit =
+	ctype_is(std::ctype_base::xdigit, std::locale::classic());
+export inline auto is_c_blank =
+	ctype_is(std::ctype_base::blank, std::locale::classic());
+export inline auto is_c_alnum =
+	ctype_is(std::ctype_base::alnum, std::locale::classic());
+export inline auto is_c_graph =
+	ctype_is(std::ctype_base::graph, std::locale::classic());
+
+} // namespace nihil

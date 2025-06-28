@@ -1,0 +1,249 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * spawn(): fork and execute a child process.
+ */
+
+#include <algorithm>
+#include <cerrno>
+#include <coroutine>
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <iterator>
+#include <print>
+#include <string>
+#include <utility>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+export module nihil.posix:spawn;
+
+import nihil.monad;
+import :argv;
+import :exec;
+import :open;
+import :process;
+
+namespace nihil {
+
+// Useful constants
+export inline int constexpr stdin_fileno = STDIN_FILENO;
+export inline int constexpr stdout_fileno = STDOUT_FILENO;
+export inline int constexpr stderr_fileno = STDERR_FILENO;
+
+/*
+ * fd_pipe: create a pipe with one end in the child and the other in the
+ * parent.  The child's side will be dup2()'d to the provided fd number.
+ * The parent side fd can be retrieved via parent_fd();
+ */
+export struct fd_pipe final {
+	fd_pipe(int fdno, fd &&child_fd, fd &&parent_fd)
+		: m_fdno(fdno)
+		, m_child_fd(std::move(child_fd))
+		, m_parent_fd(std::move(parent_fd))
+	{
+	}
+
+	auto run_in_child(this fd_pipe &self, process &) -> void
+	{
+		auto err = raw_dup(self.m_child_fd, self.m_fdno);
+		if (!err) {
+			std::print("dup: {}\n", err.error());
+			_exit(1);
+		}
+
+		/*
+		 * We don't care about errors from close() since the fd
+		 * is still closed.
+		 */
+		std::ignore = self.m_parent_fd.close();
+		std::ignore = self.m_child_fd.close();
+	}
+
+	auto run_in_parent(this fd_pipe &self, process &) -> void
+	{
+		std::ignore = self.m_child_fd.close();
+	}
+
+	[[nodiscard]] auto parent_fd(this fd_pipe &self) -> fd &
+	{
+		return self.m_parent_fd;
+	}
+
+private:
+	int	m_fdno;
+	fd	m_child_fd;
+	fd	m_parent_fd;
+};
+
+export [[nodiscard]] auto
+make_fd_pipe(int fdno) -> std::expected<fd_pipe, error>
+{
+	auto fds = co_await pipe();
+	co_return fd_pipe(fdno, std::move(fds.first), std::move(fds.second));
+}
+
+/*
+ * fd_file: open a file and provide it to the child as a file descriptor.
+ * open_flags and open_mode are as for ::open().
+ */
+export struct fd_file final {
+	fd_file(int fdno, fd &&file_fd)
+		: m_fdno(fdno)
+		, m_file_fd(std::move(file_fd))
+	{
+	}
+
+	auto run_in_parent(this fd_file &self, process &) -> void
+	{
+		std::ignore = self.m_file_fd.close();
+	}
+
+	auto run_in_child(this fd_file &self, process &) -> void
+	{
+		auto err = raw_dup(self.m_file_fd, self.m_fdno);
+		if (!err) {
+			std::print("dup: {}\n", err.error());
+			_exit(1);
+		}
+
+		std::ignore = self.m_file_fd.close();
+	}
+
+private:
+	int	m_fdno;
+	fd	m_file_fd;
+};
+
+export [[nodiscard]] auto
+make_fd_file(int fdno, std::filesystem::path const &file,
+	     int flags, int mode = 0777)
+	-> std::expected<fd_file, error>
+{
+	auto fd = co_await open(file, flags, mode);
+	co_return fd_file(fdno, std::move(fd));
+}
+
+/*
+ * Shorthand for fd_file with /dev/null as the file.
+ */
+
+export [[nodiscard]] inline auto
+stdin_devnull() -> std::expected<fd_file, error>
+{
+	return make_fd_file(stdin_fileno, "/dev/null", O_RDONLY);
+}
+
+export [[nodiscard]] inline auto
+stdout_devnull() -> std::expected<fd_file, error>
+{
+	return make_fd_file(stdout_fileno, "/dev/null", O_WRONLY);
+}
+
+export [[nodiscard]] inline auto 
+stderr_devnull() -> std::expected<fd_file, error>
+{
+	return make_fd_file(stderr_fileno, "/dev/null", O_WRONLY);
+}
+
+/*
+ * Capture the output of a pipe in the parent and read it into an
+ * output iterator.
+ */
+export template<std::output_iterator<char> Iterator>
+struct fd_capture final {
+	fd_capture(fd_pipe &&pipe, Iterator it)
+		: m_pipe(std::move(pipe))
+		, m_iterator(std::move(it))
+	{
+	}
+
+	auto run_in_child(this fd_capture &self, process &p) -> void
+	{
+		self.m_pipe.run_in_child(p);
+	}
+
+	auto run_in_parent(this fd_capture &self, process &p) -> void
+	{
+		self.m_pipe.run_in_parent(p);
+
+		auto constexpr bufsize = std::size_t{1024};
+		auto buffer = std::array<char, bufsize>();
+		auto &fd = self.m_pipe.parent_fd();
+		for (;;) {
+			auto ret = read(fd, buffer);
+			if (!ret || ret->size() == 0)
+				break;
+
+			std::ranges::copy(*ret, self.m_iterator);
+		}
+
+		// We probably want to handle errors here somehow,
+		// but it's not clear what would be useful behaviour.
+	}
+
+private:
+	fd_pipe		m_pipe;
+	Iterator	m_iterator;
+};
+
+export [[nodiscard]] auto
+make_capture(int fdno, std::output_iterator<char> auto &&it)
+	-> std::expected<fd_capture<decltype(it)>, error>
+{
+	auto pipe = co_await make_fd_pipe(fdno);
+	co_return fd_capture(std::move(pipe),
+			     std::forward<decltype(it)>(it));
+}
+
+export [[nodiscard]] auto
+make_capture(int fdno, std::string &str)
+	-> std::expected<fd_capture<decltype(std::back_inserter(str))>, error>
+{
+	auto pipe = co_await make_fd_pipe(fdno);
+	co_return fd_capture(std::move(pipe), std::back_inserter(str));
+}
+
+/*
+ * Spawn a new process with the given arguments and return a struct process.
+ * Throws exec_error() on failure.
+ */
+export [[nodiscard]] auto
+spawn(executor auto &&executor, auto &&...actions)
+	-> std::expected<process, error>
+{
+	auto const pid = ::fork();
+	if (pid == -1)
+		return std::unexpected(error("fork failed",
+					     error(std::errc(errno))));
+
+	auto proc = process(pid);
+
+	if (pid == 0) {
+		// We are in the child.  Release the process so we don't
+		// try to wait for ourselves, then run child handlers and
+		// exec the process.
+
+		std::ignore = std::move(proc).release();
+		(actions.run_in_child(proc), ...);
+
+		auto err = executor.exec();
+		std::print("{}\n", err.error());
+		_exit(1);
+	}
+
+	(actions.run_in_parent(proc), ...);
+
+	return proc;
+}
+
+} // namespace nihil

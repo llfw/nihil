@@ -1,0 +1,45 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <filesystem>
+#include <optional>
+#include <string>
+
+export module nihil.posix;
+
+import nihil.error;
+
+export import :argv;
+export import :ensure_dir;
+export import :exec;
+export import :fd;
+export import :open;
+export import :process;
+export import :read_file;
+export import :rename;
+export import :spawn;
+export import :write_file;
+
+export namespace nihil {
+
+/*
+ * Find a variable by the given name in the environment by calling getenv_r().
+ */
+
+[[nodiscard]] auto getenv(std::string_view varname)
+	-> std::expected<std::string, error>;
+
+
+/*
+ * Find an executable in $PATH, open it with O_EXEC and return the fd.
+ * If $PATH is not set, uses _PATH_DEFPATH.  If the file can't be found
+ * or opened, returns std::nullopt.
+ */
+[[nodiscard]] auto find_in_path(std::filesystem::path const &file)
+	-> std::optional<fd>;
+
+} // namespace nihil

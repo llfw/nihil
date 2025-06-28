@@ -11,7 +11,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
-import nihil;
 import nihil.ucl;
 
 TEST_CASE("ucl: array: invariants", "[ucl]")

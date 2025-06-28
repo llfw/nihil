@@ -12,7 +12,7 @@ module;
 
 export module nihil.ucl:object_cast;
 
-import nihil;
+import nihil.monad;
 import :type;
 import :object;
 import :array;

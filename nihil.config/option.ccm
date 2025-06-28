@@ -10,7 +10,7 @@ module;
 
 export module nihil.config:option;
 
-import nihil;
+import nihil.error;
 import nihil.ucl;
 
 namespace nihil::config {

@@ -16,7 +16,7 @@ module;
 
 export module nihil.ucl:parser;
 
-import nihil;
+import nihil.monad;
 import :object;
 import :map;
 

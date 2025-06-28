@@ -18,7 +18,6 @@ module;
 
 export module nihil.ucl:object;
 
-import nihil;
 import :type;
 
 namespace nihil::ucl {

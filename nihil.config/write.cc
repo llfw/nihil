@@ -12,7 +12,9 @@ module;
 
 module nihil.config;
 
-import nihil;
+import nihil.error;
+import nihil.monad;
+import nihil.posix;
 import nihil.ucl;
 
 namespace nihil::config {

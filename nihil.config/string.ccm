@@ -10,7 +10,6 @@ module;
 
 export module nihil.config:string;
 
-import nihil;
 import nihil.ucl;
 import :option;
 

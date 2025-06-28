@@ -1,0 +1,40 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <algorithm>
+#include <locale>
+#include <ranges>
+#include <string>
+
+export module nihil.util:skipws;
+
+import :ctype;
+
+namespace nihil {
+
+/*
+ * Remove leading whitespace from a string.
+ */
+
+export template<typename Char> [[nodiscard]]
+auto skipws(std::basic_string_view<Char> text,
+	    std::locale const &locale = std::locale())
+	-> std::basic_string_view<Char>
+{
+	auto is_space = ctype_is(std::ctype_base::space, locale);
+	auto nonws = std::ranges::find_if_not(text, is_space);
+	return {nonws, std::ranges::end(text)};
+}
+
+export template<typename Char>
+auto skipws(std::basic_string_view<Char> *text,
+	    std::locale const &locale = std::locale())
+	-> void
+{
+	*text = skipws(*text, locale);
+}
+
+} // namespace nihil

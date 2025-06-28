@@ -1,0 +1,105 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+/*
+ * Exec providers, mostly used for spawn().
+ */
+
+#include <expected>
+#include <string>
+
+export module nihil.posix:exec;
+
+import nihil.error;
+import :argv;
+import :fd;
+
+namespace nihil {
+
+/*
+ * A concept to mark spawn executors.
+ */
+
+export struct exec_tag{};
+
+export template<typename T>
+concept executor =
+	requires (T e) {
+		std::same_as<exec_tag, typename std::remove_cvref_t<T>::tag>;
+		{ e.exec() };
+	};
+
+/*
+ * fexecv: use a file descriptor and an argument vector to call ::fexecve().
+ * This is the lowest-level executor which all others are implemented
+ * in terms of.
+ *
+ * TODO: Should have a way to pass the environment (envp).
+ */
+export struct fexecv final {
+	using tag = exec_tag;
+
+	fexecv(fd &&execfd, argv &&args) noexcept;
+
+	[[nodiscard]] auto exec(this fexecv &self) 
+		-> std::expected<void, error>;
+
+	// Movable
+	fexecv(fexecv &&) noexcept;
+	auto operator=(this fexecv &, fexecv &&) noexcept -> fexecv&;
+	
+	// Not copyable (because we hold the open fd object)
+	fexecv(fexecv const &) = delete;
+	auto operator=(this fexecv &, fexecv const &) -> fexecv& = delete;
+
+private:
+	fd	m_execfd;
+	argv	m_args;
+};
+
+/*
+ * execv: equivalent to fexecv(), except the command is passed as
+ * a pathname instead of a file descriptor.  Does not search $PATH.
+ */
+export [[nodiscard]] auto execv(std::string_view path, argv &&argv)
+	-> std::expected<fexecv, error>;
+
+/*
+ * execvp: equivalent to fexecv(), except the command is passed as
+ * a filename instead of a file descriptor.  If the filename is not
+ * an absolute path, it will be searched for in $PATH.
+ */
+export [[nodiscard]] auto execvp(std::string_view file, argv &&argv)
+	-> std::expected<fexecv, error>;
+
+/*
+ * execl: equivalent to execv, except the arguments are passed as a
+ * variadic pack of string-like objects.
+ */
+export [[nodiscard]] auto execl(std::string_view path, auto &&...args)
+	-> std::expected<fexecv, error>
+{
+	return execv(path, argv({std::string_view(args)...}));
+}
+
+/*
+ * execlp: equivalent to execvp, except the arguments are passed as a
+ * variadic pack of string-like objects.
+ */
+export [[nodiscard]] auto execlp(std::string_view file, auto &&...args)
+	-> std::expected<fexecv, error>
+{
+	return execvp(file, argv({std::string_view(args)...}));
+}
+
+/*
+ * shell: run the process by invoking /bin/sh -c with the single argument,
+ * equivalent to system(3).
+ */
+export [[nodiscard]] auto shell(std::string_view const &command)
+	-> std::expected<fexecv, error>;
+
+} // namespace nihil

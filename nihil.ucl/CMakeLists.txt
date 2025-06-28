@@ -3,7 +3,7 @@
 pkg_check_modules(LIBUCL REQUIRED libucl)
 
 add_library(nihil.ucl STATIC)
-target_link_libraries(nihil.ucl PUBLIC nihil)
+target_link_libraries(nihil.ucl PRIVATE nihil.error nihil.monad)
 
 target_sources(nihil.ucl
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES

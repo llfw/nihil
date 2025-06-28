@@ -1,0 +1,13 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+export module nihil.util;
+
+export import :ctype;
+export import :parse_size;
+export import :next_word;
+export import :skipws;
+export import :tabulate;

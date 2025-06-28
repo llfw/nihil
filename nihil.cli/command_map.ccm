@@ -1,0 +1,67 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <functional>
+#include <iostream>
+#include <map>
+#include <string>
+#include <utility>
+
+export module nihil.cli:command_map;
+
+import nihil.util;
+import :usage_error;
+
+/*
+ * command_map represents a hierarchical list of commands.  At each level,
+ * a command is mapped to a handler, which can either be a function, in
+ * which case we execute the function, or another command_map, in which
+ * case we invoke the new map
+ */
+
+namespace nihil {
+
+export struct command;
+
+/*
+ * Register a command; used by command<>::command().
+ */
+auto register_command(std::string_view path, command *) noexcept -> void;
+
+/*
+ * A command that can be invoked.  Instantiating a command adds this command
+ * to the global command table.  If an error occurs, the program will abort.
+ */
+export struct command {
+	command(std::string_view path, std::string_view usage, auto &&fn)
+		: m_path(path)
+		, m_usage(usage)
+		, m_handler(std::forward<decltype(fn)>(fn))
+	{
+		register_command(path, this);
+	}
+
+	[[nodiscard]] auto path(this command const &self) -> std::string_view
+	{
+		return self.m_path;
+	}
+
+	auto invoke(this command const &self, int argc, char **argv) -> int
+	{
+		return std::invoke(self.m_handler, argc, argv);
+	}
+
+private:
+	std::string_view m_path;
+	std::string_view m_usage;
+	std::function<int (int, char **)> m_handler;
+};
+
+// The public API.
+export [[nodiscard]] auto dispatch_command(int argc, char **argv) -> int;
+export auto print_usage(std::string_view prefix) -> void;
+
+} // namespace nihil

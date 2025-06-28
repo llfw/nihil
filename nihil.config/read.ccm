@@ -9,7 +9,7 @@ module;
 
 export module nihil.config:read;
 
-import nihil;
+import nihil.error;
 
 namespace nihil::config {
 

@@ -7,7 +7,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-import nihil;
 import nihil.ucl;
 
 TEST_CASE("ucl: emit to std::ostream", "[ucl]")

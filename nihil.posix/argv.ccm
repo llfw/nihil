@@ -1,0 +1,78 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <memory>
+#include <ranges>
+#include <string>
+#include <vector>
+
+export module nihil.posix:argv;
+
+namespace nihil {
+
+/*
+ * argv: stores a null-terminated array of nul-terminated C strings.
+ * argv::data() is suitable for passing to ::execv().
+ *
+ * Create an argv using argv::from_range(), which takes a range of
+ * string-like objects.
+ */
+
+export struct argv {
+	/*
+	 * Create a new argv from a range.
+	 */
+	argv(std::from_range_t, std::ranges::range auto &&args)
+	{
+		for (auto &&arg : args)
+			add_arg(std::string_view(arg));
+
+		m_args.push_back(nullptr);
+	}
+
+	/*
+	 * Create an argv from an initializer list.
+	 */
+	template<typename T>
+	explicit argv(std::initializer_list<T> &&args)
+		: argv(std::from_range, std::forward<decltype(args)>(args))
+	{
+	}
+
+	// Movable.
+	argv(argv &&) noexcept;
+	auto operator=(this argv &, argv &&other) -> argv &;
+
+	// Not copyable.  TODO: for completeness, it probably should be.
+	argv(argv const &) = delete;
+	auto operator=(this argv &, argv const &other) -> argv& = delete;
+
+	~argv();
+
+	// Access the stored arguments.
+	[[nodiscard]] auto data(this argv const &self) -> char const * const *;
+	[[nodiscard]] auto data(this argv &self) -> char * const *;
+	[[nodiscard]] auto size(this argv const &self);
+
+	// Range access
+	[[nodiscard]] auto begin(this argv const &self);
+	[[nodiscard]] auto end(this argv const &self);
+
+private:
+	// Use the from_range() factory method to create new instances.
+	argv();
+
+	// The argument pointers, including the null terminator.
+	// This can't be a vector<unique_ptr> because we need an array of
+	// char pointers to pass to exec.
+	std::vector<char *> m_args;
+
+	// Add a new argument to the array.
+	auto add_arg(this argv &self, std::string_view arg) -> void;
+};
+
+} // namespace nihil
+
