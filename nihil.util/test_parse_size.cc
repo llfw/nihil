@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.core;
+import nihil.error;
 import nihil.util;
 
 TEST_CASE("parse_size: empty value", "[nihil]")

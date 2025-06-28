@@ -10,6 +10,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.error;
 import nihil.posix;
 
 TEST_CASE("getenv: existing value", "[getenv]")

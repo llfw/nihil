@@ -16,6 +16,7 @@ module;
 
 module nihil.posix;
 
+import nihil.flagset;
 import :getenv;
 import :open;
 
