@@ -19,6 +19,7 @@ add_compile_options(-Werror)
 add_compile_options(-Wpedantic)
 
 add_subdirectory(nihil.flagset)
+add_subdirectory(nihil.uuid)
 add_subdirectory(nihil)
 
 if(NIHIL_UCL)

@@ -14,7 +14,6 @@ add_executable(nihil.test
 	skipws.cc
 	spawn.cc
 	tabulate.cc
-	uuid.cc
 )
 
 target_link_libraries(nihil.test PRIVATE

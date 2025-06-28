@@ -43,7 +43,7 @@ module;
 #include <string_view>
 #include <type_traits>
 
-export module nihil:uuid;
+export module nihil.uuid;
 
 namespace nihil {
 

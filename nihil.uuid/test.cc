@@ -57,7 +57,7 @@ void seed_rng(EngineT& engine)
 
 } // anonymous namespace
 
-import nihil;
+import nihil.uuid;
 
 using namespace nihil;
 

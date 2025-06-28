@@ -31,5 +31,4 @@ export import :skipws;
 export import :spawn;
 export import :tabulate;
 export import :usage_error;
-export import :uuid;
 export import :write_file;
