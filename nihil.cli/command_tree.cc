@@ -59,7 +59,7 @@ auto command_tree_node::get_child(this command_tree_node &self,
 }
 
 auto command_tree_node::get_or_create_child(this command_tree_node &self,
-				       std::string_view child)
+					    std::string_view child)
 	-> command_tree_node *
 {
 	// Return the existing child, if there is one.
@@ -72,8 +72,11 @@ auto command_tree_node::get_or_create_child(this command_tree_node &self,
 				command_tree_node(&self, child));
 
 	// Give the child a dummy command.
-	it->second.m_command = std::make_shared<command_node>(
-				self.path() + ' ' + child);
+	auto path = self.m_parent != nullptr
+		? std::format("{} {}", self.m_parent->path(), child)
+		: std::string(child);
+
+	it->second.m_command = std::make_shared<command_node>(path);
 
 	return &it->second;
 }
@@ -108,21 +111,9 @@ auto command_tree_node::print_commands(this command_tree_node const &self)
 }
 
 auto command_tree_node::path(this command_tree_node const &self)
-	-> std::string
+	-> std::string_view
 {
-	auto path = std::string();
-
-	auto const *node = &self;
-	while (node->m_parent != nullptr) {
-		path = node->m_this_word + ' ' + path;
-		node = node->m_parent;
-	}
-
-	// Trim the trailing space.
-	if (!path.empty())
-		path.pop_back();
-
-	return path;
+	return self.m_command->path();
 }
 
 auto command_tree::insert(this command_tree &self,

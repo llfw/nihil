@@ -62,7 +62,7 @@ struct command_tree_node final {
 	 * Get the path of this command_node.
 	 */
 	[[nodiscard]] auto path(this command_tree_node const &self)
-		-> std::string;
+		-> std::string_view;
 
 	/*
 	 * Print this node's children in a form useful to humans.
