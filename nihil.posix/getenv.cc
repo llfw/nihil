@@ -44,10 +44,16 @@ auto getenv(std::string_view varname) -> std::expected<std::string, error>
 		return std::unexpected(error(std::errc(errno)));
 	}
 #else // NIHIL_HAVE_GETENV_R
+	errno = 0;
 	auto *v = ::getenv(cvarname.c_str());
-	if (v == nullptr)
+
+	if (v != nullptr)
+		return {std::string(v)};
+
+	if (errno != 0)
 		return std::unexpected(error(std::errc(errno)));
-	return {std::string(v)};
+
+	return std::unexpected(error(std::errc::no_such_file_or_directory));
 #endif // NIHIL_HAVE_GETENV_R
 }
 

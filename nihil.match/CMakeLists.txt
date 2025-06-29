@@ -15,8 +15,6 @@ if(NIHIL_TESTS)
 		Catch2::Catch2WithMain
 	)
 
-	find_package(Catch2 REQUIRED)
-
 	include(CTest)
 	include(Catch)
 	catch_discover_tests(nihil.match.test)

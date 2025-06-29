@@ -43,7 +43,7 @@ namespace Catch {
 
         template<typename T>
         auto operator << ( T const& value ) -> ReusableStringStream& {
-            *m_oss << value;
+            (void) (*m_oss << value);
             return *this;
         }
 

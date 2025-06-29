@@ -32,17 +32,17 @@ TEST_CASE("spawn: execv", "[spawn]") {
 
 	auto args = argv({"sh", "-c", "x=1; echo $x"});
 	auto exec = execv("/bin/sh", std::move(args));
-	REQUIRE(exec);
 
 	auto output = std::string();
 	auto capture = make_capture(stdout_fileno, output);
 	REQUIRE(capture);
 
-	auto proc = spawn(*exec, *capture);
+	auto proc = spawn(exec, *capture);
 	REQUIRE(proc);
 
 	auto status = std::move(*proc).wait();
-	REQUIRE(status);
+	if (!status)
+		FAIL(to_string(status.error()));
 
 	REQUIRE(status->okay());
 	REQUIRE(output == "1\n");

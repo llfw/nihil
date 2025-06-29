@@ -41,19 +41,23 @@ export inline int constexpr stdout_fileno = STDOUT_FILENO;
 export inline int constexpr stderr_fileno = STDERR_FILENO;
 
 /*
- * fd_pipe: create a pipe with one end in the child and the other in the
- * parent.  The child's side will be dup2()'d to the provided fd number.
- * The parent side fd can be retrieved via parent_fd();
+ * fd_{read,write}_pipe: create a pipe with one end in the child and the other in the parent.
+ * The child's side will be dup2()'d to the provided fd number.
+ * The parent side fd can be retrieved via parent_fd().
+ *
+ * fd_read_pipe() puts the reading side in the child, while fd_write_pipe() puts the writing
+ * side in the child.
  */
-export struct fd_pipe final {
-	fd_pipe(int fdno, fd &&child_fd, fd &&parent_fd)
+
+struct fd_pipe_base {
+	fd_pipe_base(int fdno, fd &&child_fd, fd &&parent_fd)
 		: m_fdno(fdno)
 		, m_child_fd(std::move(child_fd))
 		, m_parent_fd(std::move(parent_fd))
 	{
 	}
 
-	auto run_in_child(this fd_pipe &self, process &) -> void
+	auto run_in_child(this fd_pipe_base &self, process &) -> void
 	{
 		auto err = raw_dup(self.m_child_fd, self.m_fdno);
 		if (!err) {
@@ -69,12 +73,12 @@ export struct fd_pipe final {
 		std::ignore = self.m_child_fd.close();
 	}
 
-	auto run_in_parent(this fd_pipe &self, process &) -> void
+	auto run_in_parent(this fd_pipe_base &self, process &) -> void
 	{
 		std::ignore = self.m_child_fd.close();
 	}
 
-	[[nodiscard]] auto parent_fd(this fd_pipe &self) -> fd &
+	[[nodiscard]] auto parent_fd(this fd_pipe_base &self) -> fd &
 	{
 		return self.m_parent_fd;
 	}
@@ -83,13 +87,35 @@ private:
 	int	m_fdno;
 	fd	m_child_fd;
 	fd	m_parent_fd;
+
+};
+
+export struct fd_read_pipe final : fd_pipe_base {
+	fd_read_pipe(int fdno, fd &&read_fd, fd &&write_fd)
+		: fd_pipe_base(fdno, std::move(read_fd), std::move(write_fd))
+	{
+	}
+};
+
+export struct fd_write_pipe final : fd_pipe_base {
+	fd_write_pipe(int fdno, fd &&read_fd, fd &&write_fd)
+		: fd_pipe_base(fdno, std::move(write_fd), std::move(read_fd))
+	{
+	}
 };
 
 export [[nodiscard]] auto
-make_fd_pipe(int fdno) -> std::expected<fd_pipe, error>
+make_fd_read_pipe(int fdno) -> std::expected<fd_read_pipe, error>
 {
 	auto fds = co_await pipe();
-	co_return fd_pipe(fdno, std::move(fds.first), std::move(fds.second));
+	co_return fd_read_pipe(fdno, std::move(fds.first), std::move(fds.second));
+}
+
+export [[nodiscard]] auto
+make_fd_write_pipe(int fdno) -> std::expected<fd_write_pipe, error>
+{
+	auto fds = co_await pipe();
+	co_return fd_write_pipe(fdno, std::move(fds.first), std::move(fds.second));
 }
 
 /*
@@ -161,7 +187,7 @@ stderr_devnull() -> std::expected<fd_file, error>
  */
 export template<std::output_iterator<char> Iterator>
 struct fd_capture final {
-	fd_capture(fd_pipe &&pipe, Iterator it)
+	fd_capture(fd_write_pipe &&pipe, Iterator it)
 		: m_pipe(std::move(pipe))
 		, m_iterator(std::move(it))
 	{
@@ -192,7 +218,7 @@ struct fd_capture final {
 	}
 
 private:
-	fd_pipe		m_pipe;
+	fd_write_pipe	m_pipe;
 	Iterator	m_iterator;
 };
 
@@ -200,7 +226,7 @@ export [[nodiscard]] auto
 make_capture(int fdno, std::output_iterator<char> auto &&it)
 	-> std::expected<fd_capture<decltype(it)>, error>
 {
-	auto pipe = co_await make_fd_pipe(fdno);
+	auto pipe = co_await make_fd_write_pipe(fdno);
 	co_return fd_capture(std::move(pipe),
 			     std::forward<decltype(it)>(it));
 }
@@ -209,7 +235,7 @@ export [[nodiscard]] auto
 make_capture(int fdno, std::string &str)
 	-> std::expected<fd_capture<decltype(std::back_inserter(str))>, error>
 {
-	auto pipe = co_await make_fd_pipe(fdno);
+	auto pipe = co_await make_fd_write_pipe(fdno);
 	co_return fd_capture(std::move(pipe), std::back_inserter(str));
 }
 

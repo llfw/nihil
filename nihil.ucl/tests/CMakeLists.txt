@@ -15,8 +15,6 @@ add_executable(nihil.ucl.test
 
 target_link_libraries(nihil.ucl.test PRIVATE nihil.ucl Catch2::Catch2WithMain)
 
-find_package(Catch2 REQUIRED)
-
 include(CTest)
 include(Catch)
 catch_discover_tests(nihil.ucl.test)

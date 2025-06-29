@@ -18,18 +18,18 @@ import nihil.error;
 export import :argv;
 export import :ensure_dir;
 export import :exec;
+export import :execlp;
 export import :execv;
+export import :execvp;
 export import :fd;
+export import :fexecv;
 export import :find_in_path;
 export import :getenv;
 export import :open;
+export import :open_in_path;
 export import :process;
 export import :read_file;
 export import :rename;
 export import :spawn;
 export import :tempfile;
 export import :write_file;
-
-#ifdef NIHIL_HAVE_FEXECVE
-export import :fexecv;
-#endif

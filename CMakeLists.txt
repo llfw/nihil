@@ -41,6 +41,11 @@ add_compile_options(-Wextra)
 add_compile_options(-Werror)
 add_compile_options(-Wpedantic)
 
+if(NIHIL_TESTS)
+	add_subdirectory(contrib/catch2)
+	enable_testing()
+endif()
+
 add_subdirectory(nihil.cli)
 add_subdirectory(nihil.core)
 add_subdirectory(nihil.error)
@@ -59,8 +64,4 @@ endif()
 
 if(NIHIL_CONFIG)
 	add_subdirectory(nihil.config)
-endif()
-
-if(NIHIL_TESTS)
-	enable_testing()
 endif()

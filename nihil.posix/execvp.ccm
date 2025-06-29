@@ -1,0 +1,28 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <string>
+#include <expected>
+#include <format>
+
+export module nihil.posix:execvp;
+
+import nihil.error;
+import :argv;
+import :exec;
+
+namespace nihil {
+
+/*
+ * execvp: equivalent to fexecv(), except the command is passed as
+ * a filename instead of a file descriptor.  If the filename is not
+ * an absolute path, it will be searched for in $PATH.
+ */
+
+export [[nodiscard]] auto execvp(std::string_view file, argv &&argv)
+	-> std::expected<base_executor_type, error>;
+
+} // namespace nihil

@@ -184,16 +184,21 @@ TEST_CASE("fd: pipe, read, write", "[fd]") {
 	auto fds = nihil::pipe();
 	REQUIRE(fds);
 
+	/*
+	 * Note: traditionally, the first fd is the reading side, and the second fd
+	 * is the writing side.  Some platforms (e.g., macOS) still behave this way.
+	 */
+
 	auto [fd1, fd2] = std::move(*fds);
 
 	auto constexpr test_string = "test string"sv;
 
-	auto ret = write(fd1, test_string);
+	auto ret = write(fd2, test_string);
 	REQUIRE(ret);
 	REQUIRE(*ret == test_string.size());
 
 	auto readbuf = std::array<char, test_string.size() * 2>{};
-	auto read_buf = read(fd2, readbuf);
+	auto read_buf = read(fd1, readbuf);
 	REQUIRE(read_buf);
 	REQUIRE(std::string_view(*read_buf) == test_string);
 }

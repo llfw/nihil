@@ -7,7 +7,7 @@ module;
 #include <filesystem>
 #include <optional>
 
-export module nihil.posix:find_in_path;
+export module nihil.posix:open_in_path;
 
 import nihil.error;
 import :fd;

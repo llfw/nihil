@@ -9,8 +9,6 @@ module;
 
 #include "nihil.hh"
 
-#ifdef NIHIL_HAVE_FEXECVE
-
 export module nihil.posix:fexecv;
 
 import nihil.error;
@@ -19,6 +17,8 @@ import :executor;
 import :fd;
 
 namespace nihil {
+
+#ifdef NIHIL_HAVE_FEXECVE
 
 /*
  * fexecv: use a file descriptor and an argument vector to call ::fexecve().
@@ -48,6 +48,6 @@ private:
 	argv	m_args;
 };
 
-} // namespace nihil
-
 #endif	// NIHIL_HAVE_FEXECVE
+
+} // namespace nihil

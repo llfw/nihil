@@ -6,6 +6,7 @@ module;
 
 #include <coroutine>
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <string>
 #include <utility>
@@ -36,8 +37,6 @@ auto execv::exec(this execv &self) -> std::expected<void, error>
 }
 
 execv::execv(execv &&) noexcept = default;
-execv::execv(execv const &) = default;
-auto execv::operator=(this execv &, execv &&) -> execv & = default;
-auto execv::operator=(this execv &, execv const &) -> execv & = default;
+auto execv::operator=(this execv &, execv &&) noexcept -> execv & = default;
 
 } // namespace nihil

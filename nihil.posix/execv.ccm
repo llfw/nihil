@@ -35,9 +35,9 @@ export struct execv final
 	execv(execv &&) noexcept;
 	auto operator=(this execv &, execv &&) noexcept -> execv &;
 
-	// Copyable.
-	execv(execv const &);
-	auto operator=(this execv &, execv const &) -> execv &;
+	// Not copyable (because m_args isn't copyable).
+	execv(execv const &) = delete;
+	auto operator=(this execv &, execv const &) -> execv & = delete;
 
 private:
 	std::filesystem::path	m_path;

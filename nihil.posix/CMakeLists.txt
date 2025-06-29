@@ -11,12 +11,16 @@ target_sources(nihil.posix
 	argv.ccm
 	ensure_dir.ccm
 	exec.ccm
+	execlp.ccm
 	execv.ccm
+	execvp.ccm
 	executor.ccm
 	fd.ccm
+	fexecv.ccm
 	find_in_path.ccm
 	getenv.ccm
 	open.ccm
+	open_in_path.ccm
 	process.ccm
 	read_file.ccm
 	rename.ccm
@@ -29,10 +33,12 @@ target_sources(nihil.posix
 	ensure_dir.cc
 	exec.cc
 	execv.cc
+	execvp.cc
 	getenv.cc
 	fd.cc
 	find_in_path.cc
 	open.cc
+	open_in_path.cc
 	process.cc
 	rename.cc
 	tempfile.cc
@@ -52,8 +58,6 @@ if(NIHIL_TESTS)
 		nihil.posix
 		Catch2::Catch2WithMain
 	)
-
-	find_package(Catch2 REQUIRED)
 
 	include(CTest)
 	include(Catch)

@@ -85,7 +85,7 @@ auto process::pid(this process const &self) noexcept -> ::pid_t
 auto process::wait(this process &&self) -> std::expected<wait_result, error>
 {
 	auto status = int{};
-	auto ret = waitpid(self.m_pid, &status, WEXITED);
+	auto ret = waitpid(self.m_pid, &status, 0);
 	if (ret == -1)
 		return std::unexpected(error(std::errc(errno)));
 
