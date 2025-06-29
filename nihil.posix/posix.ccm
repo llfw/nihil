@@ -9,6 +9,8 @@ module;
 #include <optional>
 #include <string>
 
+#include "nihil.hh"
+
 export module nihil.posix;
 
 import nihil.error;
@@ -16,7 +18,9 @@ import nihil.error;
 export import :argv;
 export import :ensure_dir;
 export import :exec;
+export import :execv;
 export import :fd;
+export import :find_in_path;
 export import :getenv;
 export import :open;
 export import :process;
@@ -26,14 +30,6 @@ export import :spawn;
 export import :tempfile;
 export import :write_file;
 
-export namespace nihil {
-
-/*
- * Find an executable in $PATH, open it with O_EXEC and return the fd.
- * If $PATH is not set, uses _PATH_DEFPATH.  If the file can't be found
- * or opened, returns std::nullopt.
- */
-[[nodiscard]] auto find_in_path(std::filesystem::path const &file)
-	-> std::optional<fd>;
-
-} // namespace nihil
+#ifdef NIHIL_HAVE_FEXECVE
+export import :fexecv;
+#endif

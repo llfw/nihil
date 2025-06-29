@@ -1,0 +1,23 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <filesystem>
+#include <optional>
+
+export module nihil.posix:find_in_path;
+
+import nihil.error;
+import :fd;
+
+namespace nihil {
+
+/*
+ * Find an executable in $PATH and open it with O_EXEC.  If $PATH is not set, uses _PATH_DEFPATH.
+ * If the file can't be found or opened, returns std::nullopt.
+ */
+export [[nodiscard]] auto open_in_path(std::filesystem::path const &file) -> std::optional<fd>;
+
+} // namespace nihil

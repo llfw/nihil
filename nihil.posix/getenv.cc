@@ -1,4 +1,3 @@
-
 /*
  * This source code is released into the public domain.
  */
@@ -13,6 +12,8 @@ module;
 
 #include <unistd.h>
 
+#include "nihil.hh"
+
 module nihil.posix;
 
 import nihil.error;
@@ -21,10 +22,12 @@ namespace nihil {
 
 auto getenv(std::string_view varname) -> std::expected<std::string, error>
 {
+	auto cvarname = std::string(varname);
+
+#ifdef NIHIL_HAVE_GETENV_R
 	// Start with a buffer of this size, and double it every iteration.
 	constexpr auto bufinc = std::size_t{1024};
 
-	auto cvarname = std::string(varname);
 	auto buf = std::vector<char>(bufinc);
 	for (;;) {
 		auto const ret = ::getenv_r(cvarname.c_str(),
@@ -40,6 +43,12 @@ auto getenv(std::string_view varname) -> std::expected<std::string, error>
 
 		return std::unexpected(error(std::errc(errno)));
 	}
+#else // NIHIL_HAVE_GETENV_R
+	auto *v = ::getenv(cvarname.c_str());
+	if (v == nullptr)
+		return std::unexpected(error(std::errc(errno)));
+	return {std::string(v)};
+#endif // NIHIL_HAVE_GETENV_R
 }
 
 } // namespace nihil

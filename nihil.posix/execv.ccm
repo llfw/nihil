@@ -1,0 +1,47 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <filesystem>
+#include <string>
+
+export module nihil.posix:execv;
+
+import nihil.error;
+import :argv;
+import :executor;
+
+namespace nihil {
+
+/*
+ * execv: use a filename and an argument vector to call ::execve().
+ * This is the lowest-level executor which all others are implemented
+ * in terms of, if fexecve is not available.
+ *
+ * TODO: Should have a way to pass the environment (envp).
+ */
+export struct execv final
+{
+	using tag = exec_tag;
+
+	execv(std::filesystem::path, argv &&) noexcept;
+
+	[[nodiscard]] auto exec(this execv &) -> std::expected<void, error>;
+
+	// Movable
+	execv(execv &&) noexcept;
+	auto operator=(this execv &, execv &&) noexcept -> execv &;
+
+	// Copyable.
+	execv(execv const &);
+	auto operator=(this execv &, execv const &) -> execv &;
+
+private:
+	std::filesystem::path	m_path;
+	argv			m_args;
+};
+
+} // namespace nihil

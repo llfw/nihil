@@ -1,0 +1,27 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <concepts>
+#include <type_traits>
+
+export module nihil.posix:executor;
+
+namespace nihil {
+
+/*
+ * A concept to mark spawn executors.
+ */
+
+export struct exec_tag{};
+
+export template<typename T>
+concept executor =
+	requires (T e) {
+		std::same_as<exec_tag, typename std::remove_cvref_t<T>::tag>;
+		{ e.exec() };
+	};
+
+} // namespace nihil

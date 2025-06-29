@@ -5,6 +5,7 @@
 module;
 
 #include <iostream>
+#include <memory>
 #include <print>
 #include <ranges>
 #include <string>

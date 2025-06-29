@@ -1,0 +1,6 @@
+TabWidth: 8
+IndentWidth: 8
+PPIndentWidth: -1
+UseTab: AlignWithSpaces
+IndentPPDirectives: AfterHash
+ColumnLimit: 100

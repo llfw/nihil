@@ -2,36 +2,40 @@
 
 add_library(nihil.posix STATIC)
 target_link_libraries(nihil.posix PRIVATE
-	nihil.error nihil.flagset nihil.guard nihil.monad)
+	nihil.core nihil.error nihil.flagset nihil.guard nihil.monad)
 
 target_sources(nihil.posix
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	posix.ccm
 
-	posix.argv.ccm
-	posix.ensure_dir.ccm
-	posix.exec.ccm
-	posix.fd.ccm
-	posix.getenv.ccm
-	posix.open.ccm
-	posix.process.ccm
-	posix.read_file.ccm
-	posix.rename.ccm
-	posix.spawn.ccm
-	posix.tempfile.ccm
-	posix.write_file.ccm
+	argv.ccm
+	ensure_dir.ccm
+	exec.ccm
+	execv.ccm
+	executor.ccm
+	fd.ccm
+	find_in_path.ccm
+	getenv.ccm
+	open.ccm
+	process.ccm
+	read_file.ccm
+	rename.ccm
+	spawn.ccm
+	tempfile.ccm
+	write_file.ccm
 
 	PRIVATE
-	posix.argv.cc
-	posix.ensure_dir.cc
-	posix.exec.cc
-	posix.getenv.cc
-	posix.fd.cc
-	posix.find_in_path.cc
-	posix.open.cc
-	posix.process.cc
-	posix.rename.cc
-	posix.tempfile.cc
+	argv.cc
+	ensure_dir.cc
+	exec.cc
+	execv.cc
+	getenv.cc
+	fd.cc
+	find_in_path.cc
+	open.cc
+	process.cc
+	rename.cc
+	tempfile.cc
 )
 
 if(NIHIL_TESTS)

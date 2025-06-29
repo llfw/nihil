@@ -1,0 +1,53 @@
+/*
+ * This source code is released into the public domain.
+ */
+
+module;
+
+#include <expected>
+#include <string>
+
+#include "nihil.hh"
+
+#ifdef NIHIL_HAVE_FEXECVE
+
+export module nihil.posix:fexecv;
+
+import nihil.error;
+import :argv;
+import :executor;
+import :fd;
+
+namespace nihil {
+
+/*
+ * fexecv: use a file descriptor and an argument vector to call ::fexecve().
+ * This is the lowest-level executor which all others are implemented
+ * in terms of (if it's available).
+ *
+ * TODO: Should have a way to pass the environment (envp).
+ */
+export struct fexecv final {
+	using tag = exec_tag;
+
+	fexecv(fd &&execfd, argv &&args) noexcept;
+
+	[[nodiscard]] auto exec(this fexecv &self)
+		-> std::expected<void, error>;
+
+	// Movable
+	fexecv(fexecv &&) noexcept;
+	auto operator=(this fexecv &, fexecv &&) noexcept -> fexecv&;
+
+	// Not copyable (because we hold the open fd object)
+	fexecv(fexecv const &) = delete;
+	auto operator=(this fexecv &, fexecv const &) -> fexecv& = delete;
+
+private:
+	fd	m_execfd;
+	argv	m_args;
+};
+
+} // namespace nihil
+
+#endif	// NIHIL_HAVE_FEXECVE

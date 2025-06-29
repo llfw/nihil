@@ -16,8 +16,7 @@ module nihil.posix;
 
 namespace nihil {
 
-auto find_in_path(std::filesystem::path const &file)
-	-> std::optional<fd>
+auto open_in_path(std::filesystem::path const &file) -> std::optional<fd>
 {
 	using namespace std::literals;
 
