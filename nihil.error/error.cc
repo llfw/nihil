@@ -85,7 +85,7 @@ auto error::root_cause(this error const &self) -> error const &
 	if (self.m_cause)
 		return self.m_cause->root_cause();
 
-	return self;
+	return self; //NOLINT(bugprone-return-const-ref-from-parameter)
 }
 
 auto error::str(this error const &self) -> std::string

@@ -26,22 +26,24 @@ struct guard final {
 	 * We are being destroyed, so call the callable.
 	 * If the callable throws, std::terminate() will be called.
 	 */
-	~guard() {
+	~guard()
+	{
 		if (m_func)
 			std::invoke(*m_func);
 	}
 
 	// Release the guard.  This turns the destructor into a no-op.
-	void release() noexcept {
-		m_func.reset();
+	auto release(this guard &self) noexcept -> void
+	{
+		self.m_func.reset();
 	}
 
 	// Not default-constructible, movable or copyable.
 	guard() = delete;
 	guard(guard const &) = delete;
 	guard(guard &&) noexcept = delete;
-	guard &operator=(guard const &) = delete;
-	guard &operator=(guard &&) noexcept = delete;
+	auto operator=(this guard &, guard const &) -> guard & = delete;
+	auto operator=(this guard &, guard &&) noexcept -> guard & = delete;
 
 private:
 	// The callable to be invoked when we are destroyed.

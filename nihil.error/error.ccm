@@ -53,7 +53,7 @@ export struct error : std::exception {
 	error();
 
 	// Destroy an error.
-	virtual ~error();
+	~error() override;
 
 	// Create an error from a freeform string.
 	error(std::string_view what, error cause);

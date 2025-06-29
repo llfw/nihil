@@ -40,22 +40,7 @@ temporary_file::temporary_file(temporary_file &&other) noexcept
 {
 }
 
-auto temporary_file::operator=(this temporary_file &self,
-			       temporary_file &&other)
-	noexcept -> temporary_file &
-{
-	if (&self != &other) {
-		if (self.m_fd)
-			self.release();
-
-		self.m_fd = std::move(other.m_fd);
-		self.m_path = std::move(other.m_path);
-	}
-
-	return self;
-}
-
-temporary_file::~temporary_file()
+temporary_file::~temporary_file() //NOLINT(bugprone-exception-escape)
 {
 	if (m_fd)
 		release();

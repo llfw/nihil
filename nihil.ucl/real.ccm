@@ -78,7 +78,7 @@ export constexpr auto operator""_ucl (long double d) -> real
 	    d < static_cast<long double>(std::numeric_limits<double>::min()))
 		throw std::out_of_range("literal out of range");
 
-	return real(d);
+	return real(static_cast<double>(d));
 }
 } // namespace nihil::ucl::literals
 

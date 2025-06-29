@@ -9,6 +9,8 @@
 
 import nihil.ucl;
 
+//NOLINTBEGIN(bugprone-unchecked-optional-access)
+
 TEST_CASE("ucl: map: invariants", "[ucl]")
 {
 	using namespace nihil::ucl;
@@ -110,11 +112,10 @@ TEST_CASE("ucl: map: find", "[ucl]")
 	};
 
 	auto obj = map.find("42");
-	REQUIRE(obj != std::nullopt);
-	REQUIRE(*obj == 42);
+	REQUIRE(obj.value() == 42);
 
 	obj = map.find("43");
-	REQUIRE(obj == std::nullopt);
+	REQUIRE(!obj.has_value());
 }
 
 TEST_CASE("ucl: map: iterate", "[ucl]")
@@ -179,12 +180,13 @@ TEST_CASE("ucl: map: pop", "[uc]")
 	REQUIRE(map.find("42") != std::nullopt);
 
 	auto obj = map.pop("42");
-	REQUIRE(obj != std::nullopt);
-	REQUIRE(*obj == 42);
+	REQUIRE(obj.value() == 42);
 
-	REQUIRE(map.find("42") == std::nullopt);
+	REQUIRE(!map.find("42"));
 	REQUIRE(map["1"] == 1);
 
 	obj = map.pop("42");
-	REQUIRE(obj == std::nullopt);
+	REQUIRE(!obj);
 }
+
+//NOLINTEND(bugprone-unchecked-optional-access)

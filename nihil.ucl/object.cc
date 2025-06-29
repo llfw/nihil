@@ -33,10 +33,12 @@ object::object(object &&other) noexcept
 	: m_object(std::exchange(other.m_object, nullptr))
 {}
 
-object::object(object const &other) noexcept
+object::object(object const &other)
 	: m_object(nullptr)
 {
-	*this = other;
+	m_object = ::ucl_object_copy(other.get_ucl_object());
+	if (m_object == nullptr)
+		throw std::runtime_error("failed to copy UCL object");
 }
 
 auto object::operator=(this object &self, object &&other) noexcept
@@ -47,20 +49,9 @@ auto object::operator=(this object &self, object &&other) noexcept
 	return self;
 }
 
-auto object::operator=(this object &self, object const &other)
-	-> object &
+auto object::operator=(this object &self, object const &other) -> object &
 {
-	if (&self != &other) {
-		auto *new_uobj = ::ucl_object_copy(other.get_ucl_object());
-		if (new_uobj == nullptr)
-			throw std::runtime_error("failed to copy UCL object");
-
-		if (self.m_object != nullptr)
-			::ucl_object_unref(self.m_object);
-		self.m_object = new_uobj;
-	}
-
-	return self;
+	return self = object(other);
 }
 
 auto object::ref(this object const &self) -> object

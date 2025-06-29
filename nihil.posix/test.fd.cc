@@ -64,7 +64,7 @@ TEST_CASE("fd: move construct", "[fd]") {
 	REQUIRE(fd_is_open(fd1.get()));
 
 	auto fd2(std::move(fd1));
-	REQUIRE(!fd1);
+	REQUIRE(!fd1); //NOLINT
 	REQUIRE(fd2);
 	REQUIRE(fd2.get() == file);
 	REQUIRE(fd_is_open(file));
@@ -82,7 +82,7 @@ TEST_CASE("fd: move assign", "[fd]") {
 
 	fd2 = std::move(fd1);
 
-	REQUIRE(!fd1);
+	REQUIRE(!fd1); //NOLINT
 	REQUIRE(fd2);
 	REQUIRE(fd2.get() == file);
 	REQUIRE(fd_is_open(file));
@@ -94,7 +94,7 @@ TEST_CASE("fd: release", "[fd]") {
 
 	auto fd = nihil::fd(file);
 	auto fdesc = std::move(fd).release();
-	REQUIRE(!fd);
+	REQUIRE(!fd); //NOLINT
 	REQUIRE(fdesc == file);
 }
 

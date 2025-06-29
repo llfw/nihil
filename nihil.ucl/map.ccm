@@ -88,7 +88,8 @@ private:
 	struct state {
 		state(::ucl_object_t const *obj)
 		{
-			if ((iter = ::ucl_object_iterate_new(obj)) == nullptr)
+			iter = ::ucl_object_iterate_new(obj);
+			if (iter == nullptr)
 				throw std::system_error(make_error_code(
 					std::errc(errno)));
 		}

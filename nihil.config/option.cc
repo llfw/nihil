@@ -17,6 +17,7 @@ import nihil.ucl;
 
 namespace nihil::config {
 
+//NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 option::option(std::string_view name, std::string_view description)
 	: m_name(name)
 	, m_description(description)

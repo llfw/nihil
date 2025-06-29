@@ -36,7 +36,8 @@ TEST_CASE("nihil.cli: dispatch_command: basic", "[nihil.cli]")
 		};
 		auto argv = const_cast<char **>(args.data());
 
-		int ret = nihil::dispatch_command(args.size() - 1, argv);
+		int ret = nihil::dispatch_command(
+				static_cast<int>(args.size()) - 1, argv);
 		REQUIRE(ret == 0);
 		REQUIRE(cmd_sub1_called == true);
 		REQUIRE(cmd_sub2_called == false);
@@ -48,7 +49,8 @@ TEST_CASE("nihil.cli: dispatch_command: basic", "[nihil.cli]")
 		};
 		auto argv = const_cast<char **>(args.data());
 
-		int ret = nihil::dispatch_command(args.size() - 1, argv);
+		int ret = nihil::dispatch_command(
+				static_cast<int>(args.size()) - 1, argv);
 		REQUIRE(ret == 0);
 		REQUIRE(cmd_sub2_called == true);
 	}
@@ -65,7 +67,8 @@ TEST_CASE("nihil.cli: dispatch_command: unknown command", "[nihil.cli]")
 	auto ret = int{};
 	{
 		auto capture = nihil::capture_stream(std::cerr);
-		ret = nihil::dispatch_command(args.size() - 1, argv);
+		ret = nihil::dispatch_command(
+				static_cast<int>(args.size()) - 1, argv);
 		std::cerr.flush();
 		output = capture.str();
 	}
@@ -87,7 +90,8 @@ TEST_CASE("nihil.cli: dispatch_command: incomplete command", "[nihil.cli]")
 	auto ret = int{};
 	{
 		auto capture = nihil::capture_stream(std::cerr);
-		ret = nihil::dispatch_command(args.size() - 1, argv);
+		ret = nihil::dispatch_command(
+				static_cast<int>(args.size()) - 1, argv);
 		std::cerr.flush();
 		output = capture.str();
 	}

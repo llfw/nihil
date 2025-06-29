@@ -21,197 +21,20 @@ module;
 #include <type_traits>
 #include <utility>
 
-export module nihil.generator;
+export module nihil.generator:generator;
+
+import :elements_of;
+import :manual_lifetime;
+import :promise_base_alloc;
+import :util;
 
 namespace nihil {
-
-template <typename _T>
-class __manual_lifetime {
-  public:
-    __manual_lifetime() noexcept {}
-    ~__manual_lifetime() {}
-
-    template <typename... _Args>
-    _T& construct(_Args&&... __args) noexcept(std::is_nothrow_constructible_v<_T, _Args...>) {
-        return *::new (static_cast<void*>(std::addressof(__value_))) _T((_Args&&)__args...);
-    }
-
-    void destruct() noexcept(std::is_nothrow_destructible_v<_T>) {
-        __value_.~_T();
-    }
-
-    _T& get() & noexcept {
-        return __value_;
-    }
-    _T&& get() && noexcept {
-        return static_cast<_T&&>(__value_);
-    }
-    const _T& get() const & noexcept {
-        return __value_;
-    }
-    const _T&& get() const && noexcept {
-        return static_cast<const _T&&>(__value_);
-    }
-
-  private:
-    union {
-        std::remove_const_t<_T> __value_;
-    };
-};
-
-template <typename _T>
-class __manual_lifetime<_T&> {
-  public:
-    __manual_lifetime() noexcept : __value_(nullptr) {}
-    ~__manual_lifetime() {}
-
-    _T& construct(_T& __value) noexcept {
-        __value_ = std::addressof(__value);
-        return __value;
-    }
-
-    void destruct() noexcept {}
-
-    _T& get() const noexcept {
-        return *__value_;
-    }
-
-  private:
-    _T* __value_;
-};
-
-template <typename _T>
-class __manual_lifetime<_T&&> {
-  public:
-    __manual_lifetime() noexcept : __value_(nullptr) {}
-    ~__manual_lifetime() {}
-
-    _T&& construct(_T&& __value) noexcept {
-        __value_ = std::addressof(__value);
-        return static_cast<_T&&>(__value);
-    }
-
-    void destruct() noexcept {}
-
-    _T&& get() const noexcept {
-        return static_cast<_T&&>(*__value_);
-    }
-
-  private:
-    _T* __value_;
-};
-
-struct use_allocator_arg {};
-
-namespace ranges {
-
-export template <typename _Rng, typename _Allocator = use_allocator_arg>
-struct elements_of {
-    explicit constexpr elements_of(_Rng&& __rng) noexcept
-    requires std::is_default_constructible_v<_Allocator>
-    : __range(static_cast<_Rng&&>(__rng))
-    {}
-
-    constexpr elements_of(_Rng&& __rng, _Allocator&& __alloc) noexcept
-    : __range((_Rng&&)__rng), __alloc((_Allocator&&)__alloc) {}
-
-    constexpr elements_of(elements_of&&) noexcept = default;
-
-    constexpr elements_of(const elements_of &) = delete;
-    constexpr elements_of &operator=(const elements_of &) = delete;
-    constexpr elements_of &operator=(elements_of &&) = delete;
-
-    constexpr _Rng&& get() noexcept {
-        return static_cast<_Rng&&>(__range);
-    }
-
-    constexpr _Allocator get_allocator() const noexcept {
-        return __alloc;
-    }
-
-private:
-    [[no_unique_address]] _Allocator __alloc; // \expos
-    _Rng && __range; // \expos
-};
-
-export template <typename _Rng>
-elements_of(_Rng &&) -> elements_of<_Rng>;
-
-export template <typename _Rng, typename Allocator>
-elements_of(_Rng &&, Allocator&&) -> elements_of<_Rng, Allocator>;
-
-} // namespace ranges
-
-template <typename _Alloc>
-static constexpr bool __allocator_needs_to_be_stored =
-    !std::allocator_traits<_Alloc>::is_always_equal::value ||
-    !std::is_default_constructible_v<_Alloc>;
-
-// Round s up to next multiple of a.
-constexpr size_t __aligned_allocation_size(size_t s, size_t a) {
-    return (s + a - 1) & ~(a - 1);
-}
-
 
 export template <typename _Ref,
           typename _Value = std::remove_cvref_t<_Ref>,
           typename _Allocator = use_allocator_arg>
 class generator;
 
-template<typename _Alloc>
-class __promise_base_alloc {
-    static constexpr std::size_t __offset_of_allocator(std::size_t __frameSize) noexcept {
-        return __aligned_allocation_size(__frameSize, alignof(_Alloc));
-    }
-
-    static constexpr std::size_t __padded_frame_size(std::size_t __frameSize) noexcept {
-        return __offset_of_allocator(__frameSize) + sizeof(_Alloc);
-    }
-
-    static _Alloc& __get_allocator(void* __frame, std::size_t __frameSize) noexcept {
-        return *reinterpret_cast<_Alloc*>(
-            static_cast<char*>(__frame) + __offset_of_allocator(__frameSize));
-    }
-
-public:
-    template<typename... _Args>
-    static void* operator new(std::size_t __frameSize, std::allocator_arg_t, _Alloc __alloc, _Args&...) {
-        void* __frame = __alloc.allocate(__padded_frame_size(__frameSize));
-
-        // Store allocator at end of the coroutine frame.
-        // Assuming the allocator's move constructor is non-throwing (a requirement for allocators)
-        ::new (static_cast<void*>(std::addressof(__get_allocator(__frame, __frameSize)))) _Alloc(std::move(__alloc));
-
-        return __frame;
-    }
-
-    template<typename _This, typename... _Args>
-    static void* operator new(std::size_t __frameSize, _This&, std::allocator_arg_t, _Alloc __alloc, _Args&...) {
-        return __promise_base_alloc::operator new(__frameSize, std::allocator_arg, std::move(__alloc));
-    }
-
-    static void operator delete(void* __ptr, std::size_t __frameSize) noexcept {
-        _Alloc& __alloc = __get_allocator(__ptr, __frameSize);
-        _Alloc __localAlloc(std::move(__alloc));
-        __alloc.~Alloc();
-        __localAlloc.deallocate(static_cast<std::byte*>(__ptr), __padded_frame_size(__frameSize));
-    }
-};
-
-template<typename _Alloc>
-    requires (!__allocator_needs_to_be_stored<_Alloc>)
-class __promise_base_alloc<_Alloc> {
-public:
-    static void* operator new(std::size_t __size) {
-        _Alloc __alloc;
-        return __alloc.allocate(__size);
-    }
-
-    static void operator delete(void* __ptr, std::size_t __size) noexcept {
-        _Alloc __alloc;
-        __alloc.deallocate(static_cast<std::byte*>(__ptr), __size);
-    }
-};
 
 template<typename _Ref>
 struct __generator_promise_base
@@ -226,8 +49,8 @@ struct __generator_promise_base
     // generator coroutine is not used as a nested coroutine).
     // This member is lazily constructed by the __yield_sequence_awaiter::await_suspend()
     // method if this generator is used as a nested generator.
-    __manual_lifetime<std::exception_ptr> __exception_;
-    __manual_lifetime<_Ref> __value_;
+    manual_lifetime<std::exception_ptr> __exception_;
+    manual_lifetime<_Ref> __value_;
 
     explicit __generator_promise_base(std::coroutine_handle<> thisCoro) noexcept
         : __root_(this)
@@ -345,13 +168,13 @@ struct __generator_promise_base
 
     template <typename _OValue, typename _OAlloc>
     __yield_sequence_awaiter<generator<_Ref, _OValue, _OAlloc>>
-    yield_value(nihil::ranges::elements_of<generator<_Ref, _OValue, _OAlloc>> __g) noexcept {
+    yield_value(nihil::elements_of<generator<_Ref, _OValue, _OAlloc>> __g) noexcept {
         return std::move(__g).get();
     }
 
     template <std::ranges::range _Rng, typename _Allocator>
     __yield_sequence_awaiter<generator<_Ref, std::remove_cvref_t<_Ref>, _Allocator>>
-    yield_value(nihil::ranges::elements_of<_Rng, _Allocator> && __x) {
+    yield_value(nihil::elements_of<_Rng, _Allocator> && __x) {
         return [](std::allocator_arg_t, _Allocator, auto && __rng) -> generator<_Ref, std::remove_cvref_t<_Ref>, _Allocator> {
             for(auto && e: __rng)
                 co_yield static_cast<decltype(e)>(e);
@@ -372,7 +195,7 @@ struct __generator_promise;
 template<typename _Ref, typename _Value, typename _Alloc, typename _ByteAllocator, bool _ExplicitAllocator>
 struct __generator_promise<generator<_Ref, _Value, _Alloc>, _ByteAllocator, _ExplicitAllocator> final
     : public __generator_promise_base<_Ref>
-    , public __promise_base_alloc<_ByteAllocator> {
+    , public promise_base_alloc<_ByteAllocator> {
     __generator_promise() noexcept
     : __generator_promise_base<_Ref>(std::coroutine_handle<__generator_promise>::from_promise(*this))
     {}
@@ -387,7 +210,7 @@ struct __generator_promise<generator<_Ref, _Value, _Alloc>, _ByteAllocator, _Exp
 
     template <std::ranges::range _Rng>
     typename __generator_promise_base<_Ref>::template __yield_sequence_awaiter<generator<_Ref, _Value, _Alloc>>
-    yield_value(nihil::ranges::elements_of<_Rng> && __x) {
+    yield_value(nihil::elements_of<_Rng> && __x) {
         static_assert (!_ExplicitAllocator,
         "This coroutine has an explicit allocator specified with std::allocator_arg so an allocator needs to be passed "
         "explicitely to std::elements_of");
@@ -682,11 +505,3 @@ private:
 };
 
 } // namespace nihil
-
-export namespace std::ranges {
-
-template <typename _T, typename _U, typename _Alloc>
-constexpr inline bool enable_view<nihil::generator<_T, _U, _Alloc>> = true;
-
-} // namespace std::ranges
-

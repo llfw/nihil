@@ -24,10 +24,11 @@ struct capture_stream {
 		m_stream->rdbuf(m_buffer.rdbuf());
 	}
 
-	~capture_stream() {
+	~capture_stream()
+	{
 		if (m_old_streambuf == nullptr)
 			return;
-		release();
+		m_stream->rdbuf(m_old_streambuf);
 	}
 
 	/*

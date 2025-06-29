@@ -29,6 +29,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+//NOLINTBEGIN(bugprone-unchecked-optional-access)
+
 namespace
 {
 
@@ -69,7 +71,7 @@ TEST_CASE("uuid: Test multiple default generators", "[uuid]")
 	{
 		std::random_device rd;
 		auto seed_data = std::array<int, std::mt19937::state_size> {};
-		std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+		std::ranges::generate(seed_data, std::ref(rd));
 		std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 		std::mt19937 generator(seq);
 
@@ -82,7 +84,7 @@ TEST_CASE("uuid: Test multiple default generators", "[uuid]")
 	{
 		std::random_device rd;
 		auto seed_data = std::array<int, std::mt19937::state_size> {};
-		std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+		std::ranges::generate(seed_data, std::ref(rd));
 		std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 		std::mt19937 generator(seq);
 
@@ -99,7 +101,7 @@ TEST_CASE("uuid: Test default generator", "[uuid]")
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, std::mt19937::state_size> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	std::mt19937 generator(seq);
 
@@ -114,7 +116,7 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ smart ptr)",
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, std::mt19937::state_size> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	std::mt19937 generator(seq);
 
@@ -136,7 +138,7 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ ptr)", "[uuid]")
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, std::mt19937::state_size> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	auto generator = std::make_unique<std::mt19937>(seq);
 
@@ -158,7 +160,7 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ ref)", "[uuid]")
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, std::mt19937::state_size> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	std::mt19937 generator(seq);
 
@@ -181,7 +183,7 @@ TEST_CASE("uuid: Test basic random generator (conversion ctor w/ ptr) "
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, 6> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	std::ranlux48_base generator(seq);
 
@@ -204,7 +206,7 @@ TEST_CASE("uuid: Test basic random generator (conversion ctor w/ smart ptr) "
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, 6> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	auto generator = std::make_unique<std::ranlux48_base>(seq);
 
@@ -227,7 +229,7 @@ TEST_CASE("uuid: Test basic random generator (conversion ctor w/ ref) "
 {
 	std::random_device rd;
 	auto seed_data = std::array<int, 6> {};
-	std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
 	std::ranlux48_base generator(seq);
 
@@ -347,7 +349,8 @@ TEST_CASE("uuid: Test name generator equality (char const*, std::string, "
 {
 	using namespace std::literals;
 
-	uuid_name_generator dgen(uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43").value());
+	auto dgen = uuid_name_generator(uuid::from_string(
+			"47183823-2574-4bfd-b411-99ed177d3e43").value());
 	auto id1 = dgen("john");
 	auto id2 = dgen("john"s);
 	auto id3 = dgen("john"sv);
@@ -791,7 +794,7 @@ TEST_CASE("uuid: Test iterators constructor", "[uuid]")
 	}
 
 	{
-		uuid::value_type arr[16] = {
+		uuid::value_type arr[16] = { // NOLINT
 			0x47, 0x18, 0x38, 0x23,
 			0x25, 0x74,
 			0x4b, 0xfd,
@@ -837,7 +840,7 @@ TEST_CASE("uuid: Test array constructors", "[uuid]")
 	}
 
 	{
-		uuid::value_type arr[16] {
+		uuid::value_type arr[16] { //NOLINT
 			0x47, 0x18, 0x38, 0x23,
 			0x25, 0x74,
 			0x4b, 0xfd,
@@ -995,3 +998,4 @@ TEST_CASE("uuid: Test as_bytes", "[uuid]")
 	}
 }
 
+//NOLINTEND(bugprone-unchecked-optional-access)

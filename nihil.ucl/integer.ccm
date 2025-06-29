@@ -81,7 +81,7 @@ export constexpr auto operator""_ucl (unsigned long long i) -> integer
 	if (std::cmp_greater(i, std::numeric_limits<std::int64_t>::max()))
 		throw std::out_of_range("literal out of range");
 
-	return integer(i);
+	return integer(static_cast<std::int64_t>(i));
 }
 } // namespace nihil::ucl::literals
 

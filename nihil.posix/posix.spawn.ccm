@@ -229,12 +229,9 @@ spawn(executor auto &&executor, auto &&...actions)
 	auto proc = process(pid);
 
 	if (pid == 0) {
-		// We are in the child.  Release the process so we don't
-		// try to wait for ourselves, then run child handlers and
-		// exec the process.
-
-		std::ignore = std::move(proc).release();
+		// We are in the child.
 		(actions.run_in_child(proc), ...);
+		std::ignore = std::move(proc).release();
 
 		auto err = executor.exec();
 		std::print("{}\n", err.error());

@@ -49,7 +49,7 @@ export struct object {
 
 	// Copyable.
 	// Note that this copies the entire UCL object.
-	object(object const &other) noexcept;
+	object(object const &other);
 	auto operator=(this object &self, object const &other) -> object &;
 
 	// Increase the refcount of this object.

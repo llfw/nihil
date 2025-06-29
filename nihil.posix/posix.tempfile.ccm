@@ -56,13 +56,15 @@ export struct temporary_file final {
 
 	// Not copyable.
 	temporary_file(temporary_file const &) = delete;
-	auto operator=(this temporary_file &, temporary_file const &)
-		-> temporary_file & = delete;
 
 	// Movable.
 	temporary_file(temporary_file &&other) noexcept;
+
+	// Not assignable.
+	auto operator=(this temporary_file &, temporary_file const &)
+		-> temporary_file & = delete;
 	auto operator=(this temporary_file &, temporary_file &&) noexcept
-		-> temporary_file &;
+		-> temporary_file & = delete;
 
 private:
 	// The file descriptor for the file.

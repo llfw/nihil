@@ -1,0 +1,94 @@
+///////////////////////////////////////////////////////////////////////////////
+// Reference implementation of std::generator proposal P2168.
+//
+// See https://wg21.link/P2168 for details.
+//
+///////////////////////////////////////////////////////////////////////////////
+// Copyright Lewis Baker, Corentin Jabot
+//
+// Use, modification and distribution is subject to the Boost Software License,
+// Version 1.0.
+// (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////////////////////
+
+module;
+
+#include <cstdlib>
+#include <memory>
+
+export module nihil.generator:promise_base_alloc;
+
+import :util;
+
+namespace nihil {
+
+template<typename Alloc>
+struct promise_base_alloc
+{
+	template<typename... Args>
+	static void* operator new(std::size_t frame_size, std::allocator_arg_t, Alloc alloc, Args &...)
+	{
+		void* frame = alloc.allocate(padded_frame_size(frame_size));
+
+		// Store allocator at end of the coroutine frame.  Assuming the
+		// allocator's move constructor is non-throwing (a requirement
+		// for allocators)
+		auto *alloc_address = static_cast<void*>(std::addressof(get_allocator(frame, frame_size)));
+		::new (alloc_address) Alloc(std::move(alloc));
+
+		return frame;
+	}
+
+	template<typename This, typename... Args>
+	static void* operator new(std::size_t frame_size, This &, std::allocator_arg_t, Alloc alloc, Args &...)
+	{
+		return promise_base_alloc::operator new(frame_size, std::allocator_arg, std::move(alloc));
+	}
+
+	static void operator delete(void* ptr, std::size_t frame_size) noexcept
+	{
+		auto &alloc = get_allocator(ptr, frame_size);
+		auto local_alloc = Alloc(std::move(alloc));
+
+		alloc.~Alloc();
+
+		local_alloc.deallocate(static_cast<std::byte*>(ptr), padded_frame_size(frame_size));
+	}
+
+private:
+	[[nodiscard]] static constexpr auto offset_of_allocator(std::size_t frame_size) noexcept -> std::size_t
+	{
+		return aligned_allocation_size(frame_size, alignof(Alloc));
+	}
+
+	[[nodiscard]] static constexpr auto padded_frame_size(std::size_t frame_size) noexcept -> std::size_t
+	{
+		return offset_of_allocator(frame_size) + sizeof(Alloc);
+	}
+
+	[[nodiscard]] static auto get_allocator(void* frame, std::size_t frame_size) noexcept -> Alloc &
+	{
+		return *reinterpret_cast<Alloc*>(
+		static_cast<char*>(frame) + offset_of_allocator(frame_size));
+	}
+
+};
+
+template<typename Alloc>
+requires (!allocator_needs_to_be_stored<Alloc>)
+struct promise_base_alloc<Alloc>
+{
+	static void* operator new(std::size_t size)
+	{
+		auto alloc = Alloc();
+		return alloc.allocate(size);
+	}
+
+	static void operator delete(void *ptr, std::size_t size) noexcept
+	{
+		auto alloc = Alloc();
+		alloc.deallocate(static_cast<std::byte *>(ptr), size);
+	}
+};
+
+} // namespace nihil

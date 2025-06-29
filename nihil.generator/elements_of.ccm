@@ -1,0 +1,69 @@
+///////////////////////////////////////////////////////////////////////////////
+// Reference implementation of std::generator proposal P2168.
+//
+// See https://wg21.link/P2168 for details.
+//
+///////////////////////////////////////////////////////////////////////////////
+// Copyright Lewis Baker, Corentin Jabot
+//
+// Use, modification and distribution is subject to the Boost Software License,
+// Version 1.0.
+// (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////////////////////
+
+module;
+
+#include <concepts>
+
+export module nihil.generator:elements_of;
+
+import :util;
+
+namespace nihil {
+
+export template <typename Range, typename Allocator = use_allocator_arg>
+struct elements_of {
+	explicit constexpr elements_of(Range &&range) noexcept
+	requires std::is_default_constructible_v<Allocator>
+		: m_range(static_cast<Range &&>(range))
+	{
+	}
+
+	constexpr elements_of(Range &&range, Allocator &&alloc) noexcept
+		: m_range(static_cast<Range &&>(range))
+		, m_alloc(static_cast<Allocator &&>(alloc))
+	{}
+
+	constexpr elements_of(elements_of &&) noexcept = default;
+
+	constexpr elements_of(const elements_of &) = delete;
+
+	constexpr auto operator=(this elements_of &, const elements_of &)
+		-> elements_of & = delete;
+	constexpr auto operator=(this elements_of &, elements_of &&) noexcept
+		-> elements_of & = delete;
+
+	[[nodiscard]] constexpr auto
+	get(this elements_of const &self) noexcept -> Range &&
+	{
+		return static_cast<Range &&>(self.m_range);
+	}
+
+	[[nodiscard]] constexpr auto
+	get_allocator(this elements_of const &self) noexcept -> Allocator
+	{
+		return self.m_alloc;
+	}
+
+private:
+	[[no_unique_address]] Allocator m_alloc;
+	Range &&m_range;
+};
+
+export template <typename Range>
+elements_of(Range &&) -> elements_of<Range>;
+
+export template <typename Range, typename Allocator>
+elements_of(Range &&, Allocator &&) -> elements_of<Range, Allocator>;
+
+} // namespace nihil

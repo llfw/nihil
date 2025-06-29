@@ -1,0 +1,37 @@
+///////////////////////////////////////////////////////////////////////////////
+// Reference implementation of std::generator proposal P2168.
+//
+// See https://wg21.link/P2168 for details.
+//
+///////////////////////////////////////////////////////////////////////////////
+// Copyright Lewis Baker, Corentin Jabot
+//
+// Use, modification and distribution is subject to the Boost Software License,
+// Version 1.0.
+// (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////////////////////
+
+module;
+
+#include <concepts>
+#include <memory>
+
+export module nihil.generator:util;
+
+namespace nihil {
+
+export struct use_allocator_arg {};
+
+template <typename Alloc>
+constexpr bool allocator_needs_to_be_stored =
+	!std::allocator_traits<Alloc>::is_always_equal::value ||
+	!std::is_default_constructible_v<Alloc>;
+
+// Round s up to next multiple of a.
+[[nodiscard]] constexpr auto
+aligned_allocation_size(std::size_t s, std::size_t a) -> std::size_t
+{
+	return (s + a - 1) & ~(a - 1);
+}
+
+} // namespace nihil

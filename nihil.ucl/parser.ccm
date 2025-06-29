@@ -72,7 +72,7 @@ struct parser {
 	requires (std::same_as<bool, std::invoke_result<F>>)
 	{
 		auto handler = std::make_unique<macro_handler>(
-					std::move(func));
+					std::forward<F>(func));
 
 		auto cname = std::string(name);
 		::ucl_parser_register_macro(

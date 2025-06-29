@@ -46,7 +46,7 @@ TEST_CASE("generator: elements_of", "[generator]")
 	};
 
 	auto fn2 = [&fn1] -> nihil::generator<int> {
-		co_yield nihil::ranges::elements_of(fn1());
+		co_yield nihil::elements_of(fn1());
 	};
 
 	auto values = std::vector<int>();

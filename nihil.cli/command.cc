@@ -22,6 +22,7 @@ import :registry;
 
 namespace nihil {
 
+//NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 command::command(std::string_view path, std::string_view usage,
 		 command_function_t handler)
 	: command_node(path)

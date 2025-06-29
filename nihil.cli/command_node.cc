@@ -9,6 +9,8 @@ module;
 #include <print>
 #include <string>
 
+#include <unistd.h>
+
 module nihil.cli;
 
 import nihil.core;
@@ -16,9 +18,14 @@ import nihil.error;
 
 namespace nihil {
 
+//NOLINTNEXTLINE(bugprone-exception-escape)
 command_node::command_node(std::string_view path) noexcept
-	: m_path(path)
+try	: m_path(path)
 {
+} catch (std::exception const &exc) {
+	std::fprintf(stderr, "%s\n", exc.what());
+	_exit(1);
+	/*NOTREACHED*/
 }
 
 command_node::~command_node()
