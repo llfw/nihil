@@ -35,7 +35,7 @@ auto write_file(std::filesystem::path const &filename,
 		int mode = 0777)
 	-> std::expected<std::size_t, error>
 {
-	auto file = co_await open(filename, O_CREAT|O_WRONLY, mode);
+	auto file = co_await open(filename, open_write | open_create, mode);
 	auto nbytes = co_await write(file, range);
 	co_return nbytes;
 }

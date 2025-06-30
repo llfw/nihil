@@ -6,7 +6,12 @@ target_sources(nihil.generator
 	nihil.generator.ccm
 
 	generator.ccm
+	byte_allocator.ccm
+	coroutine_traits.ccm
 	elements_of.ccm
+	forward.ccm
+	generator_promise_base.ccm
+	generator_promise.ccm
 	manual_lifetime.ccm
 	promise_base_alloc.ccm
 	util.ccm
@@ -15,7 +20,7 @@ target_sources(nihil.generator
 if(NIHIL_TESTS)
 	enable_testing()
 
-	add_executable(nihil.generator.test test.cc)
+	add_executable(nihil.generator.test generator.test.cc)
 	target_link_libraries(nihil.generator.test PRIVATE
 		nihil.generator
 		Catch2::Catch2WithMain

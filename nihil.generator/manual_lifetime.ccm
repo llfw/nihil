@@ -68,8 +68,8 @@ private:
 
 template <typename T>
 class manual_lifetime<T &> {
-	manual_lifetime() noexcept {}
-	~manual_lifetime() {}
+	manual_lifetime() noexcept = default;
+	~manual_lifetime() = default;
 
 	auto construct(this manual_lifetime &self, T &value) noexcept -> T &
 	{
@@ -92,8 +92,8 @@ private:
 
 template <typename T>
 class manual_lifetime<T &&> {
-	manual_lifetime() noexcept {}
-	~manual_lifetime() {}
+	manual_lifetime() noexcept = default;
+	~manual_lifetime() = default;
 
 	auto construct(this manual_lifetime &self, T &&value) noexcept -> T &&
 	{

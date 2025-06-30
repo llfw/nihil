@@ -1,24 +1,87 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
 #include <expected>
 #include <filesystem>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 export module nihil.posix:open;
 
 import nihil.error;
+import nihil.flagset;
 import :fd;
 
-export namespace nihil {
+namespace nihil {
 
-/*
- * Open the given file and return an fd for it.
- */
-[[nodiscard]] auto open(std::filesystem::path const &filename,
-			int flags, int mode = 0777)
-	-> std::expected<fd, error>;
+struct open_flags_tag
+{
+};
+export using open_flags = nihil::flagset<int, open_flags_tag>;
+
+export inline constexpr auto open_none = open_flags();
+
+// Basic flags, exactly one of these is required.
+export inline constexpr auto open_read = open_flags::mask<O_RDONLY>();
+export inline constexpr auto open_write = open_flags::mask<O_WRONLY>();
+export inline constexpr auto open_readwrite = open_flags::mask<O_RDWR>();
+export inline constexpr auto open_search = open_flags::mask<O_SEARCH>();
+export inline constexpr auto open_exec = open_flags::mask<O_EXEC>();
+
+// Modifiers
+export inline constexpr auto open_nonblock = open_flags::mask<O_NONBLOCK>();
+export inline constexpr auto open_append = open_flags::mask<O_APPEND>();
+export inline constexpr auto open_create = open_flags::mask<O_CREAT>();
+export inline constexpr auto open_truncate = open_flags::mask<O_TRUNC>();
+export inline constexpr auto open_exclusive = open_flags::mask<O_EXCL>();
+export inline constexpr auto open_shared_lock = open_flags::mask<O_SHLOCK>();
+export inline constexpr auto open_exclusive_lock = open_flags::mask<O_EXLOCK>();
+export inline constexpr auto open_directory = open_flags::mask<O_DIRECTORY>();
+export inline constexpr auto open_nofollow = open_flags::mask<O_NOFOLLOW>();
+export inline constexpr auto open_nofollow_any = open_flags::mask<O_NOFOLLOW_ANY>();
+export inline constexpr auto open_symlink = open_flags::mask<O_SYMLINK>();
+export inline constexpr auto open_eventonly = open_flags::mask<O_EVTONLY>();
+export inline constexpr auto open_close_on_exec = open_flags::mask<O_CLOEXEC>();
+export inline constexpr auto open_resolve_beneath = open_flags::mask<O_RESOLVE_BENEATH>();
+
+// FreeBSD
+#ifdef O_DIRECT
+export inline constexpr auto open_direct = open_flags::mask<O_DIRECT>();
+#endif
+
+#ifdef O_VERIFY
+export inline constexpr auto open_verify = open_flags::mask<O_VERIFY>();
+#endif
+
+#ifdef O_PATH
+export inline constexpr auto open_path = open_flags::mask<O_PATH>();
+#endif
+
+#ifdef O_EMPTY_PATH
+export inline constexpr auto open_empty_path = open_flags::mask<O_EMPTY_PATH>();
+#endif
+
+// Open the given file and return an fd for it.
+export [[nodiscard]] auto open(std::filesystem::path const &filename, open_flags flags,
+                               int mode = 0777) -> std::expected<fd, error>
+{
+	auto fdno = ::open(filename.c_str(), flags.value(), mode);
+	if (fdno != -1)
+		return fd(fdno);
+
+	return std::unexpected(error(std::errc(errno)));
+}
+
+// Like open(), but resolve relative to an open file descriptor, which must refer to a directory.
+export [[nodiscard]] auto openat(fd &where, std::filesystem::path const &filename, open_flags flags,
+                                 int mode = 0777) -> std::expected<fd, error>
+{
+	auto fdno = ::openat(where.get(), filename.c_str(), flags.value(), mode);
+	if (fdno != -1)
+		return fd(fdno);
+
+	return std::unexpected(error(std::errc(errno)));
+}
 
 } // namespace nihil

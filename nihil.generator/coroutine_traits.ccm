@@ -1,0 +1,70 @@
+///////////////////////////////////////////////////////////////////////////////
+// Reference implementation of std::generator proposal P2168.
+//
+// See https://wg21.link/P2168 for details.
+//
+///////////////////////////////////////////////////////////////////////////////
+// Copyright Lewis Baker, Corentin Jabot
+//
+// Use, modification and distribution is subject to the Boost Software License,
+// Version 1.0.
+// (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////////////////////
+
+module;
+
+#include <coroutine>
+#include <memory>
+
+export module nihil.generator:coroutine_traits;
+
+import :byte_allocator;
+import :forward;
+import :generator_promise;
+
+namespace std {
+
+// Type-erased allocator with default allocator behaviour.
+export template <typename Ref, typename Value, typename... Args>
+struct coroutine_traits<nihil::generator<Ref, Value>, Args...>
+{
+	using promise_type =
+		nihil::generator_promise<nihil::generator<Ref, Value>, std::allocator<std::byte>>;
+};
+
+// Type-erased allocator with std::allocator_arg parameter
+export template <typename Ref, typename Value, typename Alloc, typename... Args>
+struct coroutine_traits<nihil::generator<Ref, Value>, allocator_arg_t, Alloc, Args...>
+{
+private:
+	using byte_allocator = nihil::byte_allocator_t<Alloc>;
+
+public:
+	using promise_type = nihil::generator_promise<nihil::generator<Ref, Value>, byte_allocator,
+	                                              true /*explicit Allocator*/>;
+};
+
+// Type-erased allocator with std::allocator_arg parameter (non-static member functions)
+export template <typename Ref, typename Value, typename This, typename Alloc, typename... Args>
+struct coroutine_traits<nihil::generator<Ref, Value>, This, allocator_arg_t, Alloc, Args...>
+{
+private:
+	using byte_allocator = nihil::byte_allocator_t<Alloc>;
+
+public:
+	using promise_type = nihil::generator_promise<nihil::generator<Ref, Value>, byte_allocator,
+	                                              true /*explicit Allocator*/>;
+};
+
+// Generator with specified allocator type
+export template <typename Ref, typename Value, typename Alloc, typename... Args>
+struct coroutine_traits<nihil::generator<Ref, Value, Alloc>, Args...>
+{
+	using byte_allocator = nihil::byte_allocator_t<Alloc>;
+
+public:
+	using promise_type =
+		nihil::generator_promise<nihil::generator<Ref, Value, Alloc>, byte_allocator>;
+};
+
+} // namespace std

@@ -13,23 +13,17 @@
 
 module;
 
-#include <ranges>
+#include <type_traits>
 
-export module nihil.generator;
+export module nihil.generator:forward;
 
-export import :byte_allocator;
-export import :coroutine_traits;
-export import :elements_of;
-export import :forward;
-export import :generator;
-export import :generator_promise_base;
-export import :manual_lifetime;
-export import :promise_base_alloc;
-export import :util;
+import :util;
 
-export namespace std::ranges { // NOLINT
+namespace nihil {
 
-template <typename T, typename U, typename Alloc>
-constexpr inline bool enable_view<nihil::generator<T, U, Alloc>> = true;
+export template <typename Ref,
+          typename Value = std::remove_cvref_t<Ref>,
+          typename Allocator = use_allocator_arg>
+class generator;
 
-} // namespace std::ranges
+} // namespace nihil

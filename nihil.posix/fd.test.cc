@@ -2,10 +2,10 @@
  * This source code is released into the public domain.
  */
 
+#include <coroutine>
 #include <span>
 #include <stdexcept>
 
-#include <stdio.h>
 #include <fcntl.h>
 
 #include <catch2/catch_test_macros.hpp>
@@ -23,10 +23,8 @@ auto fd_is_open(int fd) -> bool {
 	return ret == 0;
 }
 
-} // anonymous namespace
-
 TEST_CASE("fd: construct empty", "[fd]") {
-	nihil::fd fd;
+	auto const fd = nihil::fd();
 
 	REQUIRE(!fd);
 	REQUIRE_THROWS_AS(fd.get(), std::logic_error);
@@ -111,17 +109,18 @@ TEST_CASE("fd: dup", "[fd]") {
 }
 
 TEST_CASE("fd: dup2", "[fd]") {
+	auto constexpr test_fd = 666;
 	auto file = ::open("/dev/null", O_RDONLY);
 	REQUIRE(file > 0);
 
-	REQUIRE(!fd_is_open(666));
+	REQUIRE(!fd_is_open(test_fd));
 
 	auto fd = nihil::fd(file);
-	auto fd2 = dup(fd, 666);
+	auto fd2 = dup(fd, test_fd);
 
 	REQUIRE(fd);
 	REQUIRE(fd2);
-	REQUIRE(fd2->get() == 666);
+	REQUIRE(fd2->get() == test_fd);
 }
 
 TEST_CASE("fd: flags", "[fd]") {
@@ -131,27 +130,27 @@ TEST_CASE("fd: flags", "[fd]") {
 	auto fd = nihil::fd(file);
 
 	{
-		auto const ret = replaceflags(fd, 0);
+		auto const ret = replaceflags(fd, nihil::fd_none);
 		REQUIRE(ret);
-		REQUIRE(getflags(fd) == 0);
+		REQUIRE(getflags(fd) == nihil::fd_none);
 	}
 
 	{
-		auto const ret = setflags(fd, O_NONBLOCK);
-		REQUIRE(ret == O_NONBLOCK);
-		REQUIRE(getflags(fd) == O_NONBLOCK);
+		auto const ret = setflags(fd, nihil::fd_nonblock);
+		REQUIRE(ret == nihil::fd_nonblock);
+		REQUIRE(getflags(fd) == nihil::fd_nonblock);
 	}
 
 	{
-		auto const ret = setflags(fd, O_SYNC);
-		REQUIRE(ret == (O_NONBLOCK|O_SYNC));
-		REQUIRE(getflags(fd) == (O_NONBLOCK|O_SYNC));
+		auto const ret = setflags(fd, nihil::fd_sync);
+		REQUIRE(ret == (nihil::fd_nonblock | nihil::fd_sync));
+		REQUIRE(getflags(fd) == (nihil::fd_nonblock | nihil::fd_sync));
 	}
 
 	{
-		auto const ret = clearflags(fd, O_NONBLOCK);
-		REQUIRE(ret == O_SYNC);
-		REQUIRE(getflags(fd) == O_SYNC);
+		auto const ret = clearflags(fd, nihil::fd_nonblock);
+		REQUIRE(ret == nihil::fd_sync);
+		REQUIRE(getflags(fd) == nihil::fd_sync);
 	}
 }
 
@@ -162,21 +161,21 @@ TEST_CASE("fd: fdflags", "[fd]") {
 	auto fd = nihil::fd(file);
 
 	{
-		auto const ret = replacefdflags(fd, 0);
+		auto const ret = replacefdflags(fd, nihil::fd_fd_none);
 		REQUIRE(ret);
-		REQUIRE(getfdflags(fd) == 0);
+		REQUIRE(getfdflags(fd) == nihil::fd_fd_none);
 	}
 
 	{
-		auto const ret = setfdflags(fd, FD_CLOEXEC);
-		REQUIRE(ret == FD_CLOEXEC);
-		REQUIRE(getfdflags(fd) == FD_CLOEXEC);
+		auto const ret = setfdflags(fd, nihil::fd_fd_cloexec);
+		REQUIRE(ret == nihil::fd_fd_cloexec);
+		REQUIRE(getfdflags(fd) == nihil::fd_fd_cloexec);
 	}
 
 	{
-		auto const ret = clearfdflags(fd, FD_CLOEXEC);
-		REQUIRE(ret == 0);
-		REQUIRE(getfdflags(fd) == 0);
+		auto const ret = clearfdflags(fd, nihil::fd_fd_cloexec);
+		REQUIRE(ret == nihil::fd_fd_none);
+		REQUIRE(getfdflags(fd) == nihil::fd_fd_none);
 	}
 }
 
@@ -202,3 +201,5 @@ TEST_CASE("fd: pipe, read, write", "[fd]") {
 	REQUIRE(read_buf);
 	REQUIRE(std::string_view(*read_buf) == test_string);
 }
+
+} // anonymous namespace

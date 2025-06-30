@@ -16,19 +16,35 @@ namespace nihil {
 /*
  * argv: stores a null-terminated array of nul-terminated C strings.
  * argv::data() is suitable for passing to ::execv().
- *
- * Create an argv using argv::from_range(), which takes a range of
- * string-like objects.
  */
 
-export struct argv {
+export struct argv
+{
+	using value_type = char *;
+	using iterator = value_type const *;
+	using const_iterator = value_type const *;
+
 	/*
 	 * Create a new argv from a range.
+	 *
+	 * Delegate to the default constructor to ensure the pointers in
+	 * m_args are deleted if we throw when allocating.
 	 */
 	argv(std::from_range_t, std::ranges::range auto &&args)
+		: argv()
 	{
-		for (auto &&arg : args)
-			add_arg(std::string_view(arg));
+		for (auto &&arg : args) {
+			auto str = std::string_view(arg);
+
+			// Create a nul-terminated C string.
+			auto ptr = std::make_unique<char[]>(str.size() + 1); // NOLINT
+			std::ranges::copy(str, ptr.get());
+			ptr[str.size()] = '\0';
+
+			// Ensure we won't throw when emplacing the pointer.
+			m_args.reserve(m_args.size() + 1);
+			m_args.emplace_back(ptr.release());
+		}
 
 		m_args.push_back(nullptr);
 	}
@@ -36,43 +52,68 @@ export struct argv {
 	/*
 	 * Create an argv from an initializer list.
 	 */
-	template<typename T>
-	explicit argv(std::initializer_list<T> &&args)
-		: argv(std::from_range, std::forward<decltype(args)>(args))
+	template <typename T>
+	argv(std::initializer_list<T> const &args)
+		: argv(std::from_range, args)
 	{
 	}
 
+	template <typename T>
+	argv(std::initializer_list<T> &&args)
+		: argv(std::from_range, std::move(args))
+	{
+	}
+
+	// Destructor.
+	~argv()
+	{
+		for (auto *arg : m_args)
+			delete[] arg; // NOLINT
+	}
+
 	// Movable.
-	argv(argv &&) noexcept;
-	auto operator=(this argv &, argv &&other) -> argv &;
+	argv(argv &&) noexcept = default;
+	auto operator=(argv &&other) noexcept -> argv & = default;
 
 	// Not copyable.  TODO: for completeness, it probably should be.
 	argv(argv const &) = delete;
-	auto operator=(this argv &, argv const &other) -> argv& = delete;
-
-	~argv();
+	auto operator=(argv const &other) -> argv & = delete;
 
 	// Access the stored arguments.
-	[[nodiscard]] auto data(this argv const &self) -> char const * const *;
-	[[nodiscard]] auto data(this argv &self) -> char * const *;
-	[[nodiscard]] auto size(this argv const &self);
+	[[nodiscard]] auto data(this argv const &self) -> value_type const *
+	{
+		return self.m_args.data();
+	}
+
+	[[nodiscard]] auto size(this argv const &self) -> std::size_t
+	{
+		return self.m_args.size();
+	}
+
+	// Access an element by index.  Throws std::out_of_range if the index is out of range.
+	[[nodiscard]] auto operator[](this argv const &self, std::size_t index) -> value_type
+	{
+		return self.m_args.at(index);
+	}
 
 	// Range access
-	[[nodiscard]] auto begin(this argv const &self);
-	[[nodiscard]] auto end(this argv const &self);
+	[[nodiscard]] auto begin(this argv const &self) -> const_iterator
+	{
+		return self.data();
+	}
+
+	[[nodiscard]] auto end(this argv const &self) -> const_iterator
+	{
+		return self.data() + self.size(); // NOLINT
+	}
 
 private:
-	// Use the from_range() factory method to create new instances.
-	argv();
+	// Private since default-constructing an argv isn't useful.
+	argv() = default;
 
-	// The argument pointers, including the null terminator.
-	// This can't be a vector<unique_ptr> because we need an array of
-	// char pointers to pass to exec.
+	// The argument pointers, including the null terminator.  This can't be a
+	// vector<unique_ptr> because we need an array of char pointers to pass to exec.
 	std::vector<char *> m_args;
-
-	// Add a new argument to the array.
-	auto add_arg(this argv &self, std::string_view arg) -> void;
 };
 
 } // namespace nihil
-

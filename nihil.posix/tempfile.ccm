@@ -1,16 +1,13 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
-/*
- * tempfile: create a temporary file.
- */
+// tempfile: create a temporary file.
 
+#include <algorithm>
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <random>
 #include <string>
 
 export module nihil.posix:tempfile;
@@ -18,70 +15,139 @@ export module nihil.posix:tempfile;
 import nihil.error;
 import nihil.flagset;
 import :fd;
+import :getenv;
+import :open;
 
 namespace nihil {
 
-struct tempfile_flags_tag {};
-export using tempfile_flags_t = flagset<std::uint8_t, tempfile_flags_tag>;
+struct tempfile_flags_tag
+{
+};
+export using tempfile_flags = flagset<std::uint8_t, tempfile_flags_tag>;
 
 // No flags.
-export inline constexpr auto tempfile_none = tempfile_flags_t();
+export inline constexpr auto tempfile_none = tempfile_flags();
 
 // Unlink the tempfile immediately after creating it
-export inline constexpr auto tempfile_unlink = tempfile_flags_t::bit<0>();
+export inline constexpr auto tempfile_unlink = tempfile_flags::bit<0>();
 
-export struct temporary_file final {
-	/*
-	 * Fetch the file's fd.
-	 */
-	[[nodiscard]] auto fd(this temporary_file &) -> nihil::fd &;
+export struct temporary_file final
+{
+	// Fetch the file's fd.
+	[[nodiscard]] auto fd(this temporary_file &self) -> nihil::fd &
+	{
+		if (!self.m_fd)
+			throw std::logic_error("fd() called on empty temporary_file");
 
-	/*
-	 * Fetch the name of this file.  If tempfile_unlink was specified,
-	 * throws std::logic_error.
-	 */
-	[[nodiscard]] auto path(this temporary_file const &)
-		-> std::filesystem::path const &;
+		return self.m_fd;
+	}
 
-	/*
-	 * Release this temporary file, causing it to be deleted immediately.
-	 * Throws std::logic_error if the file has already been released.
-	 */
-	auto release(this temporary_file &) -> void;
+	// Fetch the name of this file.  If tempfile_unlink was specified,
+	// throws std::logic_error.
+	[[nodiscard]] auto path(this temporary_file const &self) -> std::filesystem::path const &
+	{
+		if (self.m_path.empty())
+			throw std::logic_error("path() called on unlinked temporary_file");
 
-	/*
-	 * Destructor; unlink the file if we didn't already.
-	 */
-	~temporary_file();
+		return self.m_path;
+	}
+
+	// Release this temporary file, causing it to be closed and deleted immediately
+	// Throws std::logic_error if the file has already been released.
+	auto release(this temporary_file &self) -> void
+	{
+		if (!self.m_fd)
+			throw std::logic_error("release() called on already-released tempfile");
+
+		if (!self.m_path.empty()) {
+			auto ec = std::error_code(); // ignore errors
+			remove(self.path(), ec);
+
+			self.m_path.clear();
+		}
+
+		std::ignore = self.m_fd.close();
+	}
+
+	// Destructor; unlink the file if we didn't already.
+	~temporary_file() // NOLINT
+	{
+		if (m_fd)
+			release();
+	}
 
 	// Not copyable.
 	temporary_file(temporary_file const &) = delete;
 
 	// Movable.
-	temporary_file(temporary_file &&other) noexcept;
+	temporary_file(temporary_file &&other) noexcept = default;
 
 	// Not assignable.
-	auto operator=(this temporary_file &, temporary_file const &)
-		-> temporary_file & = delete;
-	auto operator=(this temporary_file &, temporary_file &&) noexcept
-		-> temporary_file & = delete;
+	auto operator=(this temporary_file &, temporary_file const &) -> temporary_file & = delete;
+	auto
+	operator=(this temporary_file &, temporary_file &&) noexcept -> temporary_file & = delete;
 
 private:
 	// The file descriptor for the file.
-	nihil::fd		m_fd;
-	std::filesystem::path	m_path;
+	nihil::fd m_fd;
+	std::filesystem::path m_path;
 
-	temporary_file(nihil::fd &&fd, std::filesystem::path) noexcept;
-	temporary_file(nihil::fd &&fd) noexcept;
+	temporary_file(nihil::fd &&fd, std::filesystem::path path) noexcept
+		: m_fd(std::move(fd))
+		, m_path(std::move(path))
+	{
+	}
 
-	friend auto tempfile(tempfile_flags_t flags)
-		-> std::expected<temporary_file, error>;
+	explicit temporary_file(nihil::fd &&fd) noexcept
+		: m_fd(std::move(fd))
+	{
+	}
+
+	friend auto tempfile(tempfile_flags flags) -> std::expected<temporary_file, error>;
 };
 
 /*
  * Create a temporary file and return it.
  */
-export [[nodiscard]] auto tempfile(tempfile_flags_t flags = tempfile_none)
-	-> std::expected<temporary_file, error>;
+export [[nodiscard]] auto
+tempfile(tempfile_flags flags = tempfile_none) -> std::expected<temporary_file, error>
+{
+	auto rng = std::default_random_engine(std::random_device{}());
+
+	auto random_name = [&] -> std::string {
+		auto constexpr length = std::size_t{12};
+		auto constexpr randchars = std::string_view("abcdefghijklmnopqrstuvwxyz"
+		                                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		                                            "0123456789");
+
+		auto dist = std::uniform_int_distribution<>(0, randchars.size() - 1);
+		auto ret = std::string(length, 0);
+		std::ranges::generate_n(ret.begin(), length,
+		                        [&] -> char { return randchars[dist(rng)]; });
+		return ret;
+	};
+
+	auto dir = std::filesystem::path(getenv("TMPDIR").value_or("/tmp")); // NOLINT
+
+	// Keep trying until we don't get EEXIST.
+	for (;;) {
+		auto filename = dir / (random_name() + ".tmp");
+		auto fd =
+			nihil::open(filename, open_readwrite | open_create | open_exclusive, 0600);
+		if (!fd) {
+			if (fd.error() == std::errc::file_exists)
+				continue;
+			return std::unexpected(fd.error());
+		}
+
+		if (flags & tempfile_unlink) {
+			auto ec = std::error_code();
+			remove(filename, ec);
+			return temporary_file(std::move(*fd));
+		}
+
+		return temporary_file(std::move(*fd), std::move(filename));
+	}
+}
 
 } // namespace nihil

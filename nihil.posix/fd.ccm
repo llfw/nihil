@@ -1,7 +1,4 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
 #include <coroutine>
@@ -11,56 +8,136 @@ module;
 #include <stdexcept>
 #include <system_error>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 export module nihil.posix:fd;
 
+import nihil.flagset;
 import nihil.error;
 import nihil.monad;
 
 namespace nihil {
 
-/*
- * fd: a file descriptor.
- */
+// F_{GET,SET}FL flags
+struct fd_flags_tag
+{
+};
+export using fd_flags = nihil::flagset<int, fd_flags_tag>;
 
-export struct fd final {
+export inline constexpr auto fd_none = fd_flags();
+export inline constexpr auto fd_nonblock = fd_flags::mask<O_NONBLOCK>();
+export inline constexpr auto fd_append = fd_flags::mask<O_APPEND>();
+export inline constexpr auto fd_async = fd_flags::mask<O_ASYNC>();
+export inline constexpr auto fd_sync = fd_flags::mask<O_SYNC>();
+export inline constexpr auto fd_dsync = fd_flags::mask<O_DSYNC>();
+
+#ifdef O_DIRECT
+export inline constexpr auto fl_direct = O_DIRECT;
+#endif
+
+// F_{GET,SET}FD flags
+struct fd_fdflags_tag
+{
+};
+export using fd_fdflags = nihil::flagset<int, fd_fdflags_tag>;
+
+export inline constexpr auto fd_fd_none = fd_fdflags();
+export inline constexpr auto fd_fd_cloexec = fd_fdflags::mask<FD_CLOEXEC>();
+
+// fd: a file descriptor.
+export struct fd final
+{
 	// Construct an empty (invalid) fd.
-	fd() noexcept;
+	fd() noexcept = default;
 
-	// Construct an fd from an exising file destrictor, taking ownership.
-	fd(int fd_) noexcept;
+	// Construct an fd from an exising file descriptor, taking ownership.
+	explicit fd(int fileno) noexcept
+		: m_fileno(fileno)
+	{
+	}
 
 	// Destructor.  Close the fd, discarding any errors.
-	~fd();
+	~fd()
+	{
+		if (*this)
+			std::ignore = this->close();
+	}
 
 	// Move from another fd, leaving the moved-from fd in an invalid state.
-	fd(fd &&other) noexcept;
-	auto operator=(this fd &, fd &&other) noexcept -> fd &;
+	fd(fd &&other) noexcept
+		: m_fileno(std::exchange(other.m_fileno, invalid_fileno))
+	{
+	}
+
+	auto operator=(this fd &self, fd &&other) noexcept -> fd &
+	{
+		if (&self != &other)
+			self.m_fileno = std::exchange(other.m_fileno, invalid_fileno);
+		return self; // NOLINT
+	}
 
 	// Not copyable.
 	fd(fd const &) = delete;
-	fd& operator=(this fd &, fd const &) = delete;
+	auto operator=(this fd &, fd const &) -> fd & = delete;
 
 	// Return true if this fd is valid (open).
-	[[nodiscard]] explicit operator bool(this fd const &self) noexcept;
+	[[nodiscard]] explicit operator bool(this fd const &self) noexcept
+	{
+		return self.m_fileno != invalid_fileno;
+	}
 
 	// Close the wrapped fd.
-	[[nodiscard]] auto close(this fd &self) -> std::expected<void, error>;
+	[[nodiscard]] auto close(this fd &self) -> std::expected<void, error>
+	{
+		auto const ret = ::close(self.get());
+		self.m_fileno = invalid_fileno;
+
+		if (ret == 0)
+			return {};
+
+		return std::unexpected(error(std::errc(errno)));
+	}
 
 	// Return the stored fd.
-	[[nodiscard]] auto get(this fd const &self) -> int;
+	[[nodiscard]] auto get(this fd const &self) -> int
+	{
+		if (self)
+			return self.m_fileno;
+		throw std::logic_error("Attempt to call get() on invalid fd");
+	}
 
 	// Release the stored fd and return it.  The caller must close it.
-	[[nodiscard]] auto release(this fd &&self) -> int;
+	[[nodiscard]] auto release(this fd &&self) -> int
+	{
+		if (self)
+			return std::exchange(self.m_fileno, invalid_fileno);
+		throw std::logic_error("Attempt to release an invalid fd");
+	}
 
 	// Write data from the provided buffer to the fd.  Returns the
 	// number of bytes written.
-	[[nodiscard]] auto write(this fd &self, std::span<std::byte const>) 
-		-> std::expected<std::size_t, error>;
+	[[nodiscard]] auto
+	write(this fd &self, std::span<std::byte const> buffer) -> std::expected<std::size_t, error>
+	{
+		auto const ret = ::write(self.get(), buffer.data(), buffer.size());
+		if (ret >= 0)
+			return ret;
+
+		return std::unexpected(error(std::errc(errno)));
+	}
 
 	// Read data from the fd to the provided buffer.  Returns a
 	// subspan containing the data which was read.
-	[[nodiscard]] auto read(this fd &self, std::span<std::byte>)
-		-> std::expected<std::span<std::byte>, error>;
+	[[nodiscard]] auto read(this fd &self, std::span<std::byte> buffer)
+		-> std::expected<std::span<std::byte>, error>
+	{
+		auto const ret = ::read(self.get(), buffer.data(), buffer.size());
+		if (ret >= 0)
+			return buffer.subspan(0, ret);
+
+		return std::unexpected(error(std::errc(errno)));
+	}
 
 private:
 	static constexpr int invalid_fileno = -1;
@@ -69,7 +146,14 @@ private:
 };
 
 // Create a copy of this fd by calling dup().
-export [[nodiscard]] auto dup(fd const &self) -> std::expected<fd, error>;
+export [[nodiscard]] auto dup(fd const &self) -> std::expected<fd, error>
+{
+	auto const newfd = ::dup(self.get());
+	if (newfd != -1)
+		return fd(newfd);
+
+	return std::unexpected(error(std::errc(errno)));
+}
 
 // Create a copy of this fd by calling dup2().  Note that because this results
 // in the existing fd and the new fd both being managed by an fd instance,
@@ -80,73 +164,137 @@ export [[nodiscard]] auto dup(fd const &self) -> std::expected<fd, error>;
 //
 // In both of these cases, either use raw_dup() instead, or immediately call
 // release() on the returned fd to prevent the fd instance from closing it.
-export [[nodiscard]] auto dup(fd const &self, int newfd)
-	-> std::expected<fd, error>;
+export [[nodiscard]] auto dup(fd const &self, int newfd) -> std::expected<fd, error>
+{
+	auto const ret = ::dup2(self.get(), newfd);
+	if (ret != -1)
+		return fd(newfd);
+
+	return std::unexpected(error(std::errc(errno)));
+}
 
 // Create a copy of this fd by calling dup().
-export [[nodiscard]] auto raw_dup(fd const &self)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto raw_dup(fd const &self) -> std::expected<int, error>
+{
+	auto const newfd = ::dup(self.get());
+	if (newfd != -1)
+		return newfd;
+
+	return std::unexpected(error(std::errc(errno)));
+}
 
 // Create a copy of this fd by calling dup2().
-export [[nodiscard]] auto raw_dup(fd const &self, int newfd)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto raw_dup(fd const &self, int newfd) -> std::expected<int, error>
+{
+	auto const ret = ::dup2(self.get(), newfd);
+	if (ret != -1)
+		return newfd;
+
+	return std::unexpected(error(std::errc(errno)));
+}
+
+// Call fcntl() on this fd.  Prefer one of the type-safe wrappers to this, if available.
+export [[nodiscard]] auto fcntl(fd const &fd, int op, int arg = 0)
+	-> std::expected<int, error>
+{
+	auto const ret = ::fcntl(fd.get(), op, arg);
+	if (ret == -1)
+		return std::unexpected(error(std::errc(errno)));
+	return ret;
+}
 
 // Return the fnctl flags for this fd.
-export [[nodiscard]] auto getflags(fd const &self)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto getflags(fd const &fd) -> std::expected<fd_flags, error>
+{
+	auto flags = co_await fcntl(fd, F_GETFL);
+	co_return fd_flags::from_int(flags);
+}
 
 // Replace the fnctl flags for this fd.
-export [[nodiscard]] auto replaceflags(fd &self, int newflags)
-	-> std::expected<void, error>;
+export [[nodiscard]] auto replaceflags(fd &fd, fd_flags newflags) -> std::expected<void, error>
+{
+	co_await fcntl(fd, F_SETFL, newflags.value());
+	co_return {};
+}
 
 // Add bits to the fcntl flags for this fd.  Returns the new flags.
-export [[nodiscard]] auto setflags(fd &self, int newflags)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto setflags(fd &fd, fd_flags newflags) -> std::expected<fd_flags, error>
+{
+	auto flags = co_await getflags(fd);
+
+	flags |= newflags;
+	co_await replaceflags(fd, flags);
+	co_return flags;
+}
 
 // Remove bits from the fcntl flags for this fd.  Returns the new flags.
-export [[nodiscard]] auto clearflags(fd &self, int clrflags)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto clearflags(fd &fd, fd_flags clrflags) -> std::expected<fd_flags, error>
+{
+	auto flags = co_await getflags(fd);
+
+	flags &= ~clrflags;
+	co_await replaceflags(fd, flags);
+	co_return flags;
+}
 
 // Return the fd flags for this fd.
-export [[nodiscard]] auto getfdflags(fd const &self)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto getfdflags(fd const &fd) -> std::expected<fd_fdflags, error>
+{
+	auto const flags = co_await fcntl(fd, F_GETFD);
+	co_return fd_fdflags::from_int(flags);
+}
 
 // Replace the fd flags for this fd.
-export [[nodiscard]] auto replacefdflags(fd &self, int newflags)
-	-> std::expected<void, error>;
+export [[nodiscard]] auto replacefdflags(fd &fd, fd_fdflags newflags) -> std::expected<void, error>
+{
+	co_await fcntl(fd, F_SETFD, newflags.value());
+	co_return {};
+}
 
 // Add bits to the fd flags for this fd.  Returns the new flags.
-export [[nodiscard]] auto setfdflags(fd &self, int newflags)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto setfdflags(fd &fd, fd_fdflags newflags) -> std::expected<fd_fdflags, error>
+{
+	auto flags = co_await getfdflags(fd);
+
+	flags |= newflags;
+	co_await replacefdflags(fd, flags);
+	co_return flags;
+}
 
 // Remove bits from the fd flags for this fd.  Returns the new flags.
-export [[nodiscard]] auto clearfdflags(fd &self, int clrflags)
-	-> std::expected<int, error>;
+export [[nodiscard]] auto clearfdflags(fd &fd, fd_fdflags clrflags) -> std::expected<fd_fdflags, error>
+{
+	auto flags = co_await getfdflags(fd);
+
+	flags &= ~clrflags;
+	co_await replacefdflags(fd, flags);
+	co_return flags;
+}
 
 // Create two fds by calling pipe() and return them.
-export [[nodiscard]] auto pipe() -> std::expected<std::pair<fd, fd>, error>;
+export [[nodiscard]] auto pipe() -> std::expected<std::pair<fd, fd>, error>
+{
+	auto fds = std::array<int, 2>{};
 
-/*
- * Write data to a file descriptor from the provided range.  Returns the
- * number of bytes written.
- */
-export [[nodiscard]] auto write(fd &file,
-				std::ranges::contiguous_range auto &&range)
-	-> std::expected<std::size_t, error>
-requires(sizeof(std::ranges::range_value_t<decltype(range)>) == 1)
+	if (auto const ret = ::pipe(fds.data()); ret != 0)
+		return std::unexpected(error(std::errc(errno)));
+
+	return {{fd(fds[0]), fd(fds[1])}};
+}
+
+// Write data to a file descriptor from the provided range.  Returns the
+//number of bytes written.
+export [[nodiscard]] auto
+write(fd &file, std::ranges::contiguous_range auto &&range) -> std::expected<std::size_t, error>
+	requires(sizeof(std::ranges::range_value_t<decltype(range)>) == 1)
 {
 	return file.write(as_bytes(std::span(range)));
 }
 
-/*
- * Read data from a file descriptor into the provided buffer.  Returns a
- * span containing the data that was read.
- */
-export [[nodiscard]] auto read(fd &file,
-			       std::ranges::contiguous_range auto &&range)
-	-> std::expected<
-		std::span<std::ranges::range_value_t<decltype(range)>>,
-		error>
+// Read data from a file descriptor into the provided buffer.  Returns a
+// span containing the data that was read.
+export [[nodiscard]] auto read(fd &file, std::ranges::contiguous_range auto &&range)
+	-> std::expected<std::span<std::ranges::range_value_t<decltype(range)>>, error>
 requires(sizeof(std::ranges::range_value_t<decltype(range)>) == 1)
 {
 	auto bspan = as_writable_bytes(std::span(range));

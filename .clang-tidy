@@ -1,0 +1,33 @@
+---
+WarningsAsErrors: '*'
+Checks: >
+  -*,
+  clang-analyzer-*,
+  bugprone-*,
+    -bugprone-reserved-identifier,
+    -bugprone-easily-swappable-parameters,
+  cert-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+    -cppcoreguidelines-avoid-do-while,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-avoid-reference-coroutine-parameters,
+    -cppcoreguidelines-pro-type-*,
+  hicpp-*,
+    -hicpp-braces-around-statements,
+    -hicpp-named-parameter,
+    -hicpp-vararg,
+  misc-*,
+  modernize-*,
+  readability-*,
+    -readability-braces-around-statements,
+    -readability-convert-member-functions-to-static,
+    -readability-magic-numbers,
+    -readability-named-parameter,
+    -readability-identifier-length,
+    -readability-function-cognitive-complexity,
+  performance-*,
+
+CheckOptions:
+  performance-unnecessary-copy-initialization.AllowedTypes: 'nihil::open_flags;tempfile_flags'
+  performance-unnecessary-value-param.AllowedTypes: 'nihil::open_flags;tempfile_flags'

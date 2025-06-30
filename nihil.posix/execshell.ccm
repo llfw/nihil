@@ -1,0 +1,21 @@
+// This source code is released into the public domain.
+module;
+
+#include <string>
+
+export module nihil.posix:execshell;
+
+import nihil.error;
+import :execv;
+import :execl;
+
+namespace nihil {
+
+// execshell: a spawn executor which runs the process by invoking /bin/sh -c with the
+// single argument, equivalent to system(3).
+export [[nodiscard]] auto execshell(std::string_view command) -> execv
+{
+	return execl("/bin/sh", "sh", "-c", command);
+}
+
+} // namespace nihil

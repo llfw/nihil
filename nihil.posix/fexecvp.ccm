@@ -1,16 +1,21 @@
 // This source code is released into the public domain.
 module;
 
-#include <string>
 #include <expected>
+#include <filesystem>
 #include <format>
+#include <string>
 
-export module nihil.posix:execvp;
+#include "nihil.hh"
+
+export module nihil.posix:fexecvp;
+
+#ifdef NIHIL_HAVE_FEXECVE
 
 import nihil.error;
 import :argv;
 import :execv;
-import :find_in_path;
+import :open_in_path;
 
 namespace nihil {
 
@@ -18,13 +23,15 @@ namespace nihil {
 // a filename instead of a file descriptor.  If the filename is not
 // an absolute path, it will be searched for in $PATH.
 export [[nodiscard]] auto
-execvp(std::string_view file, argv &&argv) -> std::expected<execv, error>
+fexecvp(std::filesystem::path const &file, argv &&argv) -> std::expected<execv, error>
 {
-	auto filename = nihil::find_in_path(file);
-	if (!filename)
-		return std::unexpected(nihil::error(
+	auto execfd = open_in_path(file);
+	if (!execfd)
+		return std::unexpected(error(
 			std::format("executable not found in path: {}", file)));
-	return execv(std::move(*filename), std::move(argv));
+	return fexecv(std::move(*execfd), std::move(argv));
 }
 
 } // namespace nihil
+
+#endif	// NIHIL_HAVE_FEXECVE

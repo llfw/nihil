@@ -32,7 +32,7 @@ read_file(std::filesystem::path const &filename,
 	  std::output_iterator<char> auto &&iter)
 	-> std::expected<void, error>
 {
-	auto file = co_await open(filename, O_RDONLY);
+	auto file = co_await open(filename, open_read);
 
 	auto constexpr bufsize = std::size_t{1024};
 	auto buffer = std::array<char, bufsize>{};

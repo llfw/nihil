@@ -1,12 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
 #include <expected>
 #include <filesystem>
 #include <string>
+
+#include <unistd.h>
 
 export module nihil.posix:execv;
 
@@ -16,32 +15,37 @@ import :executor;
 
 namespace nihil {
 
-/*
- * execv: use a filename and an argument vector to call ::execve().
- * This is the lowest-level executor which all others are implemented
- * in terms of, if fexecve is not available.
- *
- * TODO: Should have a way to pass the environment (envp).
- */
+// execv: use a filename and an argument vector to call ::execv().
 export struct execv final
 {
 	using tag = exec_tag;
 
-	execv(std::filesystem::path, argv &&) noexcept;
+	execv(std::filesystem::path path, argv &&args) noexcept
+		: m_path(std::move(path))
+		, m_args(std::move(args))
+	{
+	}
 
-	[[nodiscard]] auto exec(this execv &) -> std::expected<void, error>;
+	~execv() = default;
 
 	// Movable
-	execv(execv &&) noexcept;
-	auto operator=(this execv &, execv &&) noexcept -> execv &;
+	execv(execv &&) noexcept = default;
+	auto operator=(execv &&) noexcept -> execv & = default;
 
 	// Not copyable (because m_args isn't copyable).
 	execv(execv const &) = delete;
 	auto operator=(this execv &, execv const &) -> execv & = delete;
 
+	// Perform the execv().  This only returns on failure.
+	[[nodiscard]] auto exec(this execv &self) -> std::expected<void, error>
+	{
+		::execv(self.m_path.string().c_str(), self.m_args.data());
+		return std::unexpected(error("execve failed", error(std::errc(errno))));
+	}
+
 private:
-	std::filesystem::path	m_path;
-	argv			m_args;
+	std::filesystem::path m_path;
+	argv m_args;
 };
 
 } // namespace nihil

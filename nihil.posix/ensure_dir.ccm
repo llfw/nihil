@@ -6,6 +6,7 @@ module;
 
 #include <expected>
 #include <filesystem>
+#include <system_error>
 
 export module nihil.posix:ensure_dir;
 
@@ -16,8 +17,17 @@ namespace nihil {
 /*
  * Create the given directory and any parent directories.
  */
-export [[nodiscard]] auto ensure_dir(std::filesystem::path const &dir)
-	-> std::expected<void, error>;
+export [[nodiscard]] auto
+ensure_dir(std::filesystem::path const &dir) -> std::expected<void, error>
+{
+	auto err = std::error_code();
+
+	std::filesystem::create_directories(dir, err);
+
+	if (err)
+		return std::unexpected(error(err));
+
+	return {};
+}
 
 } // namespace nihil
-

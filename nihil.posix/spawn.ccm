@@ -1,7 +1,4 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
 /*
@@ -29,7 +26,7 @@ export module nihil.posix:spawn;
 
 import nihil.monad;
 import :argv;
-import :exec;
+import :executor;
 import :open;
 import :process;
 
@@ -152,7 +149,7 @@ private:
 
 export [[nodiscard]] auto
 make_fd_file(int fdno, std::filesystem::path const &file,
-	     int flags, int mode = 0777)
+	     open_flags flags, int mode = 0777)
 	-> std::expected<fd_file, error>
 {
 	auto fd = co_await open(file, flags, mode);
@@ -166,19 +163,19 @@ make_fd_file(int fdno, std::filesystem::path const &file,
 export [[nodiscard]] inline auto
 stdin_devnull() -> std::expected<fd_file, error>
 {
-	return make_fd_file(stdin_fileno, "/dev/null", O_RDONLY);
+	return make_fd_file(stdin_fileno, "/dev/null", open_read);
 }
 
 export [[nodiscard]] inline auto
 stdout_devnull() -> std::expected<fd_file, error>
 {
-	return make_fd_file(stdout_fileno, "/dev/null", O_WRONLY);
+	return make_fd_file(stdout_fileno, "/dev/null", open_write);
 }
 
 export [[nodiscard]] inline auto 
 stderr_devnull() -> std::expected<fd_file, error>
 {
-	return make_fd_file(stderr_fileno, "/dev/null", O_WRONLY);
+	return make_fd_file(stderr_fileno, "/dev/null", open_write);
 }
 
 /*

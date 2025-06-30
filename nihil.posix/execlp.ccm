@@ -1,28 +1,22 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
-#include <string>
 #include <expected>
 #include <format>
+#include <string>
 
 export module nihil.posix:execlp;
 
 import nihil.error;
-import :exec;
 import :argv;
 import :execvp;
 
 namespace nihil {
 
-/*
- * execlp: equivalent to execvp, except the arguments are passed as a
- * variadic pack of string-like objects.
- */
-export [[nodiscard]] auto execlp(std::string_view file, auto &&...args)
-	-> std::expected<base_executor_type, error>
+// execlp: equivalent to execvp, except the arguments are passed as a
+// variadic pack of string-like objects.
+export [[nodiscard]] auto
+execlp(std::string_view file, auto &&...args) -> std::expected<execv, error>
 {
 	return execvp(file, argv({std::string_view(args)...}));
 }

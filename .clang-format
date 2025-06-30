@@ -4,9 +4,41 @@ PPIndentWidth: -1
 UseTab: AlignWithSpaces
 IndentPPDirectives: AfterHash
 ColumnLimit: 100
+AccessModifierOffset: -8
+IndentRequiresClause: false
+RequiresClausePosition: OwnLine
+ContinuationIndentWidth: 8
 
-SeparateDefinitionBlocks: Always
+ReflowComments: Always
+
+SeparateDefinitionBlocks: Leave
+AllowShortFunctionsOnASingleLine: None
+
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerIndentWidth: 8
+
+BreakAfterReturnType: Automatic
+PenaltyReturnTypeOnItsOwnLine: 0
+BreakTemplateDeclarations: Yes
+
+BracedInitializerIndentWidth: 8
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Never
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  SplitEmptyNamespace: true
+  SplitEmptyRecord: true
 
 NamespaceIndentation: None
 FixNamespaceComments: true
-WrapNamespaceBodyWithEmptyLines: Always
+#WrapNamespaceBodyWithEmptyLines: Always

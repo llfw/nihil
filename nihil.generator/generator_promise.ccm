@@ -1,0 +1,65 @@
+///////////////////////////////////////////////////////////////////////////////
+// Reference implementation of std::generator proposal P2168.
+//
+// See https://wg21.link/P2168 for details.
+//
+///////////////////////////////////////////////////////////////////////////////
+// Copyright Lewis Baker, Corentin Jabot
+//
+// Use, modification and distribution is subject to the Boost Software License,
+// Version 1.0.
+// (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
+///////////////////////////////////////////////////////////////////////////////
+
+module;
+
+#include <coroutine>
+#include <ranges>
+
+export module nihil.generator:generator_promise;
+
+import :forward;
+import :generator_promise_base;
+import :promise_base_alloc;
+
+namespace nihil {
+
+export template <typename Generator, typename ByteAllocator, bool ExplicitAllocator = false>
+struct generator_promise;
+
+export template <typename Ref, typename Value, typename Alloc, typename ByteAllocator,
+          bool ExplicitAllocator>
+struct generator_promise<generator<Ref, Value, Alloc>, ByteAllocator, ExplicitAllocator> final
+	: public generator_promise_base<Ref>,
+	  public promise_base_alloc<ByteAllocator>
+{
+	generator_promise() noexcept
+		: generator_promise_base<Ref>(
+			  std::coroutine_handle<generator_promise>::from_promise(*this))
+	{
+	}
+
+	auto get_return_object() noexcept -> generator<Ref, Value, Alloc>
+	{
+		return generator<Ref, Value, Alloc>{
+			std::coroutine_handle<generator_promise>::from_promise(*this)};
+	}
+
+	using generator_promise_base<Ref>::yield_value;
+
+	template <std::ranges::range Rng>
+	auto yield_value(nihil::elements_of<Rng> &&x) -> typename generator_promise_base<
+		Ref>::template yield_sequence_awaiter<generator<Ref, Value, Alloc>>
+	{
+		static_assert(!ExplicitAllocator,
+		              "This coroutine has an explicit allocator specified with "
+		              "std::allocator_arg so an allocator needs to be passed "
+		              "explicitely to std::elements_of");
+		return [](auto &&rng) -> generator<Ref, Value, Alloc> {
+			for (auto &&e : rng)
+				co_yield static_cast<decltype(e)>(e);
+		}(std::forward<Rng>(x.get()));
+	}
+};
+
+} // namespace nihil

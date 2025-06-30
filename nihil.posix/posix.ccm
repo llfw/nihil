@@ -1,15 +1,5 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <expected>
-#include <filesystem>
-#include <optional>
-#include <string>
-
-#include "nihil.hh"
 
 export module nihil.posix;
 
@@ -17,12 +7,14 @@ import nihil.error;
 
 export import :argv;
 export import :ensure_dir;
-export import :exec;
+export import :execl;
 export import :execlp;
+export import :execshell;
 export import :execv;
 export import :execvp;
 export import :fd;
 export import :fexecv;
+export import :fexecvp;
 export import :find_in_path;
 export import :getenv;
 export import :open;
