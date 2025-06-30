@@ -1,6 +1,7 @@
 // This source code is released into the public domain.
 module;
 
+#include <expected>
 #include <filesystem>
 #include <optional>
 #include <ranges>
@@ -17,35 +18,41 @@ import :open;
 
 namespace nihil {
 
-// Find an executable in $PATH and open it with O_EXEC.  If $PATH is not set, uses _PATH_DEFPATH.
-// If the file can't be found or opened, returns std::nullopt.
-export [[nodiscard]] auto open_in_path(std::filesystem::path const &file) -> std::optional<fd>
+// Find an executable in the given path, which should be a colon-separated list of directories, and
+// open it with O_EXEC.  If the file can't be found or can't be opened, returns an appropriate error.
+export [[nodiscard]] auto
+open_in_path(std::filesystem::path const &file, std::string_view path) -> std::expected<fd, error>
 {
-	using namespace std::literals;
-
-	auto try_open = [](std::filesystem::path const &file) -> std::optional<fd> {
-		auto ret = open(file, open_exec);
-		if (ret)
-			return {std::move(*ret)};
-		return {};
-	};
-
 	// Absolute pathname skips the search.
 	if (file.is_absolute())
-		return try_open(file);
+		return open(file, open_exec);
 
-	auto path = getenv("PATH").value_or(_PATH_DEFPATH); // NOLINT
+	// Default to ENOENT as the error.
+	auto err = error(std::errc::no_such_file_or_directory);
 
 	for (auto &&dir : path | std::views::split(':')) {
 		// An empty $PATH element means cwd.
 		auto sdir = dir.empty() ? std::filesystem::path(".")
 		                        : std::filesystem::path(std::string_view(dir));
 
-		if (auto ret = try_open(sdir / file); ret)
+		if (auto ret = open(sdir / file, open_exec); ret)
 			return ret;
+		// If we get an error other than ENOENT, cache it to return to the caller.
+		// This means we can propagate open() errors.
+		else if (ret.error().root_cause() != std::errc::no_such_file_or_directory)
+			err = std::move(ret.error());
 	}
 
-	return {};
+	return std::unexpected(std::move(err));
+}
+
+// Find an executable in $PATH and open it.  If $PATH is not set, uses _PATH_DEFPATH.
+// If the file can't be found or can't be opened, returns an appropriate error.
+export [[nodiscard]] auto
+open_in_path(std::filesystem::path const &file) -> std::expected<fd, error>
+{
+	auto const path = getenv("PATH").value_or(_PATH_DEFPATH); // NOLINT
+	return open_in_path(file, path);
 }
 
 } // namespace nihil

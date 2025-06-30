@@ -1,6 +1,4 @@
-/*
- * This source code is released into the public domain.
- */
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -8,11 +6,11 @@ import nihil.posix;
 
 namespace {
 
-SCENARIO("nihil::execlp() can be used to spawn a shell")
+SCENARIO("nihil::execvp() can be used to spawn a shell")
 {
-	GIVEN("An execlp object")
+	GIVEN("An execvp object")
 	{
-		auto exec = nihil::execlp("sh", "sh", "-c", "x=1; echo $x");
+		auto exec = nihil::execvp("sh", nihil::argv{"sh", "-c", "x=1; echo $x"});
 
 		THEN("sh was found in $PATH")
 		{
@@ -38,11 +36,11 @@ SCENARIO("nihil::execlp() can be used to spawn a shell")
 	}
 }
 
-SCENARIO("nihil::execlp() returns the shell's exit code")
+SCENARIO("nihil::execvp() returns the shell's exit code")
 {
-	GIVEN("An execlp object")
+	GIVEN("An execvp object")
 	{
-		auto exec = nihil::execlp("sh", "sh", "-c", "x=42; exit $x");
+		auto exec = nihil::execvp("sh", nihil::argv{"sh", "-c", "x=42; exit $x"});
 
 		THEN("sh was found in $PATH")
 		{
@@ -64,11 +62,11 @@ SCENARIO("nihil::execlp() returns the shell's exit code")
 	}
 }
 
-SCENARIO("nihil::execlp() returns an error if the executable is not in $PATH")
+SCENARIO("nihil::execvp() returns an error if the executable is not in $PATH")
 {
-	GIVEN("An execlp object for a non-existent executable")
+	GIVEN("An execvp object for a non-existent executable")
 	{
-		auto exec = nihil::execlp("nihil_no_such_executable", "x");
+		auto exec = nihil::execvp("nihil_no_such_executable", nihil::argv{"x"});
 
 		THEN("A no_such_file_or_directory error is returned")
 		{

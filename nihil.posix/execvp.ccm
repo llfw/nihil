@@ -1,6 +1,7 @@
 // This source code is released into the public domain.
 module;
 
+#include <coroutine>
 #include <string>
 #include <expected>
 #include <format>
@@ -8,6 +9,7 @@ module;
 export module nihil.posix:execvp;
 
 import nihil.error;
+import nihil.monad;
 import :argv;
 import :execv;
 import :find_in_path;
@@ -20,11 +22,8 @@ namespace nihil {
 export [[nodiscard]] auto
 execvp(std::string_view file, argv &&argv) -> std::expected<execv, error>
 {
-	auto filename = nihil::find_in_path(file);
-	if (!filename)
-		return std::unexpected(nihil::error(
-			std::format("executable not found in path: {}", file)));
-	return execv(std::move(*filename), std::move(argv));
+	auto filename = co_await find_in_path(file);
+	co_return execv(std::move(filename), std::move(argv));
 }
 
 } // namespace nihil

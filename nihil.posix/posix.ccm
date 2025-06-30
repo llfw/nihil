@@ -23,5 +23,6 @@ export import :process;
 export import :read_file;
 export import :rename;
 export import :spawn;
+export import :stat;
 export import :tempfile;
 export import :write_file;

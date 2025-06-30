@@ -1,0 +1,36 @@
+// This source code is released into the public domain.
+module;
+
+// Basic wrappers around stat() and fstat().
+
+#include <expected>
+#include <filesystem>
+
+#include <sys/stat.h>
+
+export module nihil.posix:stat;
+
+import :fd;
+
+namespace nihil {
+
+export [[nodiscard]] auto
+stat(std::filesystem::path const &path) -> std::expected<struct ::stat, error>
+{
+	struct ::stat sb{};
+	auto ret = ::stat(path.string().c_str(), &sb);
+	if (ret == -1)
+		return std::unexpected(error(std::errc(errno)));
+	return sb;
+}
+
+export [[nodiscard]] auto stat(fd const &fd) -> std::expected<struct ::stat, error>
+{
+	struct ::stat sb{};
+	auto ret = ::fstat(fd.get(), &sb);
+	if (ret == -1)
+		return std::unexpected(error(std::errc(errno)));
+	return sb;
+}
+
+} // namespace nihil

@@ -13,6 +13,7 @@ ReflowComments: Always
 
 SeparateDefinitionBlocks: Leave
 AllowShortFunctionsOnASingleLine: None
+AllowShortLambdasOnASingleLine: Inline
 
 BreakConstructorInitializers: BeforeComma
 ConstructorInitializerIndentWidth: 8
@@ -20,6 +21,14 @@ ConstructorInitializerIndentWidth: 8
 BreakAfterReturnType: Automatic
 PenaltyReturnTypeOnItsOwnLine: 0
 BreakTemplateDeclarations: Yes
+
+ForEachMacros:
+  - GIVEN
+  - AND_GIVEN
+  - THEN
+  - AND_THEN
+  - WHEN
+  - AND_WHEN
 
 BracedInitializerIndentWidth: 8
 BreakBeforeBraces: Custom

@@ -39,10 +39,10 @@ namespace nihil {
  */
 
 // An object that starts out unitialized. Initialized by a call to emplace.
-template <typename T>
+export template <typename T>
 using deferred = std::optional<T>;
 
-template <typename T>
+export template <typename T>
 struct return_object_holder {
 	// The staging object that is returned (by copy/move) to the caller of
 	// the coroutine.
@@ -95,7 +95,7 @@ struct return_object_holder {
 	}
 };
 
-template <typename T>
+export template <typename T>
 auto make_return_object_holder(return_object_holder<T>*& p)
 {
 	return return_object_holder<T>{p};

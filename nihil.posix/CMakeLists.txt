@@ -27,6 +27,7 @@ target_sources(nihil.posix
 	read_file.ccm
 	rename.ccm
 	spawn.ccm
+	stat.ccm
 	tempfile.ccm
 	write_file.ccm
 )
@@ -40,9 +41,13 @@ if(NIHIL_TESTS)
 		execlp.test.cc
 		execshell.test.cc
 		execv.test.cc
+		execvp.test.cc
 		fd.test.cc
+		find_in_path.test.cc
 		getenv.test.cc
-		test.spawn.cc
+		open.test.cc
+		open_in_path.test.cc
+		stat.test.cc
 		tempfile.test.cc
 	)
 
