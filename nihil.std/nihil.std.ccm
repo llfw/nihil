@@ -166,7 +166,7 @@ using std::uint64_t;
 // <cstdlib>
 using std::exit;
 using std::quick_exit;
-using std::abort;
+using std::quick_exit;
 
 // <cstdio>
 using std::FILE;
@@ -198,36 +198,31 @@ using std::filesystem::exists;
 }
 
 // <format>
-using std::basic_format_context;
-using std::format_context;
-using std::wformat_context;
+using std::basic_format_arg;
 using std::basic_format_args;
-using std::format_args;
-using std::wformat_args;
+using std::basic_format_context;
+using std::basic_format_parse_context;
 using std::basic_format_string;
-using std::format_string;
-using std::wformat_string;
-using std::runtime_format;
+using std::format;
+using std::format_args;
+using std::format_context;
+using std::format_error;
+using std::format_kind;
 using std::format;
 using std::format_to;
-using std::vformat;
-using std::vformat_to;
 using std::format_to_n;
 using std::format_to_n_result;
+using std::formattable;
 using std::formatted_size;
 using std::formatter;
-using std::formattable;
-using std::basic_format_parse_context;
-using std::format_parse_context;
-using std::wformat_parse_context;
-using std::format_kind;
-using std::range_format;
-using std::range_formatter;
-using std::basic_format_arg;
-using std::visit_format_arg;
 using std::make_format_args;
 using std::make_wformat_args;
+using std::range_format;
+using std::range_formatter;
+using std::visit_format_arg;
+using std::wformat_parse_context;
 using std::format_error;
+using std::runtime_format;
 
 // <functional>
 using std::function;
@@ -321,12 +316,12 @@ using std::vprint_unicode;
 // <random>
 using std::default_random_engine;
 using std::random_device;
-using std::uniform_int_distribution;
 using std::mt19937;
-using std::ranlux24;;
+using std::ranlux24;
 using std::ranlux24_base;
 using std::ranlux48;
 using std::ranlux48_base;
+using std::uniform_int_distribution;
 
 using std::seed_seq;
 
