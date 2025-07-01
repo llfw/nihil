@@ -1,5 +1,7 @@
 // This source code is released into the public domain.
 
+#include <sysexits.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
@@ -69,7 +71,7 @@ TEST_CASE("nihil.cli: dispatch_command: unknown command", "[nihil.cli]")
 		output = capture.str();
 	}
 
-	REQUIRE(ret == 1);
+	REQUIRE(ret == EX_USAGE);
 
 	auto const *progname = ::getprogname();
 	REQUIRE(output == std::format("{}: usage:\n  cmd\n", progname));
@@ -92,7 +94,7 @@ TEST_CASE("nihil.cli: dispatch_command: incomplete command", "[nihil.cli]")
 		output = capture.str();
 	}
 
-	REQUIRE(ret == 1);
+	REQUIRE(ret == EX_USAGE);
 
 	auto const *progname = ::getprogname();
 	REQUIRE(output == std::format("{}: usage:\n  cmd sub1\n  cmd sub2\n",

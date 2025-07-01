@@ -24,7 +24,7 @@ template <typename Ref>
 struct generator_promise_base
 {
 	template <typename Ref2, typename Value, typename Alloc>
-	friend class generator;
+	friend struct generator;
 
 	generator_promise_base *m_root;
 	std::coroutine_handle<> m_parent_or_leaf;

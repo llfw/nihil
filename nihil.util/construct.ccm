@@ -1,0 +1,21 @@
+// This source code is released into the public domain.
+export module nihil.util:construct;
+
+import nihil.std;
+
+namespace nihil {
+
+// A functor that constructs objects of an arbitrary type.
+// Useful for std::views::transform.
+template <typename T>
+struct construct_fn {
+	auto operator()(this construct_fn const &, auto &&...args) -> T
+	{
+		return T(std::forward<decltype(args)>(args)...);
+	}
+};
+
+export template<typename T>
+inline constexpr auto construct = construct_fn<T>{};
+
+}

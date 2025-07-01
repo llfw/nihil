@@ -21,6 +21,6 @@ namespace nihil {
 export template <typename Ref,
           typename Value = std::remove_cvref_t<Ref>,
           typename Allocator = use_allocator_arg>
-class generator;
+struct generator;
 
 } // namespace nihil

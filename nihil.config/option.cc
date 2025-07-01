@@ -26,6 +26,7 @@ option::option(std::string_view const name, std::string_view const description)
 
 option::~option()
 {
+	std::ignore = store::get().unregister_option(this);
 }
 
 auto option::name(this option const &self) noexcept

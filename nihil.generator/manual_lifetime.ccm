@@ -64,14 +64,14 @@ private:
 };
 
 template <typename T>
-class manual_lifetime<T &> {
+struct manual_lifetime<T &> {
 	manual_lifetime() noexcept = default;
 	~manual_lifetime() = default;
 
 	auto construct(this manual_lifetime &self, T &value) noexcept -> T &
 	{
 		self.m_value = std::addressof(value);
-		return self.m_value;
+		return value;
 	}
 
 	auto destruct(this manual_lifetime &) noexcept -> void
@@ -88,7 +88,7 @@ private:
 };
 
 template <typename T>
-class manual_lifetime<T &&> {
+struct manual_lifetime<T &&> {
 	manual_lifetime() noexcept = default;
 	~manual_lifetime() = default;
 

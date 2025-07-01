@@ -1,14 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
+// This source code is released into the public domain.
 export module nihil.cli;
 
 export import :command;
 export import :command_tree;
-export import :command_node;
 export import :dispatch_command;
 export import :registry;
 export import :usage_error;

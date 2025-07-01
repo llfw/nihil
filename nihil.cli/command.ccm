@@ -1,44 +1,97 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
+
+// For EX_USAGE.  While <sysexits.h> is deprecated, there's no other standard
+// exit code for 'usage error'; some programs use 2 (common on Linux), but
+// 2 is also used for many other exit codes.
+#include <sysexits.h>
 
 export module nihil.cli:command;
 
-import nihil.error;
+// command_node represents a possibly-invocable command.
+
 import nihil.std;
-import :command_node;
+import nihil.core;
+import nihil.error;
+import :usage_error;
 
 namespace nihil {
 
 export struct command;
 
-/*
- * A command that can be invoked.  Instantiating a command adds this command
- * to the global command table.  If an error occurs, the program will abort.
- */
+// registry.ccm
+auto register_command(command *cmd) noexcept -> void;
 
-using command_handler_t = int (int, char **);
-using command_function_t = std::function<command_handler_t>;
+// A command.  If constructed with a handler, this is a "real" command which can be invoked.
+// Otherwise, it's a stub command that has children in the command tree.
+//
+// Because commands are intended to be global objects, they are not copyable or movable.
+// Creating an object automatically registers it in the list of commands.
+export struct command final
+{
+	using command_handler_t = std::function<int(int, char **)>;
 
-export struct command final : command_node {
-	command(std::string_view path, std::string_view usage,
-		command_function_t);
+	command(std::string_view const path, std::string_view const usage, command_handler_t handler) noexcept
+		: m_path(path)
+		, m_usage(usage)
+		, m_handler(std::move(handler))
+	{
+		register_command(this);
+	}
 
-	command(std::string_view path, std::string_view usage, auto &&fn)
-		: command(path, usage, command_function_t(fn))
-	{}
+	explicit command(std::string_view const path) noexcept
+		: m_path(path)
+	{
+	}
 
-	[[nodiscard]] auto usage(this command const &) noexcept
-		-> std::string_view;
+	// Not copyable.
+	command(command const &) = delete;
+	auto operator=(command const &) -> command & = delete;
 
-	[[nodiscard]] auto invoke(int argc, char **argv) const
-		-> std::expected<int, error> override;
+	// Not movable.
+	command(command &&) = delete;
+	auto operator=(command &&) -> command & = delete;
+
+	~command() = default;
+
+	// Return the full path for this command.
+	[[nodiscard]] auto path(this command const &self) noexcept -> std::string_view
+	{
+		return self.m_path;
+	}
+
+	// Return the one-line usage summary for this command.
+	[[nodiscard]] auto usage(this command const &self) noexcept -> std::string_view
+	{
+		return self.m_usage;
+	}
+
+	// Test if this command can be invoked.
+	[[nodiscard]] auto invocable(this command const &self) noexcept -> bool
+	{
+		return static_cast<bool>(self.m_handler);
+	}
+
+	// Invoke this command and return its result.
+	[[nodiscard]] auto invoke(this command const &self, int argc, char **argv)
+		-> std::expected<int, error>
+	{
+		if (!self.m_handler)
+			return error(errc::incomplete_command);
+
+		try {
+			return std::invoke(self.m_handler, argc, argv);
+		} catch (usage_error const &err) {
+			std::println(std::cerr, "{}", err.what());
+			std::println(std::cerr, "usage: {} {}", self.path(), self.usage());
+			return EX_USAGE;
+		}
+	}
 
 private:
-	std::string_view	m_usage;
-	command_function_t	m_handler;
+	std::string       m_path;
+	std::string       m_usage;
+	command_handler_t m_handler;
 };
 
 } // namespace nihil

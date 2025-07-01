@@ -8,22 +8,19 @@ namespace nihil {
 export enum struct errc : std::uint8_t {
 	no_error = 0,
 
-	//
+	///////////////////////////////////////////////////////////////
 	// nihil.command
-	//
 
 	incomplete_command,
 
-	//
+	///////////////////////////////////////////////////////////////
 	// nihil.ucl
-	//
 
 	failed_to_create_object,
 	type_mismatch,
 
-	//
+	///////////////////////////////////////////////////////////////
 	// nihil.util
-	//
 
 	// Empty string is not allowed.
 	empty_string,
@@ -32,10 +29,48 @@ export enum struct errc : std::uint8_t {
 	invalid_unit,
 };
 
-export [[nodiscard]] auto nihil_category() noexcept -> std::error_category &;
-export [[nodiscard]] auto make_error_condition(errc ec) -> std::error_condition;
+struct nihil_error_category final : std::error_category
+{
+	[[nodiscard]] auto name() const noexcept -> char const * override
+	{
+		return "nihil";
+	}
+
+	[[nodiscard]] auto message(int err) const -> std::string override
+	{
+		switch (static_cast<errc>(err)) {
+		case errc::no_error:
+			return "No error";
+		case errc::incomplete_command:
+			return "Incomplete command";
+		case errc::empty_string:
+			return "Empty string is not permitted";
+		case errc::invalid_unit:
+			return "Invalid unit specifier";
+		case errc::failed_to_create_object:
+			return "Failed to create UCL object";
+		case errc::type_mismatch:
+			return "UCL type does not match expected type";
+		default:
+			return "Undefined error";
+		}
+	}
+};
+
+export [[nodiscard]] auto nihil_category() noexcept -> std::error_category &
+{
+	static auto category = nihil_error_category();
+	return category;
+}
+
+export [[nodiscard]] auto make_error_condition(errc ec) -> std::error_condition
+{
+	return {static_cast<int>(ec), nihil_category()};
+}
 
 } // namespace nihil
 
-template<>
-struct std::is_error_condition_enum<nihil::errc> : std::true_type {};
+export template <>
+struct std::is_error_condition_enum<nihil::errc> : std::true_type
+{
+};

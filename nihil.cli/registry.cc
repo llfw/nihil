@@ -5,13 +5,11 @@ import nihil.std;
 
 namespace nihil {
 
-/*
- * Get the registry storage.  Because this is called from global ctors,
- * it handles exceptions itself.
- */
-auto get_registry() noexcept -> std::vector<std::shared_ptr<command_node>> &
+//  Get the registry storage.  Because this is called from global ctors,
+//  it handles exceptions itself.
+auto get_registry() noexcept -> std::vector<std::shared_ptr<command>> &
 try {
-	static auto commands = std::vector<std::shared_ptr<command_node>>();
+	static auto commands = std::vector<std::shared_ptr<command>>();
 	return commands;
 } catch (std::exception const &exc) {
 	std::println(std::cerr, "{}", exc.what());
@@ -21,12 +19,10 @@ try {
 	std::exit(1); // NOLINT
 }
 
-/*
- * Register a new command.
- */
+// Register a new command.
 auto register_command(command *cmd) noexcept -> void
 try {
-	auto null_deleter = [] (command_node const *) -> void {};
+	auto null_deleter = [] (command const *) -> void {};
 
 	auto &commands = get_registry();
 	commands.emplace_back(cmd, null_deleter);
@@ -38,10 +34,8 @@ try {
 	std::exit(1); // NOLINT
 }
 
-/*
- * Get the list of registered commands.
- */
-auto get_registered_commands() -> std::span<std::shared_ptr<command_node>>
+// Get the list of registered commands.
+auto get_registered_commands() -> std::span<std::shared_ptr<command>>
 {
 	return {get_registry()};
 }

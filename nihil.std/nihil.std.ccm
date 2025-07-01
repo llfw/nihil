@@ -322,11 +322,14 @@ using std::ranges::subrange;
 
 using std::ranges::split_view;
 using std::ranges::transform_view;
+using std::ranges::values_view;
 using std::ranges::operator|;
+using std::ranges::to;
 
 namespace views {
 using std::ranges::views::split;
 using std::ranges::views::transform;
+using std::ranges::views::values;
 } // namespace views
 
 } // namespace ranges
@@ -386,8 +389,16 @@ using std::false_type;
 using std::invoke_result;
 using std::is_convertible;
 using std::is_convertible_v;
+using std::is_copy_constructible;
+using std::is_copy_constructible_v;
+using std::is_copy_assignable;
+using std::is_copy_assignable_v;
 using std::is_default_constructible;
 using std::is_default_constructible_v;
+using std::is_move_constructible;
+using std::is_move_constructible_v;
+using std::is_move_assignable;
+using std::is_move_assignable_v;
 using std::is_nothrow_constructible;
 using std::is_nothrow_constructible_v;
 using std::is_nothrow_destructible;

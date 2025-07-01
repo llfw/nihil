@@ -2,6 +2,7 @@
 export module nihil.util;
 
 export import :capture_stream;
+export import :construct;
 export import :ctype;
 export import :parse_size;
 export import :next_word;

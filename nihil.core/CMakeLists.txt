@@ -8,7 +8,4 @@ target_sources(nihil.core
 	nihil.core.ccm
 	errc.ccm
 	features.ccm
-
-	PRIVATE
-	errc.cc
 )

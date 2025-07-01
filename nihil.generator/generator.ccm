@@ -32,7 +32,7 @@ namespace nihil {
 
 // TODO :  make layout compatible promise casts possible
 export template <typename Ref, typename Value, typename Alloc>
-class generator
+struct generator
 {
 	using byte_allocator = byte_allocator_t<Alloc>;
 

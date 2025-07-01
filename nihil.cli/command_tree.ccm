@@ -2,96 +2,174 @@
 export module nihil.cli:command_tree;
 
 import nihil.std;
+import nihil.generator;
+import nihil.util;
 import :command;
+import :registry;
 
 namespace nihil {
 
-/*
- * command_tree_node represents a possibly-empty node in the command tree.
- * For example, if two commands "add foo" and "add bar" are defined,
- * then "add" will be implicitly created as an empty node.
- */
-struct command_tree_node final {
-	command_tree_node();
+// command_tree_node represents a node in the command tree.  Each node contains a command, which is
+// either a real command which can be invoked, or a stub command which acts as a placeholder in the
+// tree. For example, if two commands "add foo" and "add bar" are defined, then "add" will be
+// implicitly created as a stub command.
+struct command_tree_node final
+{
+	// Create an empty node with no parent.  This is used as the root of the tree.
+	command_tree_node()
+		: m_command(std::make_shared<nihil::command>(""))
+	{
+	}
 
-	command_tree_node(command_tree_node *parent,
-			  std::string_view this_word);
+	// Create a node that contains a command and has a parent.
+	command_tree_node(command_tree_node *parent, std::string_view const this_word,
+	                  std::shared_ptr<nihil::command> command)
+		: m_parent(parent)
+		, m_this_word(this_word)
+		, m_command(std::move(command))
+	{
+	}
 
-	command_tree_node(command_tree_node *parent,
-			  std::string_view this_word,
-			  std::shared_ptr<command_node> command);
-
-	/*
-	 * Return a child node, or NULL if the child doesn't exist.
-	 */
+	// Return a child node, or NULL if the child doesn't exist.
 	[[nodiscard]] auto get_child(this command_tree_node const &self,
-				     std::string_view child)
-		-> command_tree_node const *;
+	                             std::string_view const child) -> command_tree_node const *
+	{
+		if (auto it = self.m_children.find(std::string(child)); it != self.m_children.end())
+			return &it->second;
 
-	[[nodiscard]] auto get_child(this command_tree_node &self,
-				     std::string_view child)
-		-> command_tree_node *;
+		return nullptr;
+	}
 
-	/*
-	 * Return a child node if it exists, or insert a new empty node.
-	 */
-	[[nodiscard]] auto get_or_create_child(this command_tree_node &self,
-					       std::string_view child)
-		-> command_tree_node *;
+	[[nodiscard]] auto
+	get_child(this command_tree_node &self, std::string_view const child) -> command_tree_node *
+	{
+		if (auto it = self.m_children.find(std::string(child)); it != self.m_children.end())
+			return &it->second;
 
-	/*
-	 * Set or get this node's command.
-	 */
-	[[nodiscard]] auto command(this command_tree_node const &self)
-		-> std::shared_ptr<command_node> const &;
-	auto command(this command_tree_node &self,
-		     std::shared_ptr<command_node>)
-		-> void;
+		return nullptr;
+	}
 
-	/*
-	 * Get the path of this command_node.
-	 */
-	[[nodiscard]] auto path(this command_tree_node const &self)
-		-> std::string_view;
+	// Return a child node if it exists, or insert a new empty node.
+	[[nodiscard]] auto get_or_create_child(this command_tree_node &self, std::string_view child)
+		-> command_tree_node *
+	{
+		// Return the existing child, if there is one.
+		if (auto *ptr = self.get_child(child); ptr != nullptr)
+			return ptr;
 
-	/*
-	 * Print this node's children in a form useful to humans.
-	 */
-	auto print_commands(this command_tree_node const &self) -> void;
+		// Create a new node with a dummy command.
+		auto path = self.m_parent != nullptr
+		                  ? std::format("{} {}", self.m_parent->command().path(), child)
+		                  : std::string(child);
+		auto node = command_tree_node(&self, child, std::make_shared<nihil::command>(path));
+
+		auto [it, ok] = self.m_children.emplace(child, node);
+		if (!ok)
+			throw std::logic_error("failed to insert command tree node");
+		return &it->second;
+	}
+
+	// Get node's command.
+	[[nodiscard]] auto command(this command_tree_node const &self) -> command &
+	{
+		return *self.m_command;
+	}
+
+	auto command(this command_tree_node &self, std::shared_ptr<nihil::command> command) -> void
+	{
+		// If we have a stub command, allow it to be replaced.  This happens when
+		// a stub node is replaced with a real node during tree building.  However,
+		// if we already have an invocable command, this is an error.
+		if (self.m_command->invocable())
+			throw std::logic_error("duplicate command");
+
+		self.m_command = std::move(command);
+	}
+
+	// Yield all children of this node, depth-first.
+	auto
+	all_children(this command_tree_node const &self) -> generator<command_tree_node const &>
+	{
+		for (auto &&node : self.m_children | std::views::values) {
+			co_yield node;
+			co_yield elements_of(node.all_children());
+		}
+	}
+
+	// Yield direct children in this node.
+	auto children(this command_tree_node const &self)
+	{
+		return self.m_children | std::views::values;
+	}
 
 private:
-	command_tree_node		*m_parent = nullptr;
-	std::string			 m_this_word;
-	std::shared_ptr<command_node>	 m_command;
-	std::map<std::string, command_tree_node>
-				 m_children;
+	command_tree_node                       *m_parent = nullptr;
+	std::string                              m_this_word;
+	std::shared_ptr<nihil::command>          m_command;
+	std::map<std::string, command_tree_node> m_children;
 };
 
-/*
- * The command tree stores commands in a tree structure suitable for searching.
- */
-struct command_tree {
-	/*
-	 * Add a node to the tree.  Returns false if the node already exists.
-	 */
-	auto insert(this command_tree &self,
-		    std::vector<std::string_view> const &path,
-		    std::shared_ptr<command_node> command)
-		-> void;
+// The command tree stores commands in a tree structure suitable for searching.
+struct command_tree
+{
+	// Add a node to the tree.  Returns false if the node already exists.
+	auto insert(this command_tree &self, std::vector<std::string_view> const &path,
+	            std::shared_ptr<command> command) -> void
+	{
+		auto *this_node = &self.m_root_node;
 
-	/*
-	 * Find a node in the tree.
-	 */
-	auto find(this command_tree const &self, int &argc, char **&argv)
-		-> command_tree_node const *;
+		// Find the node for this key.
+		for (auto &&this_word : path)
+			this_node = this_node->get_or_create_child(this_word);
+
+		// Set the new value.
+		this_node->command(std::move(command));
+	}
+
+	// Find a node in the tree.
+	[[nodiscard]] auto
+	find(this command_tree const &self, int &argc, char **&argv) -> command_tree_node const *
+	{
+		auto const *this_node = &self.m_root_node;
+
+		// Iterate until we don't find a child command, then return that node.
+		while (argv[0] != nullptr) {
+			auto const *next_node = this_node->get_child(argv[0]);
+
+			if (next_node == nullptr)
+				return this_node;
+
+			this_node = next_node;
+
+			--argc;
+			++argv;
+		}
+
+		// We ran out of path without finding a valid command.  Return this
+		// node; the caller will notice the missing command.
+		return this_node;
+	}
 
 private:
 	command_tree_node m_root_node;
 };
 
-/*
- * Build a command tree from the registry.
- */
-[[nodiscard]] auto build_command_tree() -> command_tree;
+// Build a command tree from the registry.
+[[nodiscard]] auto build_command_tree() -> command_tree
+{
+	auto tree = command_tree();
+
+	for (auto &&command : get_registered_commands()) {
+		auto split_path = command->path()                                    //
+		                | std::views::split(' ')                             //
+		                | std::views::transform(construct<std::string_view>) //
+		                | std::ranges::to<std::vector>();
+
+		// Throws std::logic_error on duplicates.
+		tree.insert(split_path, command);
+	}
+
+	return tree;
+}
 
 } // namespace nihil

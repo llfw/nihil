@@ -12,6 +12,7 @@ target_sources(nihil.util
 	nihil.util.ccm
 
 	capture_stream.ccm
+	construct.ccm
 	ctype.ccm
 	parse_size.ccm
 	next_word.ccm
