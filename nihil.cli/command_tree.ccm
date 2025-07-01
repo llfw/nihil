@@ -120,18 +120,15 @@ private:
 };
 
 // The command tree stores commands in a tree structure suitable for searching.
-struct command_tree
+export struct command_tree
 {
 	// Add a node to the tree.  Returns false if the node already exists.
-	auto insert(this command_tree &self, std::ranges::range auto &&path,
-	            std::shared_ptr<command> command) -> void
-	requires(std::constructible_from<std::string_view,
-	                                 std::ranges::range_value_t<decltype(path)>>)
+	auto insert(this command_tree &self, std::shared_ptr<command> command) -> void
 	{
 		auto *this_node = &self.m_root_node;
 
 		// Find the node for this key.
-		for (auto &&this_word : path)
+		for (auto &&this_word : command->path() | std::views::split(' '))
 			this_node = this_node->get_or_create_child(std::string_view(this_word));
 
 		// Set the new value.
@@ -143,7 +140,7 @@ struct command_tree
 	requires(std::constructible_from<std::string_view,
 					 std::ranges::range_value_t<decltype(args)>>)
 	{
-		auto const *this_node = &self.m_root_node;
+		auto *this_node = &self.m_root_node;
 
 		auto rest =
 			args | std::views::take_while([&](auto &&str) {
@@ -169,9 +166,10 @@ private:
 {
 	auto tree = command_tree();
 
-	for (auto &&command : get_registered_commands())
+	for (auto &&command : get_registered_commands()) {
 		// Throws std::logic_error on duplicates.
-		tree.insert(command->path() | std::views::split(' '), command);
+		tree.insert(command);
+	}
 
 	return tree;
 }

@@ -25,8 +25,9 @@ if(NIHIL_TESTS)
 	enable_testing()
 
 	add_executable(nihil.cli.test
-		test.cc
 		command.test.cc
+		command_tree.test.cc
+		dispatch_command.test.cc
 	)
 	target_link_libraries(nihil.cli.test PRIVATE
 		nihil.cli
