@@ -31,15 +31,24 @@ export struct command final
 {
 	using command_handler_t = std::function<int(int, char **)>;
 
-	command(std::string_view const path, std::string_view const usage, command_handler_t handler) noexcept
-		: m_path(path)
+	// Construct a new command with a handler and register it.  Since this is usually invoked
+	// at global scope by static object construction, we handle exception internally.
+	command(std::string_view const path, std::string_view const usage, auto &&handler) noexcept
+	try	: m_path(path)
 		, m_usage(usage)
-		, m_handler(std::move(handler))
+		, m_handler(std::forward<decltype(handler)>(handler))
 	{
 		register_command(this);
+	} catch (std::exception const &exc) {
+		std::println(std::cerr, "register_command(): {}", exc.what());
+		std::quick_exit(1);
+	} catch (...) {
+		std::println(std::cerr, "register_command(): unknown error");
+		std::quick_exit(1);
 	}
 
-	explicit command(std::string_view const path) noexcept
+	// Create a stub command which doesn't have a handler.
+	explicit command(std::string_view const path)
 		: m_path(path)
 	{
 	}

@@ -18,7 +18,7 @@ find_package(PkgConfig REQUIRED)
 # clang-tidy support
 find_program(CLANG_TIDY clang-tidy)
 
-if(NOT (CLANG_TIDY STREQUAL ""))
+if (NOT (CLANG_TIDY STREQUAL "CLANG_TIDY-NOTFOUND"))
 	set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 	file(GLOB_RECURSE NIHIL_SOURCES "*.cc" "*.ccm")

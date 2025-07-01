@@ -30,6 +30,7 @@ target_sources(nihil.posix
 	open_in_path.ccm
 	paths.ccm
 	process.ccm
+	progname.ccm
 	read_file.ccm
 	rename.ccm
 	spawn.ccm

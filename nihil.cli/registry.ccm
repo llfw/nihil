@@ -7,11 +7,28 @@ namespace nihil {
 
 export struct command;
 
-// Register a command.  This is guaranteed not to throw; errors will print
-// a diagnostic and exit.
-auto register_command(command *cmd) noexcept -> void;
+///////////////////////////////////////////////////////////////////////
+// Command registry storage.  This is where command::command() registers
+// itself when the global command objects are constructed at startup.
+//
+// Because we sometimes create stub commands dynamically, the registry
+// storage is a list of shared_ptr<command>.  The "real" commands (which
+// refer to global objects) will be created with a null deleter so they
+// are never deleted.  This allows real and stub commands to mix in the
+// same command_tree.
 
-// Get previously registered commands.
-auto get_registered_commands() -> std::span<std::shared_ptr<command>>;
+//  Get the current registry.
+auto get_registry() -> std::vector<std::shared_ptr<command>> &
+{
+	static auto commands = std::vector<std::shared_ptr<command>>();
+	return commands;
+}
+
+// Register a new command.
+auto register_command(command *cmd) noexcept -> void
+{
+	auto constexpr null_deleter = [] (command const *) -> void {};
+	get_registry().emplace_back(cmd, null_deleter);
+}
 
 } // namespace nihil

@@ -39,9 +39,6 @@ export inline constexpr auto open_shared_lock = open_flags::mask<O_SHLOCK>();
 export inline constexpr auto open_exclusive_lock = open_flags::mask<O_EXLOCK>();
 export inline constexpr auto open_directory = open_flags::mask<O_DIRECTORY>();
 export inline constexpr auto open_nofollow = open_flags::mask<O_NOFOLLOW>();
-export inline constexpr auto open_nofollow_any = open_flags::mask<O_NOFOLLOW_ANY>();
-export inline constexpr auto open_symlink = open_flags::mask<O_SYMLINK>();
-export inline constexpr auto open_eventonly = open_flags::mask<O_EVTONLY>();
 export inline constexpr auto open_close_on_exec = open_flags::mask<O_CLOEXEC>();
 export inline constexpr auto open_resolve_beneath = open_flags::mask<O_RESOLVE_BENEATH>();
 
@@ -60,6 +57,19 @@ export inline constexpr auto open_path = open_flags::mask<O_PATH>();
 
 #ifdef O_EMPTY_PATH
 export inline constexpr auto open_empty_path = open_flags::mask<O_EMPTY_PATH>();
+#endif
+
+// macOS
+#ifdef O_NOFOLLOW_ANY
+export inline constexpr auto open_nofollow_any = open_flags::mask<O_NOFOLLOW_ANY>();
+#endif
+
+#ifdef O_SYMLINK
+export inline constexpr auto open_symlink = open_flags::mask<O_SYMLINK>();
+#endif
+
+#ifdef O_EVTONLY
+export inline constexpr auto open_eventonly = open_flags::mask<O_EVTONLY>();
 #endif
 
 // Open the given file and return an fd for it.

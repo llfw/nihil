@@ -4,6 +4,7 @@ add_library(nihil.cli STATIC)
 target_link_libraries(nihil.cli PRIVATE
 	nihil.std
 	nihil.generator
+	nihil.posix;
 	nihil.util
 )
 target_sources(nihil.cli
@@ -18,7 +19,6 @@ target_sources(nihil.cli
 
 	PRIVATE
 	dispatch_command.cc
-	registry.cc
 )
 
 if(NIHIL_TESTS)

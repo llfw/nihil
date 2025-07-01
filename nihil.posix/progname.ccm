@@ -1,0 +1,68 @@
+// This source code is released into the public domain.
+module;
+
+// progname: wrappers for getprogname and setprogname.
+//
+// setprogname() doesn't copy the provided name, which makes it awkward to provide
+// dynamic values (e.g., std::string).  We solve this by making setprogname a guard
+// object which resets the previous progname when it's destroyed.  This also happens
+// to be useful in cases like nihil.cli where we want to temporarily set the progname.
+
+#include <stdlib.h> // NOLINT
+
+export module nihil.posix:progname;
+
+import nihil.std;
+
+namespace nihil {
+
+// Get the current program name.  We could return std::string_view here, but since
+// the current program name can change unexpectedly, we don't.
+export [[nodiscard]] auto getprogname() -> std::optional<std::string>
+{
+	if (auto const *progname = ::getprogname(); progname != nullptr)
+		return {progname};
+	return {};
+}
+
+// Set the progname name to a new value for the lifetime of this object.
+// Reset it to the previous value when the object is destroyed.
+export struct setprogname final
+{
+	// Set the program name.
+	explicit setprogname(std::string_view const progname)
+		: m_progname(progname)
+		, m_old_progname(::getprogname())
+	{
+		::setprogname(m_progname.data());
+	}
+
+	// Restore the old name on destruction.
+	~setprogname()
+	{
+		if (m_old_progname != nullptr)
+			::setprogname(m_old_progname);
+	}
+
+	// Restore the old program name immediately.
+	auto release() -> void
+	{
+		if (m_old_progname != nullptr) {
+			::setprogname(m_old_progname);
+			m_old_progname = nullptr;
+		}
+	}
+
+	// Not copyable.
+	setprogname(setprogname const &) = delete;
+	auto operator=(setprogname const &) -> setprogname & = delete;
+
+	// Not movable.
+	setprogname(setprogname &&) = delete;
+	auto operator=(setprogname &&) -> setprogname & = delete;
+
+private:
+	std::string m_progname;
+	char const *m_old_progname;
+};
+} // namespace nihil

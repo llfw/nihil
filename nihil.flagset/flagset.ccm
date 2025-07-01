@@ -9,8 +9,9 @@ import nihil.std;
 
 namespace nihil {
 
-export template<std::integral base_type, typename Tag>
-struct flagset final {
+export template <std::integral base_type, typename Tag>
+struct flagset final
+{
 	using underlying_type = base_type;
 
 	/*
@@ -23,12 +24,13 @@ struct flagset final {
 	 */
 	flagset(flagset const &other) noexcept
 		: m_value(other.m_value)
-	{}
+	{
+	}
 
 	/*
 	 * Create flags from an integer mask.
 	 */
-	template<base_type flag>
+	template <base_type flag>
 	[[nodiscard]] static constexpr auto mask() noexcept -> flagset
 	{
 		return flagset(flag);
@@ -37,7 +39,7 @@ struct flagset final {
 	/*
 	 * Create flags for a specific bit.
 	 */
-	template<unsigned bitnr>
+	template <unsigned bitnr>
 	[[nodiscard]] static constexpr auto bit() noexcept -> flagset
 	{
 		static_assert(bitnr < std::numeric_limits<base_type>::digits);
@@ -47,8 +49,7 @@ struct flagset final {
 	/*
 	 * Create flags from a runtime value.
 	 */
-	[[nodiscard]] static auto from_int(base_type value) noexcept
-		-> flagset
+	[[nodiscard]] static auto from_int(base_type value) noexcept -> flagset
 	{
 		return flagset(value);
 	}
@@ -56,8 +57,7 @@ struct flagset final {
 	/*
 	 * Assign this flagset.
 	 */
-	auto operator=(this flagset &lhs, flagset rhs) noexcept
-		-> flagset &
+	auto operator=(this flagset &lhs, flagset rhs) noexcept -> flagset &
 	{
 		if (&lhs != &rhs)
 			lhs.m_value = rhs.m_value;
@@ -67,8 +67,7 @@ struct flagset final {
 	/*
 	 * The integer value of this flagset.
 	 */
-	[[nodiscard]] constexpr auto value(this flagset self) noexcept
-		-> base_type
+	[[nodiscard]] constexpr auto value(this flagset self) noexcept -> base_type
 	{
 		return self.m_value;
 	}
@@ -76,8 +75,7 @@ struct flagset final {
 	/*
 	 * True if this flagset has any bits set.
 	 */
-	[[nodiscard]] explicit constexpr operator bool(this flagset self)
-		noexcept
+	[[nodiscard]] explicit constexpr operator bool(this flagset self) noexcept
 	{
 		return self.m_value != 0;
 	}
@@ -85,8 +83,7 @@ struct flagset final {
 	/*
 	 * Set bits.
 	 */
-	constexpr auto operator|= (this flagset &lhs, flagset rhs) noexcept
-		-> flagset &
+	constexpr auto operator|=(this flagset &lhs, flagset rhs) noexcept -> flagset &
 	{
 		lhs.m_value |= rhs.value();
 		return lhs;
@@ -95,8 +92,7 @@ struct flagset final {
 	/*
 	 * Mask bits.
 	 */
-	constexpr auto operator&= (this flagset &lhs, flagset rhs) noexcept
-		-> flagset &
+	constexpr auto operator&=(this flagset &lhs, flagset rhs) noexcept -> flagset &
 	{
 		lhs.m_value &= rhs.value();
 		return lhs;
@@ -105,8 +101,7 @@ struct flagset final {
 	/*
 	 * Invert bits.
 	 */
-	[[nodiscard]] constexpr auto operator~ (this flagset self) noexcept
-		-> flagset
+	[[nodiscard]] constexpr auto operator~(this flagset self) noexcept -> flagset
 	{
 		return flagset(~self.m_value);
 	}
@@ -114,8 +109,7 @@ struct flagset final {
 	/*
 	 * xor bits.
 	 */
-	constexpr auto operator^= (this flagset &lhs, flagset rhs)
-		noexcept -> flagset
+	constexpr auto operator^=(this flagset &lhs, flagset rhs) noexcept -> flagset
 	{
 		lhs.m_value ^= rhs.value();
 		return lhs;
@@ -126,68 +120,55 @@ private:
 
 	explicit constexpr flagset(base_type mask) noexcept
 		: m_value(mask)
-	{}
+	{
+	}
+
+	[[nodiscard]] friend auto operator|(flagset lhs, flagset rhs) noexcept -> flagset
+	{
+		return (lhs |= rhs);
+	}
+
+	[[nodiscard]] friend auto operator&(flagset lhs, flagset rhs) noexcept -> flagset
+	{
+		return (lhs &= rhs);
+	}
+
+	[[nodiscard]] friend auto operator^(flagset lhs, flagset rhs) noexcept -> flagset
+	{
+		return (lhs ^= rhs);
+	}
+
+	[[nodiscard]] friend auto
+	operator==(flagset lhs, flagset rhs) noexcept -> bool
+	{
+		return lhs.value() == rhs.value();
+	}
+
+	friend auto operator<<(std::ostream &strm, flagset<base_type, Tag> flags) -> std::ostream &
+	{
+		std::print(strm, "{}", flags);
+		return strm;
+	}
 };
-
-export template<std::integral base_type, typename Tag>
-[[nodiscard]] auto operator| (flagset<base_type, Tag> lhs,
-			      flagset<base_type, Tag> rhs) noexcept
-	-> flagset<base_type, Tag>
-{
-	return (lhs |= rhs);
-}
-
-export template<std::integral base_type, typename Tag>
-[[nodiscard]] auto operator& (flagset<base_type, Tag> lhs,
-			      flagset<base_type, Tag> rhs) noexcept
-	-> flagset<base_type, Tag>
-{
-	return (lhs &= rhs);
-}
-
-export template<std::integral base_type, typename Tag>
-[[nodiscard]] auto operator^ (flagset<base_type, Tag> lhs,
-			      flagset<base_type, Tag> rhs) noexcept
-	-> flagset<base_type, Tag>
-{
-	return (lhs ^= rhs);
-}
-
-export template<std::integral base_type, typename Tag>
-[[nodiscard]] auto operator== (flagset<base_type, Tag> lhs,
-			       flagset<base_type, Tag> rhs) noexcept
-	-> bool
-{
-	return lhs.value() == rhs.value();
-}
-
-export template<std::integral base_type, typename Tag>
-auto operator<<(std::ostream &strm, flagset<base_type, Tag> flags)
-	-> std::ostream &
-{
-	std::print(strm, "{}", flags);
-	return strm;
-}
 
 } // namespace nihil
 
 /*
  * Formatting for flagset.
  */
-export template<std::integral base_type, typename Tag, typename Char>
+export template <std::integral base_type, typename Tag, typename Char>
 struct std::formatter<nihil::flagset<base_type, Tag>, Char>
 {
 	using flags_t = nihil::flagset<base_type, Tag>;
 
-	template<typename ParseContext>
+	template <typename ParseContext>
 	constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator
 	{
 		return ctx.begin();
 	}
 
-	template<typename FmtContext>
-	auto format(flags_t flags, FmtContext& ctx) const
-		-> FmtContext::iterator 
+	template <typename FmtContext>
+	auto format(flags_t flags, FmtContext &ctx) const -> FmtContext::iterator
 	{
 		auto constexpr digits = std::numeric_limits<base_type>::digits;
 		auto value = flags.value();

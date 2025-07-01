@@ -166,7 +166,7 @@ private:
 {
 	auto tree = command_tree();
 
-	for (auto &&command : get_registered_commands()) {
+	for (auto &&command : get_registry()) {
 		// Throws std::logic_error on duplicates.
 		tree.insert(command);
 	}

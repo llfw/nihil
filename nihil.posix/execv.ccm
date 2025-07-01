@@ -3,6 +3,10 @@ module;
 
 #include <unistd.h> // execv()
 
+#include "nihil.hh"
+
+extern char **environ; // NOLINT
+
 export module nihil.posix:execv;
 
 import nihil.std;
@@ -56,7 +60,7 @@ export struct execv final
 
 			[&] (fd const &file) {
 #if NIHIL_HAVE_FEXECVE == 1
-				::fexecv(file.get(), self.m_args.data());
+				::fexecve(file.get(), self.m_args.data(), environ);
 				return std::unexpected(error("execve failed", error(sys_error())));
 #else
 				std::ignore = file;

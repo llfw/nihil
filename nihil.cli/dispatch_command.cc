@@ -9,6 +9,7 @@ module nihil.cli;
 
 import nihil.std;
 import nihil.core;
+import nihil.posix;
 
 namespace nihil {
 
@@ -17,11 +18,11 @@ namespace {
 auto print_commands(command_tree_node const &node) -> void
 {
 	for (auto &&child : node.children())
-		std::print(std::cerr, "  {}\n", child.command().path());
+		std::println(std::cerr, "  {}", child.command().path());
 }
 } // namespace
 
-auto dispatch_command(int argc, char **argv) -> int
+auto dispatch_command(int const argc, char **argv) -> int
 {
 	// Reset getopt(3) for the command, in case main() used it already.
 	optreset = 1;
@@ -35,12 +36,8 @@ auto dispatch_command(int argc, char **argv) -> int
 	// Set the program name to the existing progname plus the full path to the command being
 	// invoked; this makes error messages nicer. Save the old progname so we can restore it
 	// after invoking the command.
-	auto const *old_progname = ::getprogname();
-
-	{
-		auto cprogname = std::format("{} {}", ::getprogname(), command.path());
-		::setprogname(cprogname.c_str());
-	}
+	auto progname_guard =
+		setprogname(std::format("{} {}", getprogname().value_or(""), command.path()));
 
 	// Invoke the command see what it returns.  If it's an exit code, just return it.
 	// Otherwise, handle the error.
@@ -51,7 +48,7 @@ auto dispatch_command(int argc, char **argv) -> int
 	auto ret = command.invoke(nrest, argv + (argc - nrest));
 
 	// Restore the old progname.
-	::setprogname(old_progname);
+	progname_guard.release();
 
 	if (ret)
 		return *ret;
