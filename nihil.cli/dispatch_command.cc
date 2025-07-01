@@ -1,9 +1,9 @@
 // This source code is released into the public domain.
 module;
 
-#include <stdlib.h> // getprogname, NOLINT
+#include <stdlib.h>   // getprogname, NOLINT
 #include <sysexits.h> // EX_USAGE
-#include <unistd.h> // getopt
+#include <unistd.h>   // getopt
 
 module nihil.cli;
 
@@ -19,24 +19,18 @@ auto print_commands(command_tree_node const &node) -> void
 	for (auto &&child : node.children())
 		std::print(std::cerr, "  {}\n", child.command().path());
 }
-}
+} // namespace
 
 auto dispatch_command(int argc, char **argv) -> int
 {
-	auto tree = build_command_tree();
-
-	// The caller should have stripped argv[0] already.  find() will
-	// strip all the remaining elements except the last, which means
-	// argv[0] will be set to something reasonable for the next call
-	// to getopt().
-
-	// find() never returns nullptr; at worst it will return the root node.
-	auto const *node = tree.find(argc, argv);
-	auto const &command = node->command();
-
 	// Reset getopt(3) for the command, in case main() used it already.
 	optreset = 1;
 	optind = 1;
+
+	// Node that tree.find() never fails, at worst it will return the root node.
+	auto tree = build_command_tree();
+	auto [node, rest] = tree.find(std::span(argv, argc));
+	auto const &command = node->command();
 
 	// Set the program name to the existing progname plus the full path to the command being
 	// invoked; this makes error messages nicer. Save the old progname so we can restore it
@@ -44,14 +38,17 @@ auto dispatch_command(int argc, char **argv) -> int
 	auto const *old_progname = ::getprogname();
 
 	{
-		auto cprogname = std::format("{} {}", ::getprogname(),
-					     command.path());
+		auto cprogname = std::format("{} {}", ::getprogname(), command.path());
 		::setprogname(cprogname.c_str());
 	}
 
 	// Invoke the command see what it returns.  If it's an exit code, just return it.
 	// Otherwise, handle the error.
-	auto ret = command.invoke(argc, argv);
+	auto nrest = static_cast<int>(std::ranges::distance(rest));
+	// Keep the first argument, because getopt() wants it
+	if (nrest < argc)
+		++nrest;
+	auto ret = command.invoke(nrest, argv + (argc - nrest));
 
 	// Restore the old progname.
 	::setprogname(old_progname);

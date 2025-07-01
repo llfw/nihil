@@ -90,12 +90,14 @@ using std::max;
 namespace ranges {
 using std::ranges::all_of;
 using std::ranges::copy;
+using std::ranges::count_if;
 using std::ranges::equal;
 using std::ranges::fill;
 using std::ranges::fill_n;
 using std::ranges::find;
 using std::ranges::find_if;
 using std::ranges::find_if_not;
+using std::ranges::fold_left;
 using std::ranges::generate;
 using std::ranges::generate_n;
 } // namespace ranges
@@ -120,6 +122,7 @@ using std::cmp_less_equal;
 using std::cmp_not_equal;
 
 // <concepts>
+using std::constructible_from;
 using std::convertible_to;
 using std::copy_constructible;
 using std::copy_constructible;
@@ -304,6 +307,10 @@ using std::from_range;
 using std::from_range_t;
 
 namespace ranges {
+using std::ranges::iterator_t;
+//using std::ranges::const_iterator_t; // not in libc++
+using std::ranges::sentinel_t;
+//using std::ranges::const_sentinel_t; // not in libc++
 using std::ranges::range_value_t;
 
 using std::ranges::contiguous_range;
@@ -312,6 +319,7 @@ using std::ranges::range;
 using std::ranges::sized_range;
 
 using std::ranges::begin;
+using std::ranges::distance;
 using std::ranges::empty;
 using std::ranges::end;
 using std::ranges::data;
@@ -320,14 +328,18 @@ using std::ranges::rbegin;
 using std::ranges::rend;
 using std::ranges::subrange;
 
+using std::ranges::drop_view;
 using std::ranges::split_view;
+using std::ranges::take_while_view;
 using std::ranges::transform_view;
 using std::ranges::values_view;
 using std::ranges::operator|;
 using std::ranges::to;
 
 namespace views {
+using std::ranges::views::drop;
 using std::ranges::views::split;
+using std::ranges::views::take_while;
 using std::ranges::views::transform;
 using std::ranges::views::values;
 } // namespace views

@@ -30,6 +30,16 @@ struct command_tree_node final
 	{
 	}
 
+	// Not copyable.
+	command_tree_node(command_tree_node const &) = delete;
+	auto operator=(command_tree_node const &) -> command_tree_node & = delete;
+
+	// Movable.
+	command_tree_node(command_tree_node &&) = default;
+	auto operator=(command_tree_node &&) -> command_tree_node & = default;
+
+	~command_tree_node() = default;
+
 	// Return a child node, or NULL if the child doesn't exist.
 	[[nodiscard]] auto get_child(this command_tree_node const &self,
 	                             std::string_view const child) -> command_tree_node const *
@@ -63,7 +73,7 @@ struct command_tree_node final
 		                  : std::string(child);
 		auto node = command_tree_node(&self, child, std::make_shared<nihil::command>(path));
 
-		auto [it, ok] = self.m_children.emplace(child, node);
+		auto [it, ok] = self.m_children.emplace(child, std::move(node));
 		if (!ok)
 			throw std::logic_error("failed to insert command tree node");
 		return &it->second;
@@ -113,41 +123,41 @@ private:
 struct command_tree
 {
 	// Add a node to the tree.  Returns false if the node already exists.
-	auto insert(this command_tree &self, std::vector<std::string_view> const &path,
+	auto insert(this command_tree &self, std::ranges::range auto &&path,
 	            std::shared_ptr<command> command) -> void
+	requires(std::constructible_from<std::string_view,
+	                                 std::ranges::range_value_t<decltype(path)>>)
 	{
 		auto *this_node = &self.m_root_node;
 
 		// Find the node for this key.
 		for (auto &&this_word : path)
-			this_node = this_node->get_or_create_child(this_word);
+			this_node = this_node->get_or_create_child(std::string_view(this_word));
 
 		// Set the new value.
 		this_node->command(std::move(command));
 	}
 
-	// Find a node in the tree.
-	[[nodiscard]] auto
-	find(this command_tree const &self, int &argc, char **&argv) -> command_tree_node const *
+	// Find a node in the tree.  Returns the node and the remaining unprocessed arguments.
+	[[nodiscard]] auto find(this command_tree const &self, std::ranges::range auto &&args)
+	requires(std::constructible_from<std::string_view,
+					 std::ranges::range_value_t<decltype(args)>>)
 	{
 		auto const *this_node = &self.m_root_node;
 
-		// Iterate until we don't find a child command, then return that node.
-		while (argv[0] != nullptr) {
-			auto const *next_node = this_node->get_child(argv[0]);
+		auto rest =
+			args | std::views::take_while([&](auto &&str) {
+				auto const *child = this_node->get_child(std::string_view(str));
+				if (child == nullptr)
+					return false;
+				this_node = child;
+				return true;
+			});
 
-			if (next_node == nullptr)
-				return this_node;
-
-			this_node = next_node;
-
-			--argc;
-			++argv;
-		}
-
-		// We ran out of path without finding a valid command.  Return this
-		// node; the caller will notice the missing command.
-		return this_node;
+		// Force evaluation of the view, otherwise the reference to this_node
+		// would be dangling.
+		auto taken = std::ranges::distance(args) - std::ranges::distance(rest);
+		return std::make_pair(this_node, args | std::views::drop(taken));
 	}
 
 private:
@@ -159,15 +169,9 @@ private:
 {
 	auto tree = command_tree();
 
-	for (auto &&command : get_registered_commands()) {
-		auto split_path = command->path()                                    //
-		                | std::views::split(' ')                             //
-		                | std::views::transform(construct<std::string_view>) //
-		                | std::ranges::to<std::vector>();
-
+	for (auto &&command : get_registered_commands())
 		// Throws std::logic_error on duplicates.
-		tree.insert(split_path, command);
-	}
+		tree.insert(command->path() | std::views::split(' '), command);
 
 	return tree;
 }

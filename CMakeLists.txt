@@ -8,6 +8,8 @@ option(NIHIL_CONFIG	"Build the nihil.config library"	ON)
 option(NIHIL_UCL	"Build the nihil.ucl library"		ON)
 option(NIHIL_TESTS	"Build nihil's unit tests"		ON)
 option(NIHIL_TIDY	"Run clang-tidy during build"		ON)
+option(NIHIL_ASAN	"Enable Address Sanitizer"		OFF)
+option(NIHIL_UBSAN	"Enable Undefined Behaviour Sanitizer"	OFF)
 
 set(CMAKE_CXX_STANDARD 26)
 
@@ -40,6 +42,16 @@ add_compile_options(-Wall)
 add_compile_options(-Wextra)
 add_compile_options(-Werror)
 add_compile_options(-Wpedantic)
+
+if(NIHIL_ASAN)
+	add_compile_options(-fsanitize=address)
+	add_link_options(-fsanitize=address)
+endif()
+
+if(NIHIL_UBSAN)
+	add_compile_options(-fsanitize=undefined)
+	add_link_options(-fsanitize=undefined)
+endif()
 
 # Enable libc++ hardening
 add_compile_definitions(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
