@@ -1,22 +1,41 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <expected>
-#include <filesystem>
-
+// This source code is released into the public domain.
 export module nihil.config:read;
 
+import nihil.std;
 import nihil.error;
+import nihil.monad;
+import nihil.posix;
+import nihil.ucl;
+import :option;
+import :store;
 
 namespace nihil::config {
 
-/*
- * Load the configuration from a file.
- */
-export [[nodiscard]] auto read_from(std::filesystem::path const &filename)
-	-> std::expected<void, error>;
+// Load the configuration from a file.
+export [[nodiscard]] auto
+read_from(std::filesystem::path const &filename) -> std::expected<void, error>
+{
+	// TODO: nihil.ucl should have a way to load UCL from a filename.
+
+	auto config_text = std::string();
+	auto err = read_file(filename, std::back_inserter(config_text));
+	if (!err) {
+		// Ignore ENOENT, it simply means we haven't created the
+		// config file yet, so default values will be used.
+		if (err.error().root_cause() == std::errc::no_such_file_or_directory)
+			co_return {};
+		co_return std::unexpected(error(std::format("cannot read {}", filename.string()), err.error()));
+	}
+
+	// Parse the UCL.
+	auto uclconfig = co_await ucl::parse(config_text);
+
+	for (auto &&[key, value] : uclconfig) {
+		auto *opt = co_await store::get().fetch(key);
+		co_await opt->ucl(value);
+	}
+
+	co_return {};
+}
 
 } // namespace nihil::config

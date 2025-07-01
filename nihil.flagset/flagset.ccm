@@ -1,20 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-/*
- * flagset: a type-type flags type.
- */
-
-#include <concepts>
-#include <cstdint>
-#include <iostream>
-#include <limits>
-#include <print>
-
+// This source code is released into the public domain.
 export module nihil.flagset;
+
+/*
+ * flagset: a type-safe flags type.
+ */
+
+import nihil.std;
 
 namespace nihil {
 

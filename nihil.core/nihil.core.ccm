@@ -1,9 +1,5 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
+// This source code is released into the public domain.
 export module nihil.core;
 
 export import :errc;
+export import :features;

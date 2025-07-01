@@ -1,12 +1,7 @@
 // This source code is released into the public domain.
-module;
-
-#include <concepts>
-#include <functional>
-#include <optional>
-#include <utility>
-
 export module nihil.guard;
+
+import nihil.std;
 
 namespace nihil {
 

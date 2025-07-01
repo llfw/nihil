@@ -1,18 +1,16 @@
 // This source code is released into the public domain.
 module;
 
-#include <expected>
-#include <optional>
-#include <system_error>
-#include <utility>
-
 #include <sys/wait.h>
 
 export module nihil.posix:process;
 
+import nihil.std;
 import nihil.error;
 
 namespace nihil {
+
+export struct process;
 
 // wait_result: the exit status of a process.
 export struct wait_result final
@@ -58,7 +56,7 @@ private:
 };
 
 // Represents a process we created, which can be waited for.
-export struct process final
+struct process final
 {
 	process() = delete;
 
@@ -83,7 +81,8 @@ export struct process final
 	// Movable.
 	process(process &&other) noexcept
 		: m_pid(std::exchange(other.m_pid, -1))
-	{}
+	{
+	}
 
 	auto operator=(this process &self, process &&other) noexcept -> process &
 	{
@@ -113,7 +112,7 @@ export struct process final
 		auto status = int{};
 		auto ret = waitpid(self.m_pid, &status, 0);
 		if (ret == -1)
-			return std::unexpected(error(std::errc(errno)));
+			return error(sys_error());
 
 		return wait_result(status);
 	}

@@ -1,27 +1,21 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <cstdlib>
-#include <expected>
-#include <format>
-#include <iosfwd>
-#include <string>
 
 #include <ucl.h>
 
 export module nihil.ucl:string;
 
+import nihil.std;
+import nihil.core;
 import :object;
 import :type;
 
 namespace nihil::ucl {
 
-export struct string final : object {
+export struct string final : object
+{
 	using contained_type = std::string_view;
-	inline static constexpr object_type ucl_type = object_type::string;
+	static constexpr object_type ucl_type = object_type::string;
 
 	// string is a container of char
 	using value_type = char const;
@@ -31,157 +25,234 @@ export struct string final : object {
 	using pointer = value_type *;
 	using iterator = pointer;
 
-	/*
-	 * Create a new empty string.  Throws std::system_error on failure.
-	 */
-	string();
+	// Create a new empty string.  Throws std::system_error on failure.
+	string()
+		: string(std::string_view(""))
+	{
+	}
 
-	/*
-	 * Create a string from a value.  Throws std::system_error on failure.
-	 */
-	explicit string(std::string_view);
+	// Create a string from a value.  Throws std::system_error on failure.
+	explicit string(std::string_view value)
+		: string(noref, [&] {
+			auto *uobj = ::ucl_object_fromstring_common(value.data(), value.size(),
+		                                                    UCL_STRING_RAW);
+			if (uobj == nullptr)
+				throw std::system_error(std::make_error_code(sys_error()));
+			return uobj;
+		}())
+	{
+	}
 
-	/*
-	 * Create a string from a C literal.  Throws std::system_error
-	 * on failure.
-	 */
-	explicit string(char const *);
+	// Create a string from a C literal.  Throws std::system_error
+	// on failure.
+	explicit string(char const *value)
+		: string(std::string_view(value))
+	{
+	}
 
-	/*
-	 * Create a string from a contiguous range.  The range's value type
-	 * must be char.  Throws std::system_error on failure.
-	 */
-	template<std::ranges::contiguous_range Range>
-	requires (!std::same_as<std::string_view, Range> &&
-		  std::same_as<char, std::ranges::range_value_t<Range>>)
-	explicit string(Range &&range)
-		: string(std::string_view(std::ranges::begin(range),
-					  std::ranges::end(range)))
-	{}
+	// Create a string from a contiguous range.  The range's value type
+	// must be char.  Throws std::system_error on failure.
+	template <std::ranges::contiguous_range Range>
+	requires(!std::same_as<std::string_view, Range> &&
+	         std::same_as<char, std::ranges::range_value_t<Range>>)
+	explicit string(Range const &range)
+		: string(std::string_view(std::ranges::begin(range), std::ranges::end(range)))
+	{
+	}
 
-	/*
-	 * Create a string from a non-contiguous range.  This requires a
-	 * temporary value due to limitations of the UCL C API.
-	 */
-	template<std::ranges::range Range>
-	requires (!std::ranges::contiguous_range<Range> &&
-		  std::same_as<char, std::ranges::range_value_t<Range>>)
-	explicit string(Range &&range)
-		: string(std::string(std::from_range, range))
-	{}
+	// Create a string from a non-contiguous range.  This requires a
+	// temporary value due to limitations of the UCL C API.
+	template <std::ranges::range Range>
+	requires(!std::ranges::contiguous_range<Range> &&
+	         std::same_as<char, std::ranges::range_value_t<Range>>)
+	explicit string(Range range)
+		: string(std::string(std::from_range, std::forward<Range>(range)))
+	{
+	}
 
-	/*
-	 * Create a string from an iterator pair.  The iterator's value type
-	 * must be char.  If the iterator pair is not contiguous, the value
-	 * will be copied to a temporary first.
-	 *
-	 * Throws std::system_error on failure.
-	 */
-	template<std::input_iterator Iterator>
-	requires (std::same_as<char, std::iter_value_t<Iterator>>)
+	// Create a string from an iterator pair.  The iterator's value type
+	// must be char.  If the iterator pair is not contiguous, the value
+	// will be copied to a temporary first.
+	//
+	// Throws std::system_error on failure.
+	template <std::input_iterator Iterator>
+	requires(std::same_as<char, std::iter_value_t<Iterator>>)
 	string(Iterator first, Iterator last)
 		: string(std::ranges::subrange(first, last))
-	{}
+	{
+	}
 
-	/*
-	 * Create a new string from a UCL object.  Throws type_mismatch
-	 * on failure.
-	 */
-	string(ref_t, ::ucl_object_t const *uobj);
-	string(noref_t, ::ucl_object_t *uobj);
+	// Create a new string from a UCL object.  Throws type_mismatch
+	// on failure.
+	string(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, ensure_ucl_type(uobj, string::ucl_type))
+	{
+	}
+
+	string(noref_t, ::ucl_object_t *uobj)
+		: object(nihil::ucl::noref, ensure_ucl_type(uobj, string::ucl_type))
+	{
+	}
 
 	// Return the value of this string.
-	[[nodiscard]] auto value(this string const &self) -> contained_type;
+	[[nodiscard]] auto value(this string const &self) -> contained_type
+	{
+		char const *dptr{};
+		std::size_t dlen{};
+
+		auto const *uobj = self.get_ucl_object();
+		if (::ucl_object_tolstring_safe(uobj, &dptr, &dlen))
+			return {dptr, dlen};
+
+		throw std::runtime_error("ucl_object_tolstring_safe() failed");
+	}
 
 	// Return the size of this string.
-	[[nodiscard]] auto size(this string const &self) -> size_type;
+	[[nodiscard]] auto size(this string const &self) -> size_type
+	{
+		return self.value().size();
+	}
 
 	// Test if this string is empty.
-	[[nodiscard]] auto empty(this string const &self) -> bool;
+	[[nodiscard]] auto empty(this string const &self) -> bool
+	{
+		return self.size() == 0;
+	}
 
 	// Access this string's data
-	[[nodiscard]] auto data(this string const &self) -> pointer;
+	[[nodiscard]] auto data(this string const &self) -> pointer
+	{
+		char const *dptr{};
+
+		auto const *uobj = self.get_ucl_object();
+		if (::ucl_object_tostring_safe(uobj, &dptr))
+			return dptr;
+
+		throw std::runtime_error("ucl_object_tostring_safe() failed");
+	}
 
 	// Iterator access
-	[[nodiscard]] auto begin(this string const &self) -> iterator;
-	[[nodiscard]] auto end(this string const &self) -> iterator;
+	[[nodiscard]] auto begin(this string const &self) -> iterator
+	{
+		return self.data();
+	}
+
+	[[nodiscard]] auto end(this string const &self) -> iterator
+	{
+		return self.data() + self.size();
+	}
+
+private:
+	//
+	// Comparison operators.
+	//
+
+	[[nodiscard]] friend auto operator==(string const &a, string const &b) -> bool
+	{
+		return a.value() == b.value();
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(string const &a, string const &b) -> std::strong_ordering
+	{
+		return a.value() <=> b.value();
+	}
+
+	// For convenience, allow comparison with C++ strings without having to
+	// construct a temporary UCL object.
+
+	[[nodiscard]] friend auto operator==(string const &lhs, std::string_view rhs) -> bool
+	{
+		return lhs.value() == rhs;
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(string const &lhs, std::string_view rhs) -> std::strong_ordering
+	{
+		return lhs.value() <=> rhs;
+	}
+
+	[[nodiscard]] friend auto operator==(string const &lhs, std::string const &rhs) -> bool
+	{
+		return lhs == std::string_view(rhs);
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(string const &lhs, std::string const &rhs) -> std::strong_ordering
+	{
+		return lhs <=> std::string_view(rhs);
+	}
+
+	[[nodiscard]] friend auto operator==(string const &lhs, char const *rhs) -> bool
+	{
+		return lhs == std::string_view(rhs);
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(string const &lhs, char const *rhs) -> std::strong_ordering
+	{
+		return lhs <=> std::string_view(rhs);
+	}
+
+	// Stream output.
+	friend auto operator<<(std::ostream &strm, string const &s) -> std::ostream &
+	{
+		return strm << s.value();
+	}
 };
 
-/*
- * String constructors.  These return an error instead of throwing.
- */
-
-// Empty string
-export [[nodiscard]] auto
-make_string() -> std::expected<string, error>;
+//
+// String constructors.  These return an error instead of throwing.
+//
 
 // From string_view
-export [[nodiscard]] auto
-make_string(std::string_view) -> std::expected<string, error>;
+export [[nodiscard]] auto make_string(std::string_view s) -> std::expected<string, error>
+{
+	auto *uobj = ::ucl_object_fromstring_common(s.data(), s.size(), UCL_STRING_RAW);
+
+	if (uobj == nullptr)
+		return std::unexpected(error(errc::failed_to_create_object, error(sys_error())));
+
+	return string(noref, uobj);
+}
+
+// Empty string
+export [[nodiscard]] auto make_string() -> std::expected<string, error>
+{
+	return make_string(std::string_view(""));
+}
 
 // From C literal
-export [[nodiscard]] auto
-make_string(char const *) -> std::expected<string, error>;
+export [[nodiscard]] auto make_string(char const *s) -> std::expected<string, error>
+{
+	return make_string(std::string_view(s));
+}
 
 // From contiguous range
-export template<std::ranges::contiguous_range Range>
-requires (!std::same_as<std::string_view, Range> &&
-	  std::same_as<char, std::ranges::range_value_t<Range>>)
+export template <std::ranges::contiguous_range Range>
+requires(!std::same_as<std::string_view, Range> &&
+         std::same_as<char, std::ranges::range_value_t<Range>>)
 [[nodiscard]] auto make_string(Range &&range)
 {
-	return make_string(std::string_view(range));
+	return make_string(std::string_view(std::forward<Range>(range)));
 }
 
 // From non-contiguous range
-export template<std::ranges::range Range>
-requires (!std::ranges::contiguous_range<Range> &&
-	  std::same_as<char, std::ranges::range_value_t<Range>>)
+export template <std::ranges::range Range>
+requires(!std::ranges::contiguous_range<Range> &&
+         std::same_as<char, std::ranges::range_value_t<Range>>)
 [[nodiscard]] auto make_string(Range &&range)
 {
-	return make_string(std::string(std::from_range, range));
+	return make_string(std::string(std::from_range, std::forward<Range>(range)));
 }
 
 // From iterator pair
-export template<std::input_iterator Iterator>
-requires (std::same_as<char, std::iter_value_t<Iterator>>)
+export template <std::input_iterator Iterator>
+requires(std::same_as<char, std::iter_value_t<Iterator>>)
 [[nodiscard]] auto make_string(Iterator first, Iterator last)
 {
 	return make_string(std::ranges::subrange(first, last));
 }
-
-/*
- * Comparison operators.
- */
-
-export [[nodiscard]] auto operator== (string const &a, string const &b) -> bool;
-export [[nodiscard]] auto operator<=> (string const &a, string const &b)
-	-> std::strong_ordering;
-
-/*
- * For convenience, allow comparison with C++ strings without having to
- * construct a temporary UCL object.
- */
-
-export [[nodiscard]] auto operator==(string const &lhs,
-				     std::string_view rhs) -> bool;
-
-export [[nodiscard]] auto operator==(string const &lhs,
-				     std::string const &rhs) -> bool;
-
-export [[nodiscard]] auto operator==(string const &lhs,
-				     char const *rhs) -> bool;
-
-export [[nodiscard]] auto operator<=>(string const &lhs,
-				      std::string_view rhs)
-	-> std::strong_ordering;
-
-export [[nodiscard]] auto operator<=>(string const &lhs,
-				      std::string const &rhs)
-	-> std::strong_ordering;
-
-export [[nodiscard]] auto operator<=>(string const &lhs,
-				      char const *rhs)
-	-> std::strong_ordering;
 
 /*
  * Print a string to a stream.
@@ -192,37 +263,37 @@ export auto operator<<(std::ostream &, string const &) -> std::ostream &;
  * Literal operator.
  */
 inline namespace literals {
-	export constexpr auto operator""_ucl (char const *s, std::size_t n)
-		-> string
-	{
-		return string(std::string_view(s, n));
-	}
-} // namespace nihil::ucl::literals
+export constexpr auto operator""_ucl(char const *s, std::size_t n) -> string
+{
+	return string(std::string_view(s, n));
+}
+} // namespace literals
 
 } // namespace nihil::ucl
 
-namespace nihil { inline namespace literals {
-	export using namespace ::nihil::ucl::literals;
-}} // namespace nihil::literals
+namespace nihil {
+inline namespace literals {
+export using namespace ::nihil::ucl::literals;
+}
+} // namespace nihil
 
 /*
  * std::formatter for a string.  This provides the same format operations
  * as std::formatter<std::string_view>.
  */
-export template<>
+export template <>
 struct std::formatter<nihil::ucl::string, char>
 {
 	std::formatter<std::string_view> base_formatter;
 
-	template<class ParseContext>
-	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	template <class ParseContext>
+	constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator
 	{
 		return base_formatter.parse(ctx);
 	}
 
-	template<class FmtContext>
-	FmtContext::iterator format(nihil::ucl::string const &o,
-				    FmtContext& ctx) const
+	template <class FmtContext>
+	auto format(nihil::ucl::string const &o, FmtContext &ctx) const -> FmtContext::iterator
 	{
 		return base_formatter.format(o.value(), ctx);
 	}

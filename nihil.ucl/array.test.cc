@@ -1,18 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <algorithm>
-#include <concepts>
-#include <expected>
-#include <ranges>
-#include <string>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
+import nihil.std;
 import nihil.ucl;
 
+namespace {
 TEST_CASE("ucl: array: invariants", "[ucl]")
 {
 	using namespace nihil::ucl;
@@ -27,42 +21,44 @@ TEST_CASE("ucl: array: invariants", "[ucl]")
 	static_assert(std::equality_comparable<array<>>);
 	static_assert(std::totally_ordered<array<>>);
 	static_assert(std::swappable<array<>>);
-	
+
 	static_assert(std::ranges::sized_range<array<integer>>);
-	static_assert(std::same_as<std::ranges::range_value_t<array<integer>>,
-				   integer>);
+	static_assert(std::same_as<std::ranges::range_value_t<array<integer>>, integer>);
 }
 
 TEST_CASE("ucl: array: constructor", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	SECTION("default") {
+	SECTION("default")
+	{
 		auto arr = array<integer>();
 		REQUIRE(arr.size() == 0);
 		REQUIRE(str(arr.type()) == "array");
 	}
 
-	SECTION("from range") {
+	SECTION("from range")
+	{
 		auto vec = std::vector{integer(1), integer(42)};
-		auto arr = array<integer>(std::from_range, vec);
+		auto arr = array<integer>(vec);
 
 		REQUIRE(arr.size() == 2);
 		REQUIRE(arr[0] == 1);
 		REQUIRE(arr[1] == 42);
 	}
 
-	SECTION("from iterator pair") {
+	SECTION("from iterator pair")
+	{
 		auto vec = std::vector{integer(1), integer(42)};
-		auto arr = array<integer>(std::ranges::begin(vec),
-					  std::ranges::end(vec));
+		auto arr = array<integer>(std::ranges::begin(vec), std::ranges::end(vec));
 
 		REQUIRE(arr.size() == 2);
 		REQUIRE(arr[0] == 1);
 		REQUIRE(arr[1] == 42);
 	}
 
-	SECTION("from initializer_list") {
+	SECTION("from initializer_list")
+	{
 		auto arr = array<integer>{integer(1), integer(42)};
 
 		REQUIRE(arr.size() == 2);
@@ -75,9 +71,10 @@ TEST_CASE("ucl: array: construct from UCL object", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	SECTION("ref, correct type") {
-		auto uarr = ::ucl_object_typed_new(UCL_ARRAY);
-		auto uint = ::ucl_object_fromint(42);
+	SECTION("ref, correct type")
+	{
+		auto *uarr = ::ucl_object_typed_new(UCL_ARRAY);
+		auto *uint = ::ucl_object_fromint(42);
 		::ucl_array_append(uarr, uint);
 
 		auto arr = array<integer>(ref, uarr);
@@ -86,34 +83,38 @@ TEST_CASE("ucl: array: construct from UCL object", "[ucl]")
 		::ucl_object_unref(uarr);
 	}
 
-	SECTION("noref, correct type") {
-		auto uarr = ::ucl_object_typed_new(UCL_ARRAY);
-		auto uint = ::ucl_object_fromint(42);
+	SECTION("noref, correct type")
+	{
+		auto *uarr = ::ucl_object_typed_new(UCL_ARRAY);
+		auto *uint = ::ucl_object_fromint(42);
 		::ucl_array_append(uarr, uint);
 
 		auto arr = array<integer>(noref, uarr);
 		REQUIRE(arr[0] == 42);
 	}
 
-	SECTION("ref, wrong element type") {
-		auto uarr = ::ucl_object_typed_new(UCL_ARRAY);
-		auto uint = ::ucl_object_frombool(true);
+	SECTION("ref, wrong element type")
+	{
+		auto *uarr = ::ucl_object_typed_new(UCL_ARRAY);
+		auto *uint = ::ucl_object_frombool(true);
 		::ucl_array_append(uarr, uint);
 
 		auto arr = array<integer>(noref, uarr);
 		REQUIRE_THROWS_AS(arr[0], type_mismatch);
 	}
 
-	SECTION("ref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+	SECTION("ref, wrong type")
+	{
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(array(ref, uobj), type_mismatch);
 
 		::ucl_object_unref(uobj);
 	}
 
-	SECTION("noref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+	SECTION("noref, wrong type")
+	{
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(array(noref, uobj), type_mismatch);
 
@@ -125,10 +126,8 @@ TEST_CASE("ucl: array: swap", "[ucl]")
 {
 	// do not add using namespace nihil::ucl
 
-	auto arr1 = nihil::ucl::array<nihil::ucl::integer>{
-		nihil::ucl::integer(1),
-		nihil::ucl::integer(2)
-	};
+	auto arr1 = nihil::ucl::array<nihil::ucl::integer>{nihil::ucl::integer(1),
+	                                                   nihil::ucl::integer(2)};
 
 	auto arr2 = nihil::ucl::array<nihil::ucl::integer>{
 		nihil::ucl::integer(3),
@@ -169,9 +168,7 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto arr = array<integer>{
-		integer(1), integer(42), integer(666)
-	};
+	auto arr = array<integer>{integer(1), integer(42), integer(666)};
 
 	auto arr2 = array<integer>();
 	REQUIRE(arr != arr2);
@@ -181,9 +178,7 @@ TEST_CASE("ucl: array: compare", "[ucl]")
 	arr2.push_back(integer(666));
 	REQUIRE(arr == arr2);
 
-	auto arr3 = array<integer>{
-		integer(1), integer(1), integer(1)
-	};
+	auto arr3 = array<integer>{integer(1), integer(1), integer(1)};
 
 	REQUIRE(arr != arr3);
 }
@@ -237,33 +232,33 @@ TEST_CASE("ucl: array: emit", "[ucl]")
 	auto ucl = parse("array = [1, 42, 666];").value();
 
 	auto output = std::format("{:c}", ucl);
-	REQUIRE(output == 
-"array [\n"
-"    1,\n"
-"    42,\n"
-"    666,\n"
-"]\n");
+	REQUIRE(output == "array [\n"
+	                  "    1,\n"
+	                  "    42,\n"
+	                  "    666,\n"
+	                  "]\n");
 }
 
 TEST_CASE("ucl: array: format", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	SECTION("empty array") {
+	SECTION("empty array")
+	{
 		auto arr = array<integer>();
 		REQUIRE(std::format("{}", arr) == "[]");
 	}
 
-	SECTION("bare array") {
-		auto arr = array<integer>{
-			integer(1), integer(42), integer(666)
-		};
+	SECTION("bare array")
+	{
+		auto arr = array<integer>{integer(1), integer(42), integer(666)};
 
 		auto output = std::format("{}", arr);
 		REQUIRE(output == "[1, 42, 666]");
 	}
 
-	SECTION("parsed array") {
+	SECTION("parsed array")
+	{
 		auto ucl = parse("array = [1, 42, 666];").value();
 		auto arr = object_cast<array<integer>>(ucl["array"]).value();
 
@@ -276,7 +271,8 @@ TEST_CASE("ucl: array: print to ostream", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	SECTION("empty array") {
+	SECTION("empty array")
+	{
 		auto arr = array<integer>();
 		auto strm = std::ostringstream();
 		strm << arr;
@@ -284,17 +280,17 @@ TEST_CASE("ucl: array: print to ostream", "[ucl]")
 		REQUIRE(strm.str() == "[]");
 	}
 
-	SECTION("bare array") {
-		auto arr = array<integer>{
-			integer(1), integer(42), integer(666)
-		};
+	SECTION("bare array")
+	{
+		auto arr = array<integer>{integer(1), integer(42), integer(666)};
 		auto strm = std::ostringstream();
 		strm << arr;
 
 		REQUIRE(strm.str() == "[1, 42, 666]");
 	}
 
-	SECTION("parsed array") {
+	SECTION("parsed array")
+	{
 		auto ucl = parse("array = [1, 42, 666];").value();
 		auto arr = object_cast<array<integer>>(ucl["array"]).value();
 		auto strm = std::ostringstream();
@@ -325,12 +321,10 @@ TEST_CASE("ucl: array is a sized_range", "[ucl]")
 	std::ranges::copy(arr, std::back_inserter(vec));
 	REQUIRE(std::ranges::equal(arr, vec));
 
-	auto arr_as_ints =
-		arr | std::views::transform(&integer::value);
+	auto arr_as_ints = arr | std::views::transform(&integer::value);
 	auto int_vec = std::vector<integer::contained_type>();
 	std::ranges::copy(arr_as_ints, std::back_inserter(int_vec));
 	REQUIRE(int_vec == std::vector<std::int64_t>{1, 42, 666});
-
 }
 
 TEST_CASE("ucl: array: bad object_cast", "[ucl]")
@@ -435,16 +429,18 @@ TEST_CASE("array iterator: invalid operations", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto arr = array<integer>{ integer(42) };
+	auto arr = array<integer>{integer(42)};
 	auto it = arr.begin();
 
-	SECTION("decrement before start") {
+	SECTION("decrement before start")
+	{
 		REQUIRE_THROWS_AS(--it, std::logic_error);
 		REQUIRE_THROWS_AS(it--, std::logic_error);
 		REQUIRE_THROWS_AS(it - 1, std::logic_error);
 	}
 
-	SECTION("increment past end") {
+	SECTION("increment past end")
+	{
 		++it;
 		REQUIRE(it == arr.end());
 
@@ -453,7 +449,8 @@ TEST_CASE("array iterator: invalid operations", "[ucl]")
 		REQUIRE_THROWS_AS(it + 1, std::logic_error);
 	}
 
-	SECTION("dereference iterator at end") {
+	SECTION("dereference iterator at end")
+	{
 		REQUIRE_THROWS_AS(it[1], std::logic_error);
 
 		++it;
@@ -462,17 +459,21 @@ TEST_CASE("array iterator: invalid operations", "[ucl]")
 		REQUIRE_THROWS_AS(*it, std::logic_error);
 	}
 
-	SECTION("compare with different array") {
-		auto arr2 = array<integer>{ integer(42) };
+	SECTION("compare with different array")
+	{
+		auto arr2 = array<integer>{integer(42)};
 		REQUIRE_THROWS_AS(it == arr2.begin(), std::logic_error);
 		REQUIRE_THROWS_AS(it > arr2.begin(), std::logic_error);
 		REQUIRE_THROWS_AS(it - arr2.begin(), std::logic_error);
 	}
 
-	SECTION("compare with empty iterator") {
+	SECTION("compare with empty iterator")
+	{
 		auto it2 = array_iterator<integer>();
 		REQUIRE_THROWS_AS(it == it2, std::logic_error);
 		REQUIRE_THROWS_AS(it > it2, std::logic_error);
 		REQUIRE_THROWS_AS(it - it2, std::logic_error);
 	}
 }
+
+} // anonymous namespace

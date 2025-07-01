@@ -1,6 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.match STATIC)
+target_link_libraries(nihil.match PRIVATE nihil.std)
 target_sources(nihil.match
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	match.ccm

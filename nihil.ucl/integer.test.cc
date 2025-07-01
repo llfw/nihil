@@ -1,16 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <concepts>
-#include <cstdint>
-#include <string>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
+import nihil.std;
 import nihil.ucl;
 
+namespace {
 TEST_CASE("ucl: integer: invariants", "[ucl]")
 {
 	using namespace nihil::ucl;
@@ -67,7 +63,7 @@ TEST_CASE("ucl: integer: construct from UCL object", "[ucl]")
 	using namespace nihil::ucl;
 
 	SECTION("ref, correct type") {
-		auto uobj = ::ucl_object_fromint(42);
+		auto *uobj = ::ucl_object_fromint(42);
 
 		auto i = integer(ref, uobj);
 		REQUIRE(i == 42);
@@ -76,14 +72,14 @@ TEST_CASE("ucl: integer: construct from UCL object", "[ucl]")
 	}
 
 	SECTION("noref, correct type") {
-		auto uobj = ::ucl_object_fromint(42);
+		auto *uobj = ::ucl_object_fromint(42);
 
 		auto i = integer(noref, uobj);
 		REQUIRE(i == 42);
 	}
 
 	SECTION("ref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(integer(ref, uobj), type_mismatch);
 
@@ -91,7 +87,7 @@ TEST_CASE("ucl: integer: construct from UCL object", "[ucl]")
 	}
 
 	SECTION("noref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(integer(noref, uobj), type_mismatch);
 
@@ -147,7 +143,7 @@ TEST_CASE("ucl: integer: key()", "[ucl]")
 
 	SECTION("bare integer, no key") {
 		auto i = 42_ucl;
-		REQUIRE(i.key() == "");
+		REQUIRE(i.key().empty() == true);
 	}
 }
 
@@ -245,3 +241,4 @@ TEST_CASE("ucl: integer: print to ostream", "[ucl]")
 		REQUIRE(strm.str() == "42");
 	}
 }
+} // anonymous namespace

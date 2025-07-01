@@ -1,32 +1,22 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <expected>
-#include <iosfwd>
-#include <string>
-
+// This source code is released into the public domain.
 export module nihil.config:option;
 
+import nihil.std;
 import nihil.error;
 import nihil.ucl;
 
 namespace nihil::config {
 
-/*
- * Base class for options; this is what config_store interacts with.
- *
- * Base classes should override the four protected functions:
- *
- * 	get_string()
- * 	set_string()
- * 	get_ucl()
- * 	set_ucl()
- *
- * Overriding any other members is not permitted.
- */
+// Base class for options; this is what config_store interacts with.
+//
+// Base classes should override the four protected functions:
+//
+// 	get_string()
+// 	set_string()
+// 	get_ucl()
+// 	set_ucl()
+//
+// Overriding any other members is not permitted.
 
 export struct option
 {
@@ -69,6 +59,9 @@ export struct option
 	// Not copyable or movable.
 	option(option const &) = delete;
 	auto operator=(option const &) -> option& = delete;
+
+	option(option &&) = delete;
+	auto operator=(option &&) -> option& = delete;
 
 protected:
 	option(std::string_view name, std::string_view description);

@@ -1,21 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <coroutine>
-#include <expected>
-#include <format>
-#include <functional>
-#include <memory>
-#include <string>
-#include <vector>
 
 #include <ucl.h>
 
 export module nihil.ucl:parser;
 
+import nihil.std;
 import nihil.monad;
 import :object;
 import :map;
@@ -28,79 +18,98 @@ export inline constexpr int parser_zerocopy = UCL_PARSER_ZEROCOPY;
 export inline constexpr int parser_no_time = UCL_PARSER_NO_TIME;
 
 // A macro handler.  This proxies the C API callback to the C++ API.
-using macro_callback_t = bool (std::string_view);
+using macro_callback_t = bool(std::string_view);
 
-struct macro_handler {
+struct macro_handler
+{
 	std::function<macro_callback_t> callback;
 
 	// Handle a callback from the C API.
-	static auto handle(
-		unsigned char const *data,
-		std::size_t len, void
-		*ud)
-	-> bool;
+	static auto handle(unsigned char const *data, std::size_t len, void *ud) -> bool
+	{
+		auto handler = static_cast<macro_handler *>(ud);
+		auto string = std::string_view(reinterpret_cast<char const *>(data), len);
+		return handler->callback(string);
+	}
 };
 
-/*
- * A UCL parser.  This wraps the C ucl_parser API.
- *
- * parser itself is not exported; use make_parser() to create one.
- */
-struct parser {
+// A UCL parser.  This wraps the C ucl_parser API.
+//
+// parser itself is not exported; use make_parser() to create one.
+struct parser
+{
 	// Create a parser from a UCL parser.
-	parser(::ucl_parser *);
+	explicit parser(::ucl_parser *uclp)
+		: m_parser(uclp)
+	{
+	}
 
 	// Destroy our parser when we're destroyed.
-	~parser();
+	~parser()
+	{
+		if (m_parser != nullptr)
+			::ucl_parser_free(m_parser);
+	}
 
 	// Not copyable.
 	parser(parser const &) = delete;
 	auto operator=(this parser &, parser const &) -> parser & = delete;
 
 	// Movable.
-	parser(parser &&) noexcept;
-	auto operator=(this parser &, parser &&) noexcept -> parser &;
+	parser(parser &&other) noexcept
+		: m_parser(std::exchange(other.m_parser, nullptr))
+		, m_macros(std::move(other.m_macros))
+	{
+	}
+
+	auto operator=(this parser &self, parser &&other) noexcept -> parser &
+	{
+		if (&self != &other) {
+			if (self.m_parser != nullptr)
+				::ucl_parser_free(self.m_parser);
+
+			self.m_parser = std::exchange(other.m_parser, nullptr);
+			self.m_macros = std::move(other.m_macros);
+		}
+
+		return self; // NOLINT
+	}
 
 	// Add a parser macro.  Unlike ucl_parser_register_macro, this doesn't
 	// take a userdata parameter; it's assumed the user will use lambda
 	// capture or similar if needed.
-	template<std::invocable<std::string_view> F>
-	auto register_macro(this parser &self,
-			    std::string_view name,
-			    F &&func)
-		-> void
-	requires (std::same_as<bool, std::invoke_result<F>>)
+
+	template <std::invocable<std::string_view> F>
+	auto register_macro(this parser &self, std::string_view name, F &&func) -> void
+	requires(std::same_as<bool, std::invoke_result<F>>)
 	{
-		auto handler = std::make_unique<macro_handler>(
-					std::forward<F>(func));
+		auto handler = std::make_unique<macro_handler>(std::forward<F>(func));
 
 		auto cname = std::string(name);
-		::ucl_parser_register_macro(
-			self.get_parser(), cname.c_str(),
-			&macro_handler::handle, handler.get());
+		::ucl_parser_register_macro(self.get_parser(), cname.c_str(),
+		                            &macro_handler::handle, handler.get());
 
 		self.m_macros.emplace_back(std::move(handler));
 	}
 
 	// Add a parser variable.
-	auto register_value(this parser &self,
-			    std::string_view variable,
-			    std::string_view value)
-		-> void;
+	auto
+	register_value(this parser &self, std::string_view variable, std::string_view value) -> void
+	{
+		::ucl_parser_register_variable(self.get_parser(), std::string(variable).c_str(),
+		                               std::string(value).c_str());
+	}
 
 	// Add data to the parser.
-	[[nodiscard]] auto add(this parser &self,
-			       std::ranges::contiguous_range auto &&data)
+	[[nodiscard]] auto add(this parser &self, std::ranges::contiguous_range auto &&data)
 		-> std::expected<void, error>
-	// Only bytes (chars) are permitted.
+		// Only bytes (chars) are permitted.
 	requires(sizeof(std::ranges::range_value_t<decltype(data)>) == 1)
 	{
 		auto *p = self.get_parser();
-		auto dptr = reinterpret_cast<unsigned char const *>(
-					std::ranges::data(data));
+		auto  dptr = reinterpret_cast<unsigned char const *>(std::ranges::data(data));
 
-		auto ret = ::ucl_parser_add_chunk(
-			p, dptr, std::ranges::size(data));
+		auto ret = ::ucl_parser_add_chunk(p, dptr, std::ranges::size(data));
 
 		if (ret == true)
 			return {};
@@ -108,23 +117,34 @@ struct parser {
 		return std::unexpected(error(::ucl_parser_get_error(p)));
 	}
 
-	[[nodiscard]] auto add(this parser &self,
-			       std::ranges::range auto &&data)
-		-> std::expected<void, error>
-	requires (!std::ranges::contiguous_range<decltype(data)>)
+	[[nodiscard]] auto
+	add(this parser &self, std::ranges::range auto &&data) -> std::expected<void, error>
+	requires(!std::ranges::contiguous_range<decltype(data)>)
 	{
-		auto cdata = std::vector<char>(
-				std::from_range,
-				std::forward<decltype(data)>(data));
+		auto cdata = std::vector<char>(std::from_range, std::forward<decltype(data)>(data));
 		co_await self.add(std::move(cdata));
 		co_return {};
 	}
 
 	// Return the top object of this parser.
-	[[nodiscard]] auto top(this parser &self) -> map<object>;
+	[[nodiscard]] auto top(this parser &self) -> map<object>
+	{
+		auto *obj = ::ucl_parser_get_object(self.get_parser());
+		if (obj != nullptr)
+			// ucl_parser_get_object() refs the object for us.
+			return {noref, obj};
+
+		throw std::logic_error("attempt to call top() on an invalid ucl::parser");
+	}
 
 	// Return the stored parser object.
-	[[nodiscard]] auto get_parser(this parser &self) -> ::ucl_parser *;
+	[[nodiscard]] auto get_parser(this parser &self) -> ::ucl_parser *
+	{
+		if (self.m_parser == nullptr)
+			throw std::logic_error("attempt to fetch a null ucl::parser");
+
+		return self.m_parser;
+	}
 
 private:
 	// The parser object.  Should never be null, unless we've been
@@ -137,22 +157,26 @@ private:
 };
 
 // Create a parser with the given flags.
-export [[nodiscard]] auto
-make_parser(int flags = 0) -> std::expected<parser, error>;
+export [[nodiscard]] auto make_parser(int flags = 0) -> std::expected<parser, error>
+{
+	auto *p = ::ucl_parser_new(flags);
+	if (p != nullptr)
+		return {parser(p)};
+
+	// TODO: Is there a way to get the actual error here?
+	return std::unexpected(error("failed to create parser"));
+}
 
 // Utility function to parse something and return the top-level object.
 export [[nodiscard]] auto
-parse(int flags, std::ranges::range auto &&data)
-	-> std::expected<map<object>, error> 
+parse(int flags, std::ranges::range auto &&data) -> std::expected<map<object>, error>
 {
 	auto p = co_await make_parser(flags);
 	co_await p.add(std::forward<decltype(data)>(data));
 	co_return p.top();
 }
 
-export [[nodiscard]] auto
-parse(std::ranges::range auto &&data)
-	-> std::expected<map<object>, error> 
+export [[nodiscard]] auto parse(std::ranges::range auto &&data) -> std::expected<map<object>, error>
 {
 	co_return co_await parse(0, std::forward<decltype(data)>(data));
 }

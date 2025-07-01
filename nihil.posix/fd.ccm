@@ -1,23 +1,22 @@
 // This source code is released into the public domain.
 module;
 
-#include <coroutine>
-#include <expected>
-#include <ranges>
-#include <span>
-#include <stdexcept>
-#include <system_error>
-
 #include <fcntl.h>
 #include <unistd.h>
 
 export module nihil.posix:fd;
 
+import nihil.std;
 import nihil.flagset;
 import nihil.error;
 import nihil.monad;
 
 namespace nihil {
+
+// Useful constants
+export inline int constexpr stdin_fileno = STDIN_FILENO;
+export inline int constexpr stdout_fileno = STDOUT_FILENO;
+export inline int constexpr stderr_fileno = STDERR_FILENO;
 
 // F_{GET,SET}FL flags
 struct fd_flags_tag
@@ -96,7 +95,7 @@ export struct fd final
 		if (ret == 0)
 			return {};
 
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	}
 
 	// Return the stored fd.
@@ -124,7 +123,7 @@ export struct fd final
 		if (ret >= 0)
 			return ret;
 
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	}
 
 	// Read data from the fd to the provided buffer.  Returns a
@@ -136,7 +135,7 @@ export struct fd final
 		if (ret >= 0)
 			return buffer.subspan(0, ret);
 
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	}
 
 private:
@@ -152,7 +151,7 @@ export [[nodiscard]] auto dup(fd const &self) -> std::expected<fd, error>
 	if (newfd != -1)
 		return fd(newfd);
 
-	return std::unexpected(error(std::errc(errno)));
+	return std::unexpected(error(sys_error()));
 }
 
 // Create a copy of this fd by calling dup2().  Note that because this results
@@ -170,7 +169,7 @@ export [[nodiscard]] auto dup(fd const &self, int newfd) -> std::expected<fd, er
 	if (ret != -1)
 		return fd(newfd);
 
-	return std::unexpected(error(std::errc(errno)));
+	return std::unexpected(error(sys_error()));
 }
 
 // Create a copy of this fd by calling dup().
@@ -180,7 +179,7 @@ export [[nodiscard]] auto raw_dup(fd const &self) -> std::expected<int, error>
 	if (newfd != -1)
 		return newfd;
 
-	return std::unexpected(error(std::errc(errno)));
+	return std::unexpected(error(sys_error()));
 }
 
 // Create a copy of this fd by calling dup2().
@@ -190,7 +189,7 @@ export [[nodiscard]] auto raw_dup(fd const &self, int newfd) -> std::expected<in
 	if (ret != -1)
 		return newfd;
 
-	return std::unexpected(error(std::errc(errno)));
+	return std::unexpected(error(sys_error()));
 }
 
 // Call fcntl() on this fd.  Prefer one of the type-safe wrappers to this, if available.
@@ -199,7 +198,7 @@ export [[nodiscard]] auto fcntl(fd const &fd, int op, int arg = 0)
 {
 	auto const ret = ::fcntl(fd.get(), op, arg);
 	if (ret == -1)
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	return ret;
 }
 
@@ -277,7 +276,7 @@ export [[nodiscard]] auto pipe() -> std::expected<std::pair<fd, fd>, error>
 	auto fds = std::array<int, 2>{};
 
 	if (auto const ret = ::pipe(fds.data()); ret != 0)
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 
 	return {{fd(fds[0]), fd(fds[1])}};
 }

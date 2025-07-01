@@ -1,88 +1,172 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
-/*
- * A UCL object.  The object is immutable and internally refcounted, so it
- * may be copied as needed.
- *
- */
-
-#include <compare>
-#include <cstddef>
-#include <string>
+// A UCL object.  The object is immutable and internally refcounted, so it
+// may be copied as needed.
 
 #include <ucl.h>
 
 export module nihil.ucl:object;
 
+import nihil.std;
 import :type;
 
 namespace nihil::ucl {
 
-/***********************************************************************
- * The basic object type.
- */
+//***********************************************************************
+// The basic object type.
 
 // Ref the UCL object when creating an object.
-export inline constexpr struct ref_t {} ref;
-// Don't ref the UCL object.
-export inline constexpr struct noref_t {} noref;
+export inline constexpr struct ref_t
+{
+} ref;
 
-export struct object {
-	inline static constexpr object_type ucl_type = object_type::object;
+// Don't ref the UCL object.
+export inline constexpr struct noref_t
+{
+} noref;
+
+export struct object
+{
+	static constexpr object_type ucl_type = object_type::object;
 
 	// Create an object from an existing ucl_object_t.  The first argument
 	// determines whether we ref the object or not.
 
-	object(ref_t, ::ucl_object_t const *object);
-	object(noref_t, ::ucl_object_t *object);
+	object(ref_t, ::ucl_object_t const *object)
+		: m_object(::ucl_object_ref(object))
+	{
+	}
+
+	object(noref_t, ::ucl_object_t *object)
+		: m_object(object)
+	{
+	}
 
 	// Free our object on destruction.
-	virtual ~object();
+	virtual ~object()
+	{
+		if (m_object != nullptr)
+			::ucl_object_unref(m_object);
+	}
 
 	// Movable.
-	object(object &&other) noexcept;
-	auto operator=(this object &self, object &&other) noexcept -> object&;
+	object(object &&other) noexcept
+		: m_object(std::exchange(other.m_object, nullptr))
+	{
+	}
 
-	// Copyable.
-	// Note that this copies the entire UCL object.
-	object(object const &other);
-	auto operator=(this object &self, object const &other) -> object &;
+	auto operator=(this object &self, object &&other) noexcept -> object &
+	{
+		if (&self != &other)
+			self.m_object = std::exchange(other.m_object, nullptr);
+		return self; // NOLINT
+	}
+
+	// Copyable.  Note that this copies the entire UCL object.
+
+	object(object const &other)
+		: m_object([&] {
+			auto *uobj = ::ucl_object_copy(other.get_ucl_object());
+			if (uobj == nullptr)
+				throw std::runtime_error("failed to copy UCL object");
+			return uobj;
+		}())
+	{
+	}
+
+	auto operator=(this object &self, object const &other) -> object &
+	{
+		if (&self != &other)
+			self = object(other);
+		return self; // NOLINT
+	}
 
 	// Increase the refcount of this object.
-	[[nodiscard]] auto ref(this object const &self) -> object;
+	[[nodiscard]] auto ref(this object const &self) -> object
+	{
+		return {nihil::ucl::ref, self.get_ucl_object()};
+	}
 
 	// Return the type of this object.
-	[[nodiscard]] auto type(this object const &self) -> object_type;
+	[[nodiscard]] auto type(this object const &self) -> object_type
+	{
+		auto utype = ::ucl_object_type(self.get_ucl_object());
+		return static_cast<object_type>(utype);
+	}
 
 	// Return the underlying object.
-	[[nodiscard]] auto get_ucl_object(this object &self)
-		-> ::ucl_object_t *;
+	[[nodiscard]] auto get_ucl_object(this object &self) -> ::ucl_object_t *
+	{
+		if (self.m_object == nullptr)
+			throw std::logic_error("attempt to access empty UCL object");
+		return self.m_object;
+	}
 
-	[[nodiscard]] auto get_ucl_object(this object const &self)
-		-> ::ucl_object_t const *;
+	[[nodiscard]] auto get_ucl_object(this object const &self) -> ::ucl_object_t const *
+	{
+		if (self.m_object == nullptr)
+			throw std::logic_error("attempt to access empty UCL object");
+		return self.m_object;
+	}
 
 	// Return the key of this object.
-	[[nodiscard]] auto key(this object const &self) -> std::string_view;
+	[[nodiscard]] auto key(this object const &self) -> std::string_view
+	{
+		auto        dlen = std::size_t{};
+		auto const *dptr = ::ucl_object_keyl(self.get_ucl_object(), &dlen);
+		return {dptr, dlen};
+	}
 
 protected:
+	friend auto swap(object &a, object &b) noexcept -> void
+	{
+		std::swap(a.m_object, b.m_object);
+	}
+
+	// Helper to validate the type of a UCL object.  Throws type_mismatch if the
+	// type doesn't match, or else returns the pointer.
+	[[nodiscard]] static auto ensure_ucl_type(::ucl_object_t const *uobj, object_type type)
+		-> ::ucl_object_t const *
+	{
+		if (static_cast<object_type>(::ucl_object_type(uobj)) != type)
+			throw type_mismatch(type, static_cast<object_type>(::ucl_object_type(uobj)));
+		return uobj;
+	}
+
+	[[nodiscard]] static auto ensure_ucl_type(::ucl_object_t *uobj, object_type type)
+		-> ::ucl_object_t *
+	{
+		if (static_cast<object_type>(::ucl_object_type(uobj)) != type)
+			throw type_mismatch(type, static_cast<object_type>(::ucl_object_type(uobj)));
+		return uobj;
+	}
+
+private:
 	// The object we're wrapping.
 	::ucl_object_t *m_object = nullptr;
 
-	friend auto swap(object &a, object &b) -> void;
+	//
+	// Object comparison.
+	//
+
+	[[nodiscard]] friend auto
+	operator<=>(object const &lhs, object const &rhs) -> std::strong_ordering
+	{
+		auto cmp = ::ucl_object_compare(lhs.get_ucl_object(), rhs.get_ucl_object());
+
+		if (cmp < 0)
+			return std::strong_ordering::less;
+		else if (cmp > 0)
+			return std::strong_ordering::greater;
+		else
+			return std::strong_ordering::equal;
+	}
+
+	[[nodiscard]] friend auto operator==(object const &lhs, object const &rhs) -> bool
+	{
+		return (lhs <=> rhs) == std::strong_ordering::equal;
+	}
 };
-
-/***********************************************************************
- * Object comparison.
- */
-
-export [[nodiscard]] auto operator==(object const &lhs, object const &rhs)
-	-> bool;
-
-export [[nodiscard]] auto operator<=>(object const &lhs, object const &rhs)
-	-> std::strong_ordering;
 
 } // namespace nihil::ucl

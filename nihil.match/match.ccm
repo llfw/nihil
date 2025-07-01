@@ -1,12 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <variant>
-
+// This source code is released into the public domain.
 export module nihil.match;
+
+import nihil.std;
 
 namespace nihil {
 

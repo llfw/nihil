@@ -3,13 +3,12 @@ module;
 
 // Basic wrappers around stat() and fstat().
 
-#include <expected>
-#include <filesystem>
-
 #include <sys/stat.h>
 
 export module nihil.posix:stat;
 
+import nihil.std;
+import nihil.util;
 import :fd;
 
 namespace nihil {
@@ -17,19 +16,23 @@ namespace nihil {
 export [[nodiscard]] auto
 stat(std::filesystem::path const &path) -> std::expected<struct ::stat, error>
 {
+	auto guard = save_errno();
+
 	struct ::stat sb{};
 	auto ret = ::stat(path.string().c_str(), &sb);
 	if (ret == -1)
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	return sb;
 }
 
 export [[nodiscard]] auto stat(fd const &fd) -> std::expected<struct ::stat, error>
 {
+	auto guard = save_errno();
+
 	struct ::stat sb{};
 	auto ret = ::fstat(fd.get(), &sb);
 	if (ret == -1)
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	return sb;
 }
 

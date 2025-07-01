@@ -11,12 +11,9 @@
 // (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
 ///////////////////////////////////////////////////////////////////////////////
 
-module;
-
-#include <memory>
-#include <type_traits>
-
 export module nihil.generator:byte_allocator;
+
+import nihil.std;
 
 namespace nihil {
 

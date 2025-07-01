@@ -1,13 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <string>
-#include <system_error>
-
+// This source code is released into the public domain.
 module nihil.core;
+
+import nihil.std;
 
 namespace nihil {
 
@@ -43,6 +37,10 @@ auto nihil_error_category::message(int err) const -> std::string
 		return "Empty string is not permitted";
 	case errc::invalid_unit:
 		return "Invalid unit specifier";
+	case errc::failed_to_create_object:
+		return "Failed to create UCL object";
+	case errc::type_mismatch:
+		return "UCL type does not match expected type";
 	default:
 		return "Undefined error";
 	}

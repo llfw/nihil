@@ -1,0 +1,18 @@
+// This source code is released into the public domain.
+module;
+
+#include <cerrno>
+
+export module nihil.error:sys_error;
+
+import nihil.std;
+
+namespace nihil {
+
+// Allow access to errno without having to include <cerrno>.
+export [[nodiscard]] auto sys_error() -> std::errc
+{
+	return static_cast<std::errc>(errno);
+}
+
+} // namespace nihil

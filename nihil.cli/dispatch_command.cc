@@ -1,22 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
-#include <cstdio>
-#include <functional>
-#include <iostream>
-#include <map>
-#include <print>
-#include <ranges>
-#include <string>
-#include <utility>
-
-#include <unistd.h>
+#include <stdlib.h> // getprogname, NOLINT
+#include <unistd.h> // getopt
 
 module nihil.cli;
 
+import nihil.std;
 import nihil.core;
 
 namespace nihil {
@@ -45,7 +35,7 @@ auto dispatch_command(int argc, char **argv) -> int
 	 * Set the program name to the existing progname plus the full path
 	 * to the command being invoked; this makes error messages nicer.
 	 */
-	auto *old_progname = ::getprogname();
+	auto const *old_progname = ::getprogname();
 
 	{
 		auto cprogname = std::format("{} {}", ::getprogname(),

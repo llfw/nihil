@@ -1,13 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <iterator>
-#include <string>
-#include <vector>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.util;
 
 using namespace std::literals;

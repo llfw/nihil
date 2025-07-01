@@ -1,10 +1,7 @@
 // This source code is released into the public domain.
-module;
-
-#include <string>
-
 export module nihil.posix:execshell;
 
+import nihil.std;
 import nihil.error;
 import :execv;
 import :execl;

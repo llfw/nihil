@@ -1,0 +1,28 @@
+// This source code is released into the public domain.
+module;
+
+#include <unistd.h>
+
+export module nihil.posix:unlink;
+
+// unlink: simple wrapper around ::unlink()
+
+import nihil.std;
+import nihil.error;
+import nihil.util;
+
+namespace nihil {
+
+export [[nodiscard]] auto unlink(std::filesystem::path const &path)
+	-> std::expected<void, error>
+{
+	auto guard = save_errno();
+
+	auto const ret = ::unlink(path.string().c_str());
+	if (ret == 0)
+		return {};
+
+	return std::unexpected(error(sys_error()));
+}
+
+} // namespace nihil

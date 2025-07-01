@@ -1,10 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.util;
+
+namespace {
 
 TEST_CASE("ctype: space", "[ctype]") {
 	auto is_utf8_space =
@@ -371,3 +372,5 @@ TEST_CASE("ctype: graph", "[ctype]") {
 	REQUIRE(nihil::is_c_graph(L'\u0430') == false);
 	REQUIRE(is_utf8_graph(L'\u0430') == true);
 }
+
+} // anonymous namespace

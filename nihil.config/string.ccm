@@ -1,55 +1,68 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <expected>
-#include <format>
-#include <string>
-
+// This source code is released into the public domain.
 export module nihil.config:string;
 
+import nihil.std;
+import nihil.monad;
 import nihil.ucl;
 import :option;
 
 namespace nihil::config {
 
-/*
- * A string option.  The backing type is std::string.
- */
+// A string option.  The backing type is std::string.
 export struct string final : option
 {
-	string(std::string &storage,
-	       std::string_view name,
-	       std::string_view description) noexcept;
+	string(std::string &storage, std::string_view const name,
+	       std::string_view const description) noexcept
+		: option(name, description)
+		, m_storage(storage)
+	{
+	}
 
-	~string();
+	~string() override = default;
 
-	/*
-	 * Get this option as a string; simply returns the storage.
-	 */
-	[[nodiscard]] auto get_string() const -> std::string override;
+	// Not copyable.
+	string(string const &) = delete;
+	auto operator=(string const &) -> string & = delete;
 
-	/*
-	 * Set this option to a string value; assigns to the storage.
-	 */
-	[[nodiscard]] auto set_string(std::string_view new_value)
-		-> std::expected<void, error> override;
-
-	/*
-	 * Convert this option to a UCL object.
-	 */
-	[[nodiscard]] auto get_ucl() const
-		-> std::expected<ucl::object, error> override;
-
-	/*
-	 * Set this option from a UCL object.
-	 */
-	[[nodiscard]] auto set_ucl(ucl::object const &uclobj)
-		-> std::expected<void, error> override;
+	// Not movable.
+	string(string &&) = delete;
+	auto operator=(string &&) -> string & = delete;
 
 private:
+	// Get this option as a string; simply returns the storage.
+	[[nodiscard]] auto get_string() const -> std::string override
+	{
+		return m_storage;
+	}
+
+	// Set this option to a string value; assigns to the storage.
+	[[nodiscard]] auto
+	set_string(std::string_view const new_value) -> std::expected<void, error> override
+	{
+		m_storage = new_value;
+		return {};
+	}
+
+	// Convert this option to a UCL object.
+	[[nodiscard]] auto get_ucl() const -> std::expected<ucl::object, error> override
+	{
+		return ucl::make_string(m_storage);
+	}
+
+	// Set this option from a UCL object.
+	[[nodiscard]] auto set_ucl(ucl::object const &uclobj) -> std::expected<void, error> override
+	{
+		auto obj = co_await object_cast<ucl::string>(uclobj).transform_error(
+			[&](ucl::type_mismatch const &m) {
+				return error(std::format("'{}': expected string, not {}", name(),
+			                                 str(m.actual_type())));
+			});
+
+		m_storage = obj.value();
+		is_default(false);
+		co_return {};
+	}
+
 	std::string &m_storage;
 };
 

@@ -1,16 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <coroutine>
-#include <expected>
-#include <iostream>
-#include <string>
-
+// This source code is released into the public domain.
 module nihil.config;
 
+import nihil.std;
 import nihil.error;
 import nihil.monad;
 import nihil.ucl;
@@ -18,7 +9,7 @@ import nihil.ucl;
 namespace nihil::config {
 
 //NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-option::option(std::string_view name, std::string_view description)
+option::option(std::string_view const name, std::string_view const description)
 	: m_name(name)
 	, m_description(description)
 {
@@ -26,16 +17,15 @@ option::option(std::string_view name, std::string_view description)
 	if (okay)
 		return;
 
-	std::print(std::cerr,
+	std::println(std::cerr,
 		   "INTERNAL ERROR: failed to register "
 		   "configuration option '{}': {}",
 		   m_name, okay.error());
-	std::exit(1);
+	std::exit(1); // NOLINT
 }
 
 option::~option()
 {
-	std::ignore = store::get().unregister_option(this);
 }
 
 auto option::name(this option const &self) noexcept

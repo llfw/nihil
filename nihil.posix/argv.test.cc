@@ -1,14 +1,8 @@
-/*
- * This source code is released into the public domain
- */
-
-#include <algorithm>
-#include <string>
-#include <type_traits>
-#include <vector>
+// This source code is released into the public domain
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.posix;
 
 namespace {

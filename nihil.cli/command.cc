@@ -1,14 +1,5 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <expected>
-#include <functional>
-#include <iostream>
-#include <print>
-#include <string>
 
 // For EX_USAGE.  While <sysexits.h> is deprecated, there's no other standard
 // exit code for 'usage error'; some programs use 2 (common on Linux), but
@@ -17,6 +8,7 @@ module;
 
 module nihil.cli;
 
+import nihil.std;
 import nihil.error;
 import :registry;
 

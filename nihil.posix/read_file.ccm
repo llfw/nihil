@@ -1,20 +1,4 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <algorithm>
-#include <expected>
-#include <filesystem>
-#include <iterator>
-#include <ranges>
-#include <span>
-#include <system_error>
-
-#include <fcntl.h>
-#include <unistd.h>
-
+// This source code is released into the public domain.
 export module nihil.posix:read_file;
 
 import nihil.error;
@@ -24,12 +8,9 @@ import :open;
 
 namespace nihil {
 
-/*
- * Read the contents of a file into an output iterator. 
- */
+// Read the contents of a file into an output iterator.
 export [[nodiscard]] auto
-read_file(std::filesystem::path const &filename,
-	  std::output_iterator<char> auto &&iter)
+read_file(std::filesystem::path const &filename, std::output_iterator<char> auto &&iter)
 	-> std::expected<void, error>
 {
 	auto file = co_await open(filename, open_read);
@@ -38,7 +19,7 @@ read_file(std::filesystem::path const &filename,
 	auto buffer = std::array<char, bufsize>{};
 
 	for (;;) {
-		auto read_buf = co_await(read(file, buffer));
+		auto read_buf = co_await (read(file, buffer));
 		if (read_buf.empty())
 			co_return {};
 

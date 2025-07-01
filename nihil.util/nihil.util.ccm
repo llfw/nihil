@@ -1,14 +1,10 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
+// This source code is released into the public domain.
 export module nihil.util;
 
 export import :capture_stream;
 export import :ctype;
 export import :parse_size;
 export import :next_word;
+export import :save_errno;
 export import :skipws;
 export import :tabulate;

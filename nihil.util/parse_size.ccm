@@ -1,20 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <algorithm>
-#include <coroutine>
-#include <cstdint>
-#include <expected>
-#include <ranges>
-#include <string>
-#include <system_error>
-#include <utility>
-
+// This source code is released into the public domain.
 export module nihil.util:parse_size;
 
+import nihil.std;
 import nihil.core;
 import nihil.error;
 import nihil.monad;
@@ -23,53 +10,50 @@ import :ctype;
 
 namespace nihil {
 
-template<typename Char>
+export template <typename Char>
 auto get_multiplier(Char c) -> std::expected<std::uint64_t, error>
 {
 	auto ret = std::uint64_t{1};
 
+	// clang-format off
 	switch (c) {
-	case 'p': case 'P': ret *= 1024;	//NOLINT
-	case 't': case 'T': ret *= 1024;	//NOLINT
-	case 'g': case 'G': ret *= 1024;	//NOLINT
-	case 'm': case 'M': ret *= 1024;	//NOLINT
-	case 'k': case 'K': ret *= 1024;	//NOLINT
+	case 'p': case 'P': ret *= 1024;	// NOLINT
+	case 't': case 'T': ret *= 1024;	// NOLINT
+	case 'g': case 'G': ret *= 1024;	// NOLINT
+	case 'm': case 'M': ret *= 1024;	// NOLINT
+	case 'k': case 'K': ret *= 1024;	// NOLINT
 		return ret;
 
 	default:
-		return std::unexpected(error(errc::invalid_unit));
+		return error(errc::invalid_unit);
 	}
+	// clang-format on
 }
 
-/*
- * Parse a string containing a human-formatted size, such as "1024"
- * or "4g".  Parsing is always done in the "C" locale and does not
- * recognise thousands separators or negative numbers.
- */
-export template<typename T, typename Char> [[nodiscard]]
-auto parse_size(std::basic_string_view<Char> str)
-	-> std::expected<T, error>
+// Parse a string containing a human-formatted size, such as "1024"
+// or "4g".  Parsing is always done in the "C" locale and does not
+// recognise thousands separators or negative numbers.
+export template <typename T, typename Char>
+[[nodiscard]]
+auto parse_size(std::basic_string_view<Char> str) -> std::expected<T, error>
 {
 	// Extract the numeric part of the string.
 	auto it = std::ranges::find_if_not(str, is_c_digit);
-	auto num_str = std::basic_string_view<Char>(
-				std::ranges::begin(str), it);
+	auto num_str = std::basic_string_view<Char>(std::ranges::begin(str), it);
 
 	if (num_str.empty())
-		co_return std::unexpected(error(errc::empty_string));
+		co_return error(errc::empty_string);
 
 	auto ret = T{0};
 
 	for (auto c : num_str) {
 		if (ret > (std::numeric_limits<T>::max() / 10))
-			co_return std::unexpected(error(
-					std::errc::result_out_of_range));
+			co_return error(std::errc::result_out_of_range);
 		ret *= 10;
 
 		auto digit = static_cast<T>(c - '0');
 		if ((std::numeric_limits<T>::max() - digit) < ret)
-			co_return std::unexpected(error(
-					std::errc::result_out_of_range));
+			co_return error(std::errc::result_out_of_range);
 		ret += digit;
 	}
 
@@ -81,27 +65,26 @@ auto parse_size(std::basic_string_view<Char> str)
 
 	if (it != str.end())
 		// Multiplier is more than one character.
-		co_return std::unexpected(error(errc::invalid_unit));
+		co_return error(errc::invalid_unit);
 
 	auto mult = co_await get_multiplier(mchar);
 
 	if (std::cmp_greater(ret, std::numeric_limits<T>::max() / mult))
-		co_return std::unexpected(error(
-				std::errc::result_out_of_range));
+		co_return error(std::errc::result_out_of_range);
 
-	co_return ret * mult;
+	co_return ret *mult;
 }
 
-export template<typename T>
-[[nodiscard]] inline auto parse_size(char const *s)
+export template <typename T>
+[[nodiscard]] auto parse_size(char const *s)
 {
 	return parse_size<T>(std::string_view(s));
 }
 
-export template<typename T>
-[[nodiscard]] inline auto parse_size(wchar_t const *s)
+export template <typename T>
+[[nodiscard]] auto parse_size(wchar_t const *s)
 {
 	return parse_size<T>(std::wstring_view(s));
 }
 
-}
+} // namespace nihil

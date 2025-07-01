@@ -1,22 +1,15 @@
 // This source code is released into the public domain.
-module;
-
-// tempfile: create a temporary file.
-
-#include <algorithm>
-#include <cstdint>
-#include <expected>
-#include <filesystem>
-#include <random>
-#include <string>
-
 export module nihil.posix:tempfile;
 
+import nihil.std;
 import nihil.error;
 import nihil.flagset;
 import :fd;
 import :getenv;
 import :open;
+import :unlink;
+
+// tempfile: create a temporary file.
 
 namespace nihil {
 
@@ -60,9 +53,7 @@ export struct temporary_file final
 			throw std::logic_error("release() called on already-released tempfile");
 
 		if (!self.m_path.empty()) {
-			auto ec = std::error_code(); // ignore errors
-			remove(self.path(), ec);
-
+			std::ignore = unlink(self.path());
 			self.m_path.clear();
 		}
 
@@ -141,8 +132,7 @@ tempfile(tempfile_flags flags = tempfile_none) -> std::expected<temporary_file, 
 		}
 
 		if (flags & tempfile_unlink) {
-			auto ec = std::error_code();
-			remove(filename, ec);
+			std::ignore = unlink(filename);
 			return temporary_file(std::move(*fd));
 		}
 

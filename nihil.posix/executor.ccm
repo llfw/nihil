@@ -1,19 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <concepts>
-#include <type_traits>
-
+// This source code is released into the public domain.
 export module nihil.posix:executor;
+
+import nihil.std;
 
 namespace nihil {
 
-/*
- * A concept to mark spawn executors.
- */
+// A concept to mark spawn executors, which should contain:
+//	using tag = exec_tag;
 
 export struct exec_tag{};
 

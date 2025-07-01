@@ -1,49 +1,28 @@
-/*
- * From https://github.com/mariusbancila/stduuid
- *
- * Copyright (c) 2017
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to
- * deal in the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
- */
-
-module;
-
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <chrono>
-#include <cstring>
-#include <functional>
-#include <iomanip>
-#include <iterator>
-#include <memory>
-#include <numeric>
-#include <optional>
-#include <random>
-#include <ranges>
-#include <span>
-#include <string>
-#include <sstream>
-#include <string_view>
-#include <type_traits>
+// From https://github.com/mariusbancila/stduuid
+//
+// Copyright (c) 2017
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE SOFTWARE.
 
 export module nihil.uuid;
+
+import nihil.std;
 
 namespace nihil {
 
@@ -51,16 +30,13 @@ template <typename TChar>
 [[nodiscard]] constexpr auto hex2char(TChar const ch) noexcept -> unsigned char
 {
 	if (ch >= static_cast<TChar>('0') && ch <= static_cast<TChar>('9'))
-		return static_cast<unsigned char>(
-				ch - static_cast<TChar>('0'));
+		return static_cast<unsigned char>(ch - static_cast<TChar>('0'));
 
 	if (ch >= static_cast<TChar>('a') && ch <= static_cast<TChar>('f'))
-		return static_cast<unsigned char>(
-				10 + ch - static_cast<TChar>('a'));
+		return static_cast<unsigned char>(10 + ch - static_cast<TChar>('a'));
 
 	if (ch >= static_cast<TChar>('A') && ch <= static_cast<TChar>('F'))
-		return static_cast<unsigned char>(
-				10 + ch - static_cast<TChar>('A'));
+		return static_cast<unsigned char>(10 + ch - static_cast<TChar>('A'));
 
 	return 0;
 }
@@ -68,17 +44,14 @@ template <typename TChar>
 template <typename TChar>
 [[nodiscard]] constexpr auto is_hex(TChar const ch) noexcept -> bool
 {
-	return	(ch >= static_cast<TChar>('0') &&
-		 ch <= static_cast<TChar>('9')) ||
-		(ch >= static_cast<TChar>('a') &&
-		 ch <= static_cast<TChar>('f')) ||
-		(ch >= static_cast<TChar>('A') &&
-		 ch <= static_cast<TChar>('F'));
+	return (ch >= static_cast<TChar>('0') && ch <= static_cast<TChar>('9')) ||
+	       (ch >= static_cast<TChar>('a') && ch <= static_cast<TChar>('f')) ||
+	       (ch >= static_cast<TChar>('A') && ch <= static_cast<TChar>('F'));
 }
 
 template <typename TChar>
-[[nodiscard]] constexpr auto to_string_view(TChar const *str) noexcept
-	-> std::basic_string_view<TChar>
+[[nodiscard]] constexpr auto
+to_string_view(TChar const *str) noexcept -> std::basic_string_view<TChar>
 {
 	if (str)
 		return str;
@@ -87,9 +60,7 @@ template <typename TChar>
 
 template <typename StringType>
 [[nodiscard]] constexpr auto to_string_view(StringType const &str) noexcept
-	-> std::basic_string_view<
-		typename StringType::value_type,
-		typename StringType::traits_type>
+	-> std::basic_string_view<typename StringType::value_type, typename StringType::traits_type>
 {
 	return str;
 }
@@ -106,9 +77,8 @@ struct sha1
 		reset();
 	}
 
-	[[nodiscard]] inline static auto
-	left_rotate(std::uint32_t value, std::size_t const count) noexcept
-		-> std::uint32_t
+	[[nodiscard]] static auto
+	left_rotate(std::uint32_t value, std::size_t const count) noexcept -> std::uint32_t
 	{
 		return (value << count) ^ (value >> (32 - count));
 	}
@@ -126,7 +96,7 @@ struct sha1
 
 	auto process_byte(this sha1 &self, std::uint8_t octet) -> void
 	{
-		self.m_block[self.m_blockByteIndex++] = octet;
+		self.m_block.at(self.m_blockByteIndex++) = octet;
 		++self.m_byteCount;
 
 		if (self.m_blockByteIndex == block_bytes) {
@@ -135,13 +105,10 @@ struct sha1
 		}
 	}
 
-	auto process_block(this sha1 &self,
-			   void const *const start,
-			   void const *const end)
-		-> void
+	auto process_block(this sha1 &self, void const *const start, void const *const end) -> void
 	{
-		auto *first = static_cast<uint8_t const *>(start);
-		auto *last = static_cast<uint8_t const *>(end);
+		auto const *first = static_cast<std::uint8_t const *>(start);
+		auto const *last = static_cast<std::uint8_t const *>(end);
 
 		while (first != last) {
 			self.process_byte(*first);
@@ -149,12 +116,9 @@ struct sha1
 		}
 	}
 
-	auto process_bytes(this sha1 &self,
-			   void const *const data,
-			   size_t const len)
-		-> void
+	auto process_bytes(this sha1 &self, void const *const data, std::size_t const len) -> void
 	{
-		auto *block = static_cast<uint8_t const *>(data);
+		auto *block = static_cast<std::uint8_t const *>(data);
 		self.process_block(block, block + len);
 	}
 
@@ -178,14 +142,10 @@ struct sha1
 		self.process_byte(0);
 		self.process_byte(0);
 		self.process_byte(0);
-		self.process_byte(static_cast<unsigned char>(
-				(bit_count >> 24) & 0xFF));
-		self.process_byte(static_cast<unsigned char>(
-				(bit_count >> 16) & 0xFF));
-		self.process_byte(static_cast<unsigned char>(
-				(bit_count >> 8) & 0xFF));
-		self.process_byte(static_cast<unsigned char>(
-				(bit_count) & 0xFF));
+		self.process_byte(static_cast<unsigned char>((bit_count >> 24U) & 0xFFU));
+		self.process_byte(static_cast<unsigned char>((bit_count >> 16U) & 0xFFU));
+		self.process_byte(static_cast<unsigned char>((bit_count >> 8U) & 0xFFU));
+		self.process_byte(static_cast<unsigned char>((bit_count) & 0xFFU));
 
 		return self.m_digest;
 	}
@@ -193,57 +153,50 @@ struct sha1
 	auto get_digest_bytes(this sha1 &self) -> digest8_t
 	{
 		auto d32 = self.get_digest();
-		auto digest = digest8_t{};
 
-		auto di = std::size_t{0};
+		return {
+			static_cast<std::uint8_t>(d32[0] >> 24U),
+			static_cast<std::uint8_t>(d32[0] >> 16U),
+			static_cast<std::uint8_t>(d32[0] >> 8U),
+			static_cast<std::uint8_t>(d32[0] >> 0U),
 
-		digest[di++] = static_cast<uint8_t>(d32[0] >> 24);
-		digest[di++] = static_cast<uint8_t>(d32[0] >> 16);
-		digest[di++] = static_cast<uint8_t>(d32[0] >> 8);
-		digest[di++] = static_cast<uint8_t>(d32[0] >> 0);
+			static_cast<std::uint8_t>(d32[1] >> 24U),
+			static_cast<std::uint8_t>(d32[1] >> 16U),
+			static_cast<std::uint8_t>(d32[1] >> 8U),
+			static_cast<std::uint8_t>(d32[1] >> 0U),
 
-		digest[di++] = static_cast<uint8_t>(d32[1] >> 24);
-		digest[di++] = static_cast<uint8_t>(d32[1] >> 16);
-		digest[di++] = static_cast<uint8_t>(d32[1] >> 8);
-		digest[di++] = static_cast<uint8_t>(d32[1] >> 0);
+			static_cast<std::uint8_t>(d32[2] >> 24U),
+			static_cast<std::uint8_t>(d32[2] >> 16U),
+			static_cast<std::uint8_t>(d32[2] >> 8U),
+			static_cast<std::uint8_t>(d32[2] >> 0U),
 
-		digest[di++] = static_cast<uint8_t>(d32[2] >> 24);
-		digest[di++] = static_cast<uint8_t>(d32[2] >> 16);
-		digest[di++] = static_cast<uint8_t>(d32[2] >> 8);
-		digest[di++] = static_cast<uint8_t>(d32[2] >> 0);
+			static_cast<std::uint8_t>(d32[3] >> 24U),
+			static_cast<std::uint8_t>(d32[3] >> 16U),
+			static_cast<std::uint8_t>(d32[3] >> 8U),
+			static_cast<std::uint8_t>(d32[3] >> 0U),
 
-		digest[di++] = static_cast<uint8_t>(d32[3] >> 24);
-		digest[di++] = static_cast<uint8_t>(d32[3] >> 16);
-		digest[di++] = static_cast<uint8_t>(d32[3] >> 8);
-		digest[di++] = static_cast<uint8_t>(d32[3] >> 0);
-
-		digest[di++] = static_cast<uint8_t>(d32[4] >> 24);
-		digest[di++] = static_cast<uint8_t>(d32[4] >> 16);
-		digest[di++] = static_cast<uint8_t>(d32[4] >> 8);
-		digest[di++] = static_cast<uint8_t>(d32[4] >> 0);
-
-		return digest;
+			static_cast<std::uint8_t>(d32[4] >> 24U),
+			static_cast<std::uint8_t>(d32[4] >> 16U),
+			static_cast<std::uint8_t>(d32[4] >> 8U),
+			static_cast<std::uint8_t>(d32[4] >> 0U),
+		};
 	}
 
 private:
 	auto process_block(this sha1 &self) -> void
 	{
-		auto w = std::array<std::uint32_t, 80>();
+		auto w = std::array<std::uint32_t, 80>{};
 
 		for (std::size_t i = 0; i < 16; i++) {
-			w[i] = static_cast<std::uint32_t>(
-					self.m_block[i * 4 + 0]) << 24;
-			w[i] |= static_cast<std::uint32_t>(
-					self.m_block[i * 4 + 1]) << 16;
-			w[i] |= static_cast<std::uint32_t>(
-					self.m_block[i * 4 + 2]) << 8;
-			w[i] |= static_cast<std::uint32_t>(
-					self.m_block[i * 4 + 3]);
+			w.at(i) = static_cast<std::uint32_t>(self.m_block.at((i * 4) + 0)) << 24U;
+			w.at(i) |= static_cast<std::uint32_t>(self.m_block.at((i * 4) + 1)) << 16U;
+			w.at(i) |= static_cast<std::uint32_t>(self.m_block.at((i * 4) + 2)) << 8U;
+			w.at(i) |= static_cast<std::uint32_t>(self.m_block.at((i * 4) + 3));
 		}
 
 		for (std::size_t i = 16; i < 80; i++) {
-			w[i] = left_rotate((w[i - 3] ^ w[i - 8] ^
-					    w[i - 14] ^ w[i - 16]), 1);
+			w.at(i) = left_rotate(
+				(w.at(i - 3) ^ w.at(i - 8) ^ w.at(i - 14) ^ w.at(i - 16)), 1);
 		}
 
 		auto a = self.m_digest[0];
@@ -270,8 +223,7 @@ private:
 				k = 0xCA62C1D6;
 			}
 
-			auto temp = std::uint32_t{left_rotate(a, 5)
-						  + f + e + k + w[i]};
+			auto temp = std::uint32_t{left_rotate(a, 5) + f + e + k + w.at(i)};
 			e = d;
 			d = c;
 			c = left_rotate(b, 30);
@@ -286,19 +238,17 @@ private:
 		self.m_digest[4] += e;
 	}
 
-	digest32_t			m_digest;
-	std::array<std::uint8_t, 64>	m_block;
-	std::size_t			m_blockByteIndex;
-	std::size_t			m_byteCount;
+	digest32_t                   m_digest{};
+	std::array<std::uint8_t, 64> m_block{};
+	std::size_t                  m_blockByteIndex{};
+	std::size_t                  m_byteCount{};
 };
 
 template <typename CharT>
-inline constexpr std::string_view empty_guid =
-	"00000000-0000-0000-0000-000000000000";
+inline constexpr std::string_view empty_guid = "00000000-0000-0000-0000-000000000000";
 
 template <>
-inline constexpr std::wstring_view empty_guid<wchar_t>
-	= L"00000000-0000-0000-0000-000000000000";
+inline constexpr std::wstring_view empty_guid<wchar_t> = L"00000000-0000-0000-0000-000000000000";
 
 template <typename CharT>
 inline constexpr std::string_view guid_encoder = "0123456789abcdef";
@@ -345,19 +295,19 @@ inline constexpr std::wstring_view guid_encoder<wchar_t> = L"0123456789abcdef";
 
 // indicated by a bit pattern in octet 8, marked with N in
 // xxxxxxxx-xxxx-xxxx-Nxxx-xxxxxxxxxxxx
-export enum struct uuid_variant {
+export enum struct uuid_variant : std::uint8_t {
 	// NCS backward compatibility (with the obsolete Apollo Network
 	// Computing System 1.5 UUID format).
 	// N bit pattern: 0xxx
 	// > the first 6 octets of the UUID are a 48-bit timestamp (the number
 	//   of 4 microsecond units of time since 1 Jan 1980 UTC);
 	// > the next 2 octets are reserved;
-	// > the next octet is the "address family"; 
+	// > the next octet is the "address family";
 	// > the final 7 octets are a 56-bit host ID in the form specified by
 	//   the address family
 	ncs,
 
-	// RFC 4122/DCE 1.1 
+	// RFC 4122/DCE 1.1
 	// N bit pattern: 10xx
 	// > big-endian byte order
 	rfc,
@@ -365,17 +315,17 @@ export enum struct uuid_variant {
 	// Microsoft Corporation backward compatibility
 	// N bit pattern: 110x
 	// > little endian byte order
-	// > formely used in the Component Object Model (COM) library      
+	// > formely used in the Component Object Model (COM) library
 	microsoft,
 
 	// reserved for possible future definition
-	// N bit pattern: 111x      
+	// N bit pattern: 111x
 	reserved
 };
 
 // indicated by a bit pattern in octet 6, marked with M in
-// xxxxxxxx-xxxx-Mxxx-xxxx-xxxxxxxxxxxx   
-export enum struct uuid_version {
+// xxxxxxxx-xxxx-Mxxx-xxxx-xxxxxxxxxxxx
+export enum struct uuid_version : std::uint8_t {
 	// only possible for nil or invalid uuids
 	none = 0,
 	// The time-based version specified in RFC 4122
@@ -393,25 +343,25 @@ export enum struct uuid_version {
 // Forward declare uuid and to_string so that we can declare to_string as a
 // friend later.
 export struct uuid;
-export template <typename CharT = char,
-	  typename Traits = std::char_traits<CharT>,
-	  typename Allocator = std::allocator<CharT>>
+export template <typename CharT = char, typename Traits = std::char_traits<CharT>,
+                 typename Allocator = std::allocator<CharT>>
 auto to_string(uuid const &id) -> std::basic_string<CharT, Traits, Allocator>;
 
 // --------------------------------------------------------------------------------------------------------------------------
 // uuid class
 // --------------------------------------------------------------------------------------------------------------------------
-export struct uuid {
+export struct uuid
+{
 	using value_type = std::uint8_t;
 
 	constexpr uuid() noexcept = default;
 
-	uuid(value_type(&arr)[16]) noexcept // NOLINT
+	uuid(value_type (&arr)[16]) noexcept // NOLINT
 	{
 		std::ranges::copy(arr, std::ranges::begin(data));
 	}
 
-	constexpr uuid(std::array<value_type, 16> const &arr) noexcept
+	explicit constexpr uuid(std::array<value_type, 16> const &arr) noexcept
 		: data{arr}
 	{
 	}
@@ -428,7 +378,7 @@ export struct uuid {
 		std::ranges::copy(bytes, std::ranges::begin(data));
 	}
 
-	template<typename ForwardIterator>
+	template <typename ForwardIterator>
 	explicit uuid(ForwardIterator first, ForwardIterator last)
 	{
 		if (std::distance(first, last) != 16)
@@ -439,11 +389,11 @@ export struct uuid {
 
 	[[nodiscard]] constexpr auto variant() const noexcept -> uuid_variant
 	{
-		if ((data[8] & 0x80) == 0x00)
+		if ((data[8] & 0x80U) == 0x00U)
 			return uuid_variant::ncs;
-		else if ((data[8] & 0xC0) == 0x80)
+		else if ((data[8] & 0xC0U) == 0x80U)
 			return uuid_variant::rfc;
-		else if ((data[8] & 0xE0) == 0xC0)
+		else if ((data[8] & 0xE0U) == 0xC0U)
 			return uuid_variant::microsoft;
 		else
 			return uuid_variant::reserved;
@@ -451,15 +401,15 @@ export struct uuid {
 
 	[[nodiscard]] constexpr auto version() const noexcept -> uuid_version
 	{
-		if ((data[6] & 0xF0) == 0x10)
+		if ((data[6] & 0xF0U) == 0x10U)
 			return uuid_version::time_based;
-		else if ((data[6] & 0xF0) == 0x20)
+		else if ((data[6] & 0xF0U) == 0x20U)
 			return uuid_version::dce_security;
-		else if ((data[6] & 0xF0) == 0x30)
+		else if ((data[6] & 0xF0U) == 0x30U)
 			return uuid_version::name_based_md5;
-		else if ((data[6] & 0xF0) == 0x40)
+		else if ((data[6] & 0xF0U) == 0x40U)
 			return uuid_version::random_number_based;
-		else if ((data[6] & 0xF0) == 0x50)
+		else if ((data[6] & 0xF0U) == 0x50U)
 			return uuid_version::name_based_sha1;
 		else
 			return uuid_version::none;
@@ -467,10 +417,7 @@ export struct uuid {
 
 	[[nodiscard]] constexpr auto is_nil() const noexcept -> bool
 	{
-		for (auto i : data)
-			if (i != 0)
-				return false;
-		return true;
+		return std::ranges::all_of(data, [](auto i) { return i == 0; });
 	}
 
 	auto swap(uuid &other) noexcept -> void
@@ -478,18 +425,14 @@ export struct uuid {
 		data.swap(other.data);
 	}
 
-	[[nodiscard]] inline auto as_bytes() const
-		-> std::span<std::byte const, 16>
+	[[nodiscard]] auto as_bytes() const -> std::span<std::byte const, 16>
 	{
 		return std::span<std::byte const, 16>(
-				reinterpret_cast<std::byte const*>(data.data()),
-				16);
+			reinterpret_cast<std::byte const *>(data.data()), 16);
 	}
 
 	template <typename StringType>
-	[[nodiscard]] constexpr static auto
-	is_valid_uuid(StringType const &in_str) noexcept
-		-> bool
+	[[nodiscard]] constexpr static auto is_valid_uuid(StringType const &in_str) noexcept -> bool
 	{
 		auto str = to_string_view(in_str);
 		auto firstDigit = true;
@@ -505,7 +448,7 @@ export struct uuid {
 		if (hasBraces && str.back() != '}')
 			return false;
 
-		for (size_t i = hasBraces; i < str.size() - hasBraces; ++i) {
+		for (std::size_t i = hasBraces; i < str.size() - hasBraces; ++i) {
 			if (str[i] == '-')
 				continue;
 
@@ -528,15 +471,14 @@ export struct uuid {
 
 	template <typename StringType>
 	[[nodiscard]] constexpr static auto
-	from_string(StringType const & in_str) noexcept
-		-> std::optional<uuid>
+	from_string(StringType const &in_str) -> std::optional<uuid>
 	{
 		auto str = to_string_view(in_str);
 		bool firstDigit = true;
-		size_t hasBraces = 0;
-		size_t index = 0;
+		auto hasBraces = std::size_t{0};
+		auto index = std::size_t{0};
 
-		std::array<uint8_t, 16> data{ { 0 } };
+		auto data = std::array<std::uint8_t, 16>{};
 
 		if (str.empty())
 			return {};
@@ -546,7 +488,7 @@ export struct uuid {
 		if (hasBraces && str.back() != '}')
 			return {};
 
-		for (size_t i = hasBraces; i < str.size() - hasBraces; ++i) {
+		for (std::size_t i = hasBraces; i < str.size() - hasBraces; ++i) {
 			if (str[i] == '-')
 				continue;
 
@@ -555,10 +497,11 @@ export struct uuid {
 			}
 
 			if (firstDigit) {
-				data[index] = static_cast<uint8_t>(hex2char(str[i]) << 4);
+				data.at(index) = static_cast<std::uint8_t>(hex2char(str[i]) << 4);
 				firstDigit = false;
 			} else {
-				data[index] = static_cast<uint8_t>(data[index] | hex2char(str[i]));
+				data.at(index) =
+					static_cast<std::uint8_t>(data.at(index) | hex2char(str[i]));
 				index++;
 				firstDigit = true;
 			}
@@ -572,19 +515,17 @@ export struct uuid {
 	}
 
 private:
-	std::array<value_type, 16> data{ { 0 } };
+	std::array<value_type, 16> data{{0}};
 
 	friend auto operator==(uuid const &, uuid const &) noexcept -> bool;
 	friend auto operator<(uuid const &, uuid const &) noexcept -> bool;
 
 	template <class Elem, class Traits>
-	friend auto operator<<(std::basic_ostream<Elem, Traits> &s,
-			       uuid const &id)
+	friend auto operator<<(std::basic_ostream<Elem, Traits> &s, uuid const &id)
 		-> std::basic_ostream<Elem, Traits> &;
 
-	template<class CharT, class Traits, class Allocator>
-	friend auto to_string(uuid const &id)
-		-> std::basic_string<CharT, Traits, Allocator>;
+	template <class CharT, class Traits, class Allocator>
+	friend auto to_string(uuid const &id) -> std::basic_string<CharT, Traits, Allocator>;
 
 	friend std::hash<uuid>;
 };
@@ -594,36 +535,35 @@ private:
 // --------------------------------------------------------------------------------------------------------------------------
 
 export [[nodiscard]]
-auto operator== (uuid const &lhs, uuid const &rhs) noexcept -> bool
+auto operator==(uuid const &lhs, uuid const &rhs) noexcept -> bool
 {
 	return lhs.data == rhs.data;
 }
 
-export [[nodiscard]] 
-auto operator!= (uuid const &lhs, uuid const &rhs) noexcept -> bool
+export [[nodiscard]]
+auto operator!=(uuid const &lhs, uuid const &rhs) noexcept -> bool
 {
 	return !(lhs == rhs);
 }
 
 export [[nodiscard]]
-auto operator< (uuid const &lhs, uuid const &rhs) noexcept -> bool
+auto operator<(uuid const &lhs, uuid const &rhs) noexcept -> bool
 {
 	return lhs.data < rhs.data;
 }
 
 export template <typename CharT, typename Traits, typename Allocator>
-[[nodiscard]] auto to_string(uuid const &id)
-	-> std::basic_string<CharT, Traits, Allocator>
+[[nodiscard]] auto to_string(uuid const &id) -> std::basic_string<CharT, Traits, Allocator>
 {
-	auto uustr = std::basic_string<CharT, Traits, Allocator>(
-		std::from_range, empty_guid<CharT>);
+	auto uustr =
+		std::basic_string<CharT, Traits, Allocator>(std::from_range, empty_guid<CharT>);
 
 	for (std::size_t i = 0, index = 0; i < 36; ++i) {
 		if (i == 8 || i == 13 || i == 18 || i == 23)
 			continue;
 
-		uustr[i] = guid_encoder<CharT>[id.data[index] >> 4 & 0x0f];
-		uustr[++i] = guid_encoder<CharT>[id.data[index] & 0x0f];
+		uustr[i] = guid_encoder<CharT>[id.data.at(index) >> 4U & 0x0FU];
+		uustr[++i] = guid_encoder<CharT>[id.data.at(index) & 0x0FU];
 		index++;
 	}
 
@@ -634,13 +574,12 @@ export template <class Elem, class Traits>
 auto operator<<(std::basic_ostream<Elem, Traits> &s, uuid const &id)
 	-> std::basic_ostream<Elem, Traits> &
 {
-	s << to_string(id);
-	return s;
+	return s << to_string(id);
 }
 
 export auto swap(uuid &lhs, uuid &rhs) noexcept -> void
 {
-	lhs.swap(rhs);   
+	lhs.swap(rhs);
 }
 
 /***********************************************************************
@@ -648,31 +587,31 @@ export auto swap(uuid &lhs, uuid &rhs) noexcept -> void
  */
 
 // Name string is a fully-qualified domain name
-export uuid uuid_namespace_dns{{
-	0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
-	0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8
-}};
+export uuid uuid_namespace_dns{
+	{0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
+         0xc8}
+};
 
 // Name string is a URL
-export uuid uuid_namespace_url{{
-	0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1,
-	0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8
-}};
+export uuid uuid_namespace_url{
+	{0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
+         0xc8}
+};
 
 // Name string is an ISO OID (See https://oidref.com/,
 // https://en.wikipedia.org/wiki/Object_identifier)
-export uuid uuid_namespace_oid{{
-	0x6b, 0xa7, 0xb8, 0x12, 0x9d, 0xad, 0x11, 0xd1,
-	0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8
-}};
+export uuid uuid_namespace_oid{
+	{0x6b, 0xa7, 0xb8, 0x12, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
+         0xc8}
+};
 
 // Name string is an X.500 DN, in DER or a text output format (See
 // https://en.wikipedia.org/wiki/X.500,
 // https://en.wikipedia.org/wiki/Abstract_Syntax_Notation_One)
-export uuid uuid_namespace_x500{{
-	0x6b, 0xa7, 0xb8, 0x14, 0x9d, 0xad, 0x11, 0xd1,
-	0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8
-}};
+export uuid uuid_namespace_x500{
+	{0x6b, 0xa7, 0xb8, 0x14, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30,
+         0xc8}
+};
 
 /***********************************************************************
  * uuid generators
@@ -695,20 +634,16 @@ struct basic_uuid_random_generator
 
 	[[nodiscard]] auto operator()() -> uuid
 	{
-		alignas(std::uint32_t)
 		auto bytes = std::array<std::uint8_t, 16>{};
-
-		for (int i = 0; i < 16; i += 4)
-			*reinterpret_cast<std::uint32_t *>(bytes.data() + i) =
-				distribution(*generator);
+		std::ranges::generate(bytes, [&] { return distribution(*generator); });
 
 		// variant must be 10xxxxxx
-		bytes[8] &= 0xBF;
-		bytes[8] |= 0x80;
+		bytes[8] &= 0xBFU;
+		bytes[8] |= 0x80U;
 
 		// version must be 0100xxxx
-		bytes[6] &= 0x4F;
-		bytes[6] |= 0x40;
+		bytes[6] &= 0x4FU;
+		bytes[6] |= 0x40U;
 
 		return uuid{std::begin(bytes), std::end(bytes)};
 	}
@@ -749,18 +684,14 @@ private:
 	}
 
 	template <typename CharT, typename Traits>
-	auto process_characters(
-		std::basic_string_view<CharT, Traits> const str) -> void
+	auto process_characters(std::basic_string_view<CharT, Traits> const str) -> void
 	{
 		for (std::uint32_t c : str) {
-			hasher.process_byte(static_cast<std::uint8_t>(c & 0xFF));
+			hasher.process_byte(static_cast<std::uint8_t>(c & 0xFFU));
 			if constexpr (!std::is_same_v<CharT, char>) {
-				hasher.process_byte(
-					static_cast<uint8_t>((c >> 8) & 0xFF));
-				hasher.process_byte(
-					static_cast<uint8_t>((c >> 16) & 0xFF));
-				hasher.process_byte(
-					static_cast<uint8_t>((c >> 24) & 0xFF));
+				hasher.process_byte(static_cast<std::uint8_t>((c >> 8U) & 0xFFU));
+				hasher.process_byte(static_cast<std::uint8_t>((c >> 16U) & 0xFFU));
+				hasher.process_byte(static_cast<std::uint8_t>((c >> 24U) & 0xFFU));
 			}
 		}
 	}
@@ -770,17 +701,16 @@ private:
 		auto digest = hasher.get_digest_bytes();
 
 		// variant must be 0b10xxxxxx
-		digest[8] &= 0xBF;
-		digest[8] |= 0x80;
+		digest[8] &= 0xBFU;
+		digest[8] |= 0x80U;
 
 		// version must be 0b0101xxxx
-		digest[6] &= 0x5F;
-		digest[6] |= 0x50;
+		digest[6] &= 0x5FU;
+		digest[6] |= 0x50U;
 
 		return uuid(std::span(digest).subspan(0, 16));
 	}
 
-private:
 	uuid nsuuid;
 	sha1 hasher;
 };
@@ -791,15 +721,14 @@ private:
 export auto random_uuid() -> uuid
 {
 	auto rd = std::random_device();
-	auto seed_data = std::array<int, std::mt19937::state_size> {};
+	auto seed_data = std::array<int, std::mt19937::state_size>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 
-	auto seq = std::seed_seq(std::ranges::begin(seed_data),
-				 std::ranges::end(seed_data));
+	auto seq = std::seed_seq(std::ranges::begin(seed_data), std::ranges::end(seed_data));
 	auto generator = std::mt19937(seq);
 	auto gen = uuid_random_generator{generator};
 
-	return gen();	
+	return gen();
 }
 
 } // namespace nihil
@@ -810,30 +739,27 @@ export template <>
 struct hash<nihil::uuid>
 {
 	using argument_type = nihil::uuid;
-	using result_type   = std::size_t;
+	using result_type = std::size_t;
 
-	[[nodiscard]] auto operator()(argument_type const &uuid) const
-		-> result_type
+	[[nodiscard]] auto operator()(argument_type const &uuid) const noexcept -> result_type
 	{
-		std::uint64_t l =
-			static_cast<uint64_t>(uuid.data[0]) << 56 |
-			static_cast<uint64_t>(uuid.data[1]) << 48 |
-			static_cast<uint64_t>(uuid.data[2]) << 40 |
-			static_cast<uint64_t>(uuid.data[3]) << 32 |
-			static_cast<uint64_t>(uuid.data[4]) << 24 |
-			static_cast<uint64_t>(uuid.data[5]) << 16 |
-			static_cast<uint64_t>(uuid.data[6]) <<  8 |
-			static_cast<uint64_t>(uuid.data[7]);
+		auto const l = static_cast<uint64_t>(uuid.data[0]) << 56U |
+		               static_cast<uint64_t>(uuid.data[1]) << 48U |
+		               static_cast<uint64_t>(uuid.data[2]) << 40U |
+		               static_cast<uint64_t>(uuid.data[3]) << 32U |
+		               static_cast<uint64_t>(uuid.data[4]) << 24U |
+		               static_cast<uint64_t>(uuid.data[5]) << 16U |
+		               static_cast<uint64_t>(uuid.data[6]) << 8U |
+		               static_cast<uint64_t>(uuid.data[7]);
 
-		std::uint64_t h =
-			static_cast<uint64_t>(uuid.data[8])  << 56 |
-			static_cast<uint64_t>(uuid.data[9])  << 48 |
-			static_cast<uint64_t>(uuid.data[10]) << 40 |
-			static_cast<uint64_t>(uuid.data[11]) << 32 |
-			static_cast<uint64_t>(uuid.data[12]) << 24 |
-			static_cast<uint64_t>(uuid.data[13]) << 16 |
-			static_cast<uint64_t>(uuid.data[14]) <<  8 |
-			static_cast<uint64_t>(uuid.data[15]);
+		auto const h = static_cast<uint64_t>(uuid.data[8]) << 56U |
+		               static_cast<uint64_t>(uuid.data[9]) << 48U |
+		               static_cast<uint64_t>(uuid.data[10]) << 40U |
+		               static_cast<uint64_t>(uuid.data[11]) << 32U |
+		               static_cast<uint64_t>(uuid.data[12]) << 24U |
+		               static_cast<uint64_t>(uuid.data[13]) << 16U |
+		               static_cast<uint64_t>(uuid.data[14]) << 8U |
+		               static_cast<uint64_t>(uuid.data[15]);
 
 		return std::hash<std::uint64_t>{}(l ^ h);
 	}

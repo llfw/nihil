@@ -1,0 +1,23 @@
+// This source code is released into the public domain.
+module;
+
+#include <unistd.h>
+
+export module nihil.posix:unistd;
+
+import nihil.std;
+import nihil.error;
+
+// Symbols from unistd.h that might be useful.
+
+namespace nihil {
+
+export [[nodiscard]] auto fork() -> std::expected<::pid_t, error>
+{
+	auto const pid = ::fork();
+	if (pid == -1)
+		return std::unexpected(error(sys_error()));
+	return pid;
+}
+
+};

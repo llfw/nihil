@@ -1,28 +1,18 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <memory>
-#include <span>
-
+// This source code is released into the public domain.
 export module nihil.cli:registry;
+
+import nihil.std;
 
 namespace nihil {
 
 export struct command;
 export struct command_node;
 
-/*
- * Register a command.  This is guaranteed not to throw; errors will print
- * a diagnostic and exit.
- */
+// Register a command.  This is guaranteed not to throw; errors will print
+// a diagnostic and exit.
 auto register_command(command *cmd) noexcept -> void;
 
-/*
- * Get previously registered commands.
- */
+// Get previously registered commands.
 auto get_registered_commands() -> std::span<std::shared_ptr<command_node>>;
 
 } // namespace nihil

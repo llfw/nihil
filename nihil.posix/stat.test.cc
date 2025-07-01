@@ -1,5 +1,6 @@
 // This source code is released into the public domain.
 
+import nihil.std;
 import nihil.error;
 import nihil.posix;
 

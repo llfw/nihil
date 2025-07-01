@@ -1,13 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
+// This source code is released into the public domain.
 export module nihil.ucl;
 
 export import :emit;
-export import :errc;
 export import :object;
 export import :object_cast;
 export import :parser;

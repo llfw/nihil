@@ -1,13 +1,11 @@
 # This source code is released into the public domain.
 
 add_library(nihil.error STATIC)
-target_link_libraries(nihil.error PRIVATE nihil.match)
+target_link_libraries(nihil.error PRIVATE nihil.std nihil.match)
 target_sources(nihil.error
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	error.ccm
-
-	PRIVATE
-	error.cc
+	sys_error.ccm
 )
 
 if(NIHIL_TESTS)

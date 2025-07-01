@@ -1,12 +1,9 @@
 // This source code is released into the public domain.
-module;
-
-#include <expected>
-#include <filesystem>
-
 export module nihil.posix:rename;
 
+import nihil.std;
 import nihil.error;
+import nihil.util;
 
 namespace nihil {
 
@@ -15,12 +12,11 @@ export [[nodiscard]] auto
 rename(std::filesystem::path const &oldp, std::filesystem::path const &newp)
 	-> std::expected<void, error>
 {
-	auto err = std::error_code();
+	auto guard = save_errno();
 
-	std::filesystem::rename(oldp, newp, err);
-
-	if (err)
-		return std::unexpected(error(err));
+	auto const ret = std::rename(oldp.string().c_str(), newp.string().c_str());
+	if (ret == -1)
+		return std::unexpected(error(sys_error()));
 
 	return {};
 }

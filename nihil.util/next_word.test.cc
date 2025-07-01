@@ -1,13 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <locale>
-#include <string>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.util;
+
+namespace {
 
 TEST_CASE("next_word: basic", "[next_word]")
 {
@@ -63,3 +61,5 @@ TEST_CASE("next_word: locale", "[next_word]")
 	REQUIRE(words.first == L"foo");
 	REQUIRE(words.second == L"\u2003bar\u2003baz");
 }
+
+} // anonymous namespace

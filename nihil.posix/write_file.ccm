@@ -1,34 +1,19 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <coroutine>
-#include <expected>
-#include <filesystem>
-#include <ranges>
-#include <system_error>
-#include <vector>
-
-#include <fcntl.h>
-#include <unistd.h>
-
+// This source code is released into the public domain.
 export module nihil.posix:write_file;
 
+import nihil.std;
 import nihil.error;
 import nihil.guard;
 import nihil.monad;
 import :fd;
 import :open;
 import :rename;
+import :unlink;
 
 namespace nihil {
 
-/*
- * Write the contents of a range to a file.  Returns the number of bytes
- * written.
- */
+// Write the contents of a range to a file.  Returns the number of bytes
+// written.
 export [[nodiscard]]
 auto write_file(std::filesystem::path const &filename,
 		std::ranges::contiguous_range auto &&range,
@@ -40,9 +25,7 @@ auto write_file(std::filesystem::path const &filename,
 	co_return nbytes;
 }
 
-/*
- * Utility wrapper for non-contiguous ranges.
- */
+// Utility wrapper for non-contiguous ranges.
 export [[nodiscard]]
 auto write_file(std::filesystem::path const &filename,
 		std::ranges::range auto &&range)
@@ -52,12 +35,10 @@ requires(!std::ranges::contiguous_range<decltype(range)>)
 	return write_file(filename, std::vector(std::from_range, range));
 }
 
-/*
- * Write the contents of a range to a file safely.  The data will be written
- * to "<filename>.tmp", and if the write succeeds, the temporary file will be
- * renamed to the target filename.  If an error occurs, the target file will
- * not be modified.
- */
+// Write the contents of a range to a file safely.  The data will be written
+// to "<filename>.tmp", and if the write succeeds, the temporary file will be
+// renamed to the target filename.  If an error occurs, the target file will
+// not be modified.
 export [[nodiscard]]
 auto safe_write_file(std::filesystem::path const &filename,
 		     std::ranges::range auto &&range)
@@ -68,11 +49,11 @@ auto safe_write_file(std::filesystem::path const &filename,
 	tmpfile /= (filename.filename().native() + ".tmp");
 
 	auto tmpfile_guard = guard([&tmpfile] {
-		::unlink(tmpfile.c_str());
+		std::ignore = unlink(tmpfile.c_str());
 	});
 
 	co_await write_file(tmpfile, range);
-	co_await nihil::rename(tmpfile, filename);
+	co_await rename(tmpfile, filename);
 
 	tmpfile_guard.release();
 	co_return {};

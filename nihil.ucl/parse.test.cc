@@ -1,14 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <string>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+import nihil.std;
 import nihil.ucl;
 
+namespace {
 TEST_CASE("ucl parse: iterate array", "[ucl]")
 {
 	using namespace std::literals;
@@ -53,3 +51,5 @@ TEST_CASE("ucl parse: iterate hash", "[ucl]")
 			REQUIRE(object_cast<string>(value) == "test");
 	}
 }
+
+} // anonymous namespace

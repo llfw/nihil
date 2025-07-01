@@ -1,18 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
 
-#include <expected>
-#include <iostream>
-#include <print>
-#include <string>
-
-#include <unistd.h>
+#include <unistd.h> // _exit
 
 module nihil.cli;
 
+import nihil.std;
 import nihil.core;
 import nihil.error;
 
@@ -23,14 +16,12 @@ command_node::command_node(std::string_view path) noexcept
 try	: m_path(path)
 {
 } catch (std::exception const &exc) {
-	std::fprintf(stderr, "%s\n", exc.what());
+	std::print(std::cerr, "%s\n", exc.what());
 	_exit(1);
 	/*NOTREACHED*/
 }
 
-command_node::~command_node()
-{
-}
+command_node::~command_node() = default;
 
 auto command_node::path(this command_node const &self) noexcept
 	-> std::string_view

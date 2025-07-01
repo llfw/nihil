@@ -1,7 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.cli STATIC)
-target_link_libraries(nihil.cli PRIVATE nihil.util)
+target_link_libraries(nihil.cli PRIVATE nihil.std nihil.util)
 target_sources(nihil.cli
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.cli.ccm

@@ -1,20 +1,12 @@
 // This source code is released into the public domain.
-module;
-
-#include <expected>
-#include <filesystem>
-#include <optional>
-#include <ranges>
-#include <string>
-
-#include <paths.h>
-
 export module nihil.posix:open_in_path;
 
+import nihil.std;
 import nihil.error;
 import :fd;
 import :getenv;
 import :open;
+import :paths;
 
 namespace nihil {
 
@@ -51,7 +43,7 @@ open_in_path(std::filesystem::path const &file, std::string_view path) -> std::e
 export [[nodiscard]] auto
 open_in_path(std::filesystem::path const &file) -> std::expected<fd, error>
 {
-	auto const path = getenv("PATH").value_or(_PATH_DEFPATH); // NOLINT
+	auto const path = getenv("PATH").value_or(std::string(paths::defpath)); // NOLINT
 	return open_in_path(file, path);
 }
 

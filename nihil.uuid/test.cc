@@ -2,17 +2,17 @@
  * From https://github.com/mariusbancila/stduuid
  *
  * Copyright (c) 2017
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
  * deal in the Software without restriction, including without limitation the
  * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
  * sell copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,44 +22,34 @@
  * IN THE SOFTWARE.
  */
 
-#include <algorithm>
-#include <random>
-#include <set>
-#include <unordered_set>
-
 #include <catch2/catch_test_macros.hpp>
 
-//NOLINTBEGIN(bugprone-unchecked-optional-access)
+import nihil.std;
+import nihil.uuid;
 
-namespace
-{
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
 
+namespace {
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0205r0.html
 template <typename EngineT, std::size_t StateSize = EngineT::state_size>
-void seed_rng(EngineT& engine)
+void seed_rng(EngineT &engine)
 {
 	using engine_type = typename EngineT::result_type;
 	using device_type = std::random_device::result_type;
 	using seedseq_type = std::seed_seq::result_type;
 
 	constexpr auto bytes_needed = StateSize * sizeof(engine_type);
-	constexpr auto numbers_needed =
-		(sizeof(device_type) < sizeof(seedseq_type))
-		? (bytes_needed / sizeof(device_type))
-		: (bytes_needed / sizeof(seedseq_type));
+	constexpr auto numbers_needed = (sizeof(device_type) < sizeof(seedseq_type))
+					      ? (bytes_needed / sizeof(device_type))
+					      : (bytes_needed / sizeof(seedseq_type));
 
 	auto numbers = std::array<device_type, numbers_needed>{};
 	auto rnddev = std::random_device{};
 	std::ranges::generate(numbers, std::ref(rnddev));
 
-	auto seedseq = std::seed_seq(std::cbegin(numbers),
-				     std::cend(numbers));
+	auto seedseq = std::seed_seq(std::cbegin(numbers), std::cend(numbers));
 	engine.seed(seedseq);
 }
-
-} // anonymous namespace
-
-import nihil.uuid;
 
 using namespace nihil;
 
@@ -70,12 +60,12 @@ TEST_CASE("uuid: Test multiple default generators", "[uuid]")
 
 	{
 		std::random_device rd;
-		auto seed_data = std::array<int, std::mt19937::state_size> {};
+		auto               seed_data = std::array<int, std::mt19937::state_size>{};
 		std::ranges::generate(seed_data, std::ref(rd));
 		std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-		std::mt19937 generator(seq);
+		std::mt19937  generator(seq);
 
-		id1 = uuid_random_generator{ generator }();
+		id1 = uuid_random_generator{generator}();
 		REQUIRE(!id1.is_nil());
 		REQUIRE(id1.version() == uuid_version::random_number_based);
 		REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -83,12 +73,12 @@ TEST_CASE("uuid: Test multiple default generators", "[uuid]")
 
 	{
 		std::random_device rd;
-		auto seed_data = std::array<int, std::mt19937::state_size> {};
+		auto               seed_data = std::array<int, std::mt19937::state_size>{};
 		std::ranges::generate(seed_data, std::ref(rd));
 		std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-		std::mt19937 generator(seq);
+		std::mt19937  generator(seq);
 
-		id2 = uuid_random_generator{ generator }();
+		id2 = uuid_random_generator{generator}();
 		REQUIRE(!id2.is_nil());
 		REQUIRE(id2.version() == uuid_version::random_number_based);
 		REQUIRE(id2.variant() == uuid_variant::rfc);
@@ -100,10 +90,10 @@ TEST_CASE("uuid: Test multiple default generators", "[uuid]")
 TEST_CASE("uuid: Test default generator", "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, std::mt19937::state_size> {};
+	auto               seed_data = std::array<int, std::mt19937::state_size>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-	std::mt19937 generator(seq);
+	std::mt19937  generator(seq);
 
 	uuid const guid = uuid_random_generator{generator}();
 	REQUIRE(!guid.is_nil());
@@ -111,17 +101,16 @@ TEST_CASE("uuid: Test default generator", "[uuid]")
 	REQUIRE(guid.variant() == uuid_variant::rfc);
 }
 
-TEST_CASE("uuid: Test random generator (conversion ctor w/ smart ptr)",
-	  "[uuid]")
+TEST_CASE("uuid: Test random generator (conversion ctor w/ smart ptr)", "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, std::mt19937::state_size> {};
+	auto               seed_data = std::array<int, std::mt19937::state_size>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-	std::mt19937 generator(seq);
+	std::mt19937  generator(seq);
 
 	uuid_random_generator dgen(&generator);
-	auto id1 = dgen();
+	auto                  id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -137,13 +126,13 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ smart ptr)",
 TEST_CASE("uuid: Test random generator (conversion ctor w/ ptr)", "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, std::mt19937::state_size> {};
+	auto               seed_data = std::array<int, std::mt19937::state_size>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-	auto generator = std::make_unique<std::mt19937>(seq);
+	auto          generator = std::make_unique<std::mt19937>(seq);
 
 	uuid_random_generator dgen(generator.get());
-	auto id1 = dgen();
+	auto                  id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -159,13 +148,13 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ ptr)", "[uuid]")
 TEST_CASE("uuid: Test random generator (conversion ctor w/ ref)", "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, std::mt19937::state_size> {};
+	auto               seed_data = std::array<int, std::mt19937::state_size>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-	std::mt19937 generator(seq);
+	std::mt19937  generator(seq);
 
 	uuid_random_generator dgen(generator);
-	auto id1 = dgen();
+	auto                  id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -179,16 +168,17 @@ TEST_CASE("uuid: Test random generator (conversion ctor w/ ref)", "[uuid]")
 }
 
 TEST_CASE("uuid: Test basic random generator (conversion ctor w/ ptr) "
-	  "w/ ranlux48_base", "[uuid]")
+	  "w/ ranlux48_base",
+	  "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, 6> {};
+	auto               seed_data = std::array<int, 6>{};
 	std::ranges::generate(seed_data, std::ref(rd));
-	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+	std::seed_seq      seq(std::begin(seed_data), std::end(seed_data));
 	std::ranlux48_base generator(seq);
 
 	basic_uuid_random_generator<std::ranlux48_base> dgen(&generator);
-	auto id1 = dgen();
+	auto                                            id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -202,16 +192,17 @@ TEST_CASE("uuid: Test basic random generator (conversion ctor w/ ptr) "
 }
 
 TEST_CASE("uuid: Test basic random generator (conversion ctor w/ smart ptr) "
-	  "w/ ranlux48_base", "[uuid]")
+	  "w/ ranlux48_base",
+	  "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, 6> {};
+	auto               seed_data = std::array<int, 6>{};
 	std::ranges::generate(seed_data, std::ref(rd));
 	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-	auto generator = std::make_unique<std::ranlux48_base>(seq);
+	auto          generator = std::make_unique<std::ranlux48_base>(seq);
 
 	basic_uuid_random_generator<std::ranlux48_base> dgen(generator.get());
-	auto id1 = dgen();
+	auto                                            id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -225,16 +216,17 @@ TEST_CASE("uuid: Test basic random generator (conversion ctor w/ smart ptr) "
 }
 
 TEST_CASE("uuid: Test basic random generator (conversion ctor w/ ref) "
-	  "w/ ranlux48_base", "[uuid]")
+	  "w/ ranlux48_base",
+	  "[uuid]")
 {
 	std::random_device rd;
-	auto seed_data = std::array<int, 6> {};
+	auto               seed_data = std::array<int, 6>{};
 	std::ranges::generate(seed_data, std::ref(rd));
-	std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+	std::seed_seq      seq(std::begin(seed_data), std::end(seed_data));
 	std::ranlux48_base generator(seq);
 
 	basic_uuid_random_generator<std::ranlux48_base> dgen(generator);
-	auto id1 = dgen();
+	auto                                            id1 = dgen();
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::random_number_based);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -289,7 +281,7 @@ TEST_CASE("uuid: Test name generator (std::string)", "[uuid]")
 	using namespace std::string_literals;
 
 	uuid_name_generator dgen(uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43").value());
-	auto id1 = dgen("john"s);
+	auto                id1 = dgen("john"s);
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::name_based_sha1);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -319,7 +311,7 @@ TEST_CASE("uuid: Test name generator (std::string_view)", "[uuid]")
 	using namespace std::string_view_literals;
 
 	uuid_name_generator dgen(uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43").value());
-	auto id1 = dgen("john"sv);
+	auto                id1 = dgen("john"sv);
 	REQUIRE(!id1.is_nil());
 	REQUIRE(id1.version() == uuid_version::name_based_sha1);
 	REQUIRE(id1.variant() == uuid_variant::rfc);
@@ -345,12 +337,13 @@ TEST_CASE("uuid: Test name generator (std::string_view)", "[uuid]")
 }
 
 TEST_CASE("uuid: Test name generator equality (char const*, std::string, "
-	  "std::string_view)", "[uuid]")
+	  "std::string_view)",
+	  "[uuid]")
 {
 	using namespace std::literals;
 
-	auto dgen = uuid_name_generator(uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e43").value());
+	auto dgen = uuid_name_generator(
+		uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43").value());
 	auto id1 = dgen("john");
 	auto id2 = dgen("john"s);
 	auto id3 = dgen("john"sv);
@@ -368,30 +361,20 @@ TEST_CASE("uuid: Test default constructor", "[uuid]")
 TEST_CASE("uuid: Test string conversion", "[uuid]")
 {
 	auto empty = uuid();
-	REQUIRE(to_string(empty) ==
-		"00000000-0000-0000-0000-000000000000");
-	REQUIRE(to_string<wchar_t>(empty) ==
-		L"00000000-0000-0000-0000-000000000000");
+	REQUIRE(to_string(empty) == "00000000-0000-0000-0000-000000000000");
+	REQUIRE(to_string<wchar_t>(empty) == L"00000000-0000-0000-0000-000000000000");
 }
 
 TEST_CASE("uuid: Test is_valid_uuid(char*)", "[uuid]")
 {
-	REQUIRE(uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e43"));
-	REQUIRE(uuid::is_valid_uuid(
-			"{47183823-2574-4bfd-b411-99ed177d3e43}"));
-	REQUIRE(uuid::is_valid_uuid(
-			L"47183823-2574-4bfd-b411-99ed177d3e43"));
-	REQUIRE(uuid::is_valid_uuid(
-			L"{47183823-2574-4bfd-b411-99ed177d3e43}"));
-	REQUIRE(uuid::is_valid_uuid(
-			"00000000-0000-0000-0000-000000000000"));
-	REQUIRE(uuid::is_valid_uuid(
-			"{00000000-0000-0000-0000-000000000000}"));
-	REQUIRE(uuid::is_valid_uuid(
-			L"00000000-0000-0000-0000-000000000000"));
-	REQUIRE(uuid::is_valid_uuid(
-			L"{00000000-0000-0000-0000-000000000000}"));
+	REQUIRE(uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e43"));
+	REQUIRE(uuid::is_valid_uuid("{47183823-2574-4bfd-b411-99ed177d3e43}"));
+	REQUIRE(uuid::is_valid_uuid(L"47183823-2574-4bfd-b411-99ed177d3e43"));
+	REQUIRE(uuid::is_valid_uuid(L"{47183823-2574-4bfd-b411-99ed177d3e43}"));
+	REQUIRE(uuid::is_valid_uuid("00000000-0000-0000-0000-000000000000"));
+	REQUIRE(uuid::is_valid_uuid("{00000000-0000-0000-0000-000000000000}"));
+	REQUIRE(uuid::is_valid_uuid(L"00000000-0000-0000-0000-000000000000"));
+	REQUIRE(uuid::is_valid_uuid(L"{00000000-0000-0000-0000-000000000000}"));
 }
 
 TEST_CASE("uuid: Test is_valid_uuid(basic_string)", "[uuid]")
@@ -443,36 +426,24 @@ TEST_CASE("uuid: Test is_valid_uuid(basic_string_view)", "[uuid]")
 {
 	using namespace std::string_view_literals;
 
-	REQUIRE(uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e43"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			"{47183823-2574-4bfd-b411-99ed177d3e43}"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			L"47183823-2574-4bfd-b411-99ed177d3e43"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			L"{47183823-2574-4bfd-b411-99ed177d3e43}"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			"00000000-0000-0000-0000-000000000000"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			"{00000000-0000-0000-0000-000000000000}"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			L"00000000-0000-0000-0000-000000000000"sv));
-	REQUIRE(uuid::is_valid_uuid(
-			L"{00000000-0000-0000-0000-000000000000}"sv));
+	REQUIRE(uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e43"sv));
+	REQUIRE(uuid::is_valid_uuid("{47183823-2574-4bfd-b411-99ed177d3e43}"sv));
+	REQUIRE(uuid::is_valid_uuid(L"47183823-2574-4bfd-b411-99ed177d3e43"sv));
+	REQUIRE(uuid::is_valid_uuid(L"{47183823-2574-4bfd-b411-99ed177d3e43}"sv));
+	REQUIRE(uuid::is_valid_uuid("00000000-0000-0000-0000-000000000000"sv));
+	REQUIRE(uuid::is_valid_uuid("{00000000-0000-0000-0000-000000000000}"sv));
+	REQUIRE(uuid::is_valid_uuid(L"00000000-0000-0000-0000-000000000000"sv));
+	REQUIRE(uuid::is_valid_uuid(L"{00000000-0000-0000-0000-000000000000}"sv));
 }
 
 TEST_CASE("uuid: Test is_valid_uuid(char*) invalid format", "[uuid]")
 {
 	REQUIRE(!uuid::is_valid_uuid(""));
 	REQUIRE(!uuid::is_valid_uuid("{}"));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e4"));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e430"));
-	REQUIRE(!uuid::is_valid_uuid(
-			"{47183823-2574-4bfd-b411-99ed177d3e43"));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e43}"));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e4"));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e430"));
+	REQUIRE(!uuid::is_valid_uuid("{47183823-2574-4bfd-b411-99ed177d3e43"));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e43}"));
 }
 
 TEST_CASE("uuid: Test is_valid_uuid(basic_string) invalid format", "[uuid]")
@@ -510,21 +481,16 @@ TEST_CASE("uuid: Test is_valid_uuid(basic_string) invalid format", "[uuid]")
 	}
 }
 
-TEST_CASE("uuid: Test is_valid_uuid(basic_string_view) invalid format",
-	  "[uuid]")
+TEST_CASE("uuid: Test is_valid_uuid(basic_string_view) invalid format", "[uuid]")
 {
 	using namespace std::string_view_literals;
 
 	REQUIRE(!uuid::is_valid_uuid(""sv));
 	REQUIRE(!uuid::is_valid_uuid("{}"sv));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e4"sv));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e430"sv));
-	REQUIRE(!uuid::is_valid_uuid(
-			"{47183823-2574-4bfd-b411-99ed177d3e43"sv));
-	REQUIRE(!uuid::is_valid_uuid(
-			"47183823-2574-4bfd-b411-99ed177d3e43}"sv));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e4"sv));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e430"sv));
+	REQUIRE(!uuid::is_valid_uuid("{47183823-2574-4bfd-b411-99ed177d3e43"sv));
+	REQUIRE(!uuid::is_valid_uuid("47183823-2574-4bfd-b411-99ed177d3e43}"sv));
 }
 
 TEST_CASE("uuid: Test from_string(char*)", "[uuid]")
@@ -714,14 +680,10 @@ TEST_CASE("uuid: Test from_string(char*) invalid format", "[uuid]")
 {
 	REQUIRE(!uuid::from_string("").has_value());
 	REQUIRE(!uuid::from_string("{}").has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e4").has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e430").has_value());
-	REQUIRE(!uuid::from_string(
-			"{47183823-2574-4bfd-b411-99ed177d3e43").has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e43}").has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e4").has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e430").has_value());
+	REQUIRE(!uuid::from_string("{47183823-2574-4bfd-b411-99ed177d3e43").has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43}").has_value());
 }
 
 TEST_CASE("uuid: Test from_string(basic_string) invalid format", "[uuid]")
@@ -765,14 +727,10 @@ TEST_CASE("uuid: Test from_string(basic_string_view) invalid format", "[uuid]")
 
 	REQUIRE(!uuid::from_string(""sv).has_value());
 	REQUIRE(!uuid::from_string("{}"sv).has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e4"sv).has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e430"sv).has_value());
-	REQUIRE(!uuid::from_string(
-			"{47183823-2574-4bfd-b411-99ed177d3e43"sv).has_value());
-	REQUIRE(!uuid::from_string(
-			"47183823-2574-4bfd-b411-99ed177d3e43}"sv).has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e4"sv).has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e430"sv).has_value());
+	REQUIRE(!uuid::from_string("{47183823-2574-4bfd-b411-99ed177d3e43"sv).has_value());
+	REQUIRE(!uuid::from_string("47183823-2574-4bfd-b411-99ed177d3e43}"sv).has_value());
 }
 
 TEST_CASE("uuid: Test iterators constructor", "[uuid]")
@@ -780,31 +738,22 @@ TEST_CASE("uuid: Test iterators constructor", "[uuid]")
 	using namespace std::string_literals;
 
 	{
-		std::array<uuid::value_type, 16> arr{{
-			0x47, 0x18, 0x38, 0x23,
-			0x25, 0x74,
-			0x4b, 0xfd,
-			0xb4, 0x11,
-			0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
-		}};
+		std::array<uuid::value_type, 16> arr{
+				{0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd, 0xb4, 0x11, 0x99, 0xed,
+				 0x17, 0x7d, 0x3e, 0x43}
+		};
 
-		uuid guid(std::begin(arr), std::end(arr));
-		REQUIRE(to_string(guid) ==
-			"47183823-2574-4bfd-b411-99ed177d3e43"s);
+		auto const guid = uuid(std::begin(arr), std::end(arr));
+		REQUIRE(to_string(guid) == "47183823-2574-4bfd-b411-99ed177d3e43"s);
 	}
 
 	{
-		uuid::value_type arr[16] = { // NOLINT
-			0x47, 0x18, 0x38, 0x23,
-			0x25, 0x74,
-			0x4b, 0xfd,
-			0xb4, 0x11,
-			0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
-		};
+		uuid::value_type arr[16] = {// NOLINT
+			0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd,
+			0xb4, 0x11, 0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43};
 
-		uuid guid(std::begin(arr), std::end(arr));
-		REQUIRE(to_string(guid) ==
-			"47183823-2574-4bfd-b411-99ed177d3e43"s);
+		auto const guid = uuid(std::begin(arr), std::end(arr));
+		REQUIRE(to_string(guid) == "47183823-2574-4bfd-b411-99ed177d3e43"s);
 	}
 }
 
@@ -813,44 +762,31 @@ TEST_CASE("uuid: Test array constructors", "[uuid]")
 	using namespace std::string_literals;
 
 	{
-		uuid guid{{
-			0x47, 0x18, 0x38, 0x23,
-			0x25, 0x74,
-			0x4b, 0xfd,
-			0xb4, 0x11,
-			0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
-		}};
-
-		REQUIRE(to_string(guid) ==
-			"47183823-2574-4bfd-b411-99ed177d3e43"s);
-	}
-
-	{
-		std::array<uuid::value_type, 16> arr{{
-			0x47, 0x18, 0x38, 0x23,
-			0x25, 0x74,
-			0x4b, 0xfd,
-			0xb4, 0x11,
-			0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
-		}};
-
-		uuid guid(arr);
-		REQUIRE(to_string(guid) ==
-			"47183823-2574-4bfd-b411-99ed177d3e43"s);
-	}
-
-	{
-		uuid::value_type arr[16] { //NOLINT
-			0x47, 0x18, 0x38, 0x23,
-			0x25, 0x74,
-			0x4b, 0xfd,
-			0xb4, 0x11,
-			0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
+		auto const guid = uuid {
+				{0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd, 0xb4, 0x11, 0x99, 0xed,
+				 0x17, 0x7d, 0x3e, 0x43}
 		};
 
-		uuid guid(arr);
-		REQUIRE(to_string(guid) ==
-			"47183823-2574-4bfd-b411-99ed177d3e43"s);
+		REQUIRE(to_string(guid) == "47183823-2574-4bfd-b411-99ed177d3e43"s);
+	}
+
+	{
+		auto arr = std::array<uuid::value_type, 16>{
+				{0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd, 0xb4, 0x11, 0x99, 0xed,
+				 0x17, 0x7d, 0x3e, 0x43}
+		};
+
+		auto const guid = uuid(arr);
+		REQUIRE(to_string(guid) == "47183823-2574-4bfd-b411-99ed177d3e43"s);
+	}
+
+	{
+		uuid::value_type arr[16]{// NOLINT
+			0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd,
+			0xb4, 0x11, 0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43};
+
+		auto const guid = uuid(arr);
+		REQUIRE(to_string(guid) == "47183823-2574-4bfd-b411-99ed177d3e43"s);
 	}
 }
 
@@ -874,21 +810,15 @@ TEST_CASE("Test comparison", "[uuid]")
 	auto engine = uuid_random_generator::engine_type{};
 	seed_rng(engine);
 
-	uuid_random_generator gen{engine};
+	auto gen = uuid_random_generator{engine};
 	auto id = gen();
 
 	REQUIRE(empty < id);
 
-	std::set<uuid> ids{
-		uuid{},
-		gen(),
-		gen(),
-		gen(),
-		gen()
-	};
+	auto ids = std::set{uuid{}, gen(), gen(), gen(), gen()};
 
 	REQUIRE(ids.size() == 5);
-	REQUIRE(ids.find(uuid{}) != ids.end());
+	REQUIRE(ids.contains(uuid{}) == true);
 }
 
 TEST_CASE("uuid: Test hashing", "[uuid]")
@@ -904,15 +834,9 @@ TEST_CASE("uuid: Test hashing", "[uuid]")
 
 	auto engine = uuid_random_generator::engine_type{};
 	seed_rng(engine);
-	uuid_random_generator gen{ engine };
+	uuid_random_generator gen{engine};
 
-	std::unordered_set<uuid> ids{
-		uuid{},
-		gen(),
-		gen(),
-		gen(),
-		gen()
-	};
+	std::unordered_set<uuid> ids{uuid{}, gen(), gen(), gen(), gen()};
 
 	REQUIRE(ids.size() == 5);
 	REQUIRE(ids.find(uuid{}) != ids.end());
@@ -950,7 +874,7 @@ TEST_CASE("uuid: Test constexpr", "[uuid]")
 
 TEST_CASE("uuid: Test size", "[uuid]")
 {
-   REQUIRE(sizeof(uuid) == 16);
+	REQUIRE(sizeof(uuid) == 16);
 }
 
 TEST_CASE("uuid: Test assignment", "[uuid]")
@@ -973,16 +897,13 @@ TEST_CASE("uuid: Test trivial", "[uuid]")
 
 TEST_CASE("uuid: Test as_bytes", "[uuid]")
 {
-	std::array<uuid::value_type, 16> arr{{
-		0x47, 0x18, 0x38, 0x23,
-		0x25, 0x74,
-		0x4b, 0xfd,
-		0xb4, 0x11,
-		0x99, 0xed, 0x17, 0x7d, 0x3e, 0x43
-	}};
+	std::array<uuid::value_type, 16> arr{
+			{0x47, 0x18, 0x38, 0x23, 0x25, 0x74, 0x4b, 0xfd, 0xb4, 0x11, 0x99, 0xed, 0x17, 0x7d,
+			 0x3e, 0x43}
+	};
 
 	{
-		uuid id{ arr };
+		uuid id{arr};
 		REQUIRE(!id.is_nil());
 
 		auto view = id.as_bytes();
@@ -990,12 +911,13 @@ TEST_CASE("uuid: Test as_bytes", "[uuid]")
 	}
 
 	{
-		const uuid id{ arr };
+		const uuid id{arr};
 		REQUIRE(!id.is_nil());
 
 		auto view = id.as_bytes();
 		REQUIRE(memcmp(view.data(), arr.data(), arr.size()) == 0);
 	}
 }
+} // anonymous namespace
 
-//NOLINTEND(bugprone-unchecked-optional-access)
+// NOLINTEND(bugprone-unchecked-optional-access)

@@ -1,0 +1,27 @@
+// This source code is released into the public domain.
+module;
+
+#include <paths.h>
+
+export module nihil.posix:paths;
+
+import nihil.std;
+
+namespace nihil::paths {
+
+export inline constexpr auto defpath = std::string_view(_PATH_DEFPATH);
+export inline constexpr auto stdpath = std::string_view(_PATH_STDPATH);
+
+#ifdef _PATH_LOCALBASE
+export inline constexpr auto localbase = std::string_view(_PATH_LOCALBASE);
+#else
+export inline constexpr auto localbase = std::string_view("/usr/local");
+#endif
+
+#ifdef _PATH_SYSPATH
+export inline constexpr auto syspath = std::string_view(_PATH_SYSPATH);
+#else
+export inline constexpr auto syspath = std::string_view("/sbin:/usr/sbin");
+#endif
+
+} // namespace nihil::paths

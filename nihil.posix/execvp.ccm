@@ -1,29 +1,26 @@
 // This source code is released into the public domain.
-module;
-
-#include <coroutine>
-#include <string>
-#include <expected>
-#include <format>
-
 export module nihil.posix:execvp;
 
+import nihil.std;
+import nihil.core;
 import nihil.error;
 import nihil.monad;
 import :argv;
 import :execv;
 import :find_in_path;
+import :open_in_path;
 
 namespace nihil {
 
-// execvp: equivalent to execv, except the command is passed as
-// a filename instead of a file descriptor.  If the filename is not
-// an absolute path, it will be searched for in $PATH.
+// execvp: equivalent to execv, except the command will be searched for in $PATH.
+
 export [[nodiscard]] auto
-execvp(std::string_view file, argv &&argv) -> std::expected<execv, error>
+execvp(std::filesystem::path const &file, argv &&args) -> std::expected<execv, error>
 {
-	auto filename = co_await find_in_path(file);
-	co_return execv(std::move(filename), std::move(argv));
+	if constexpr (features::fexecve)
+		co_return execv(co_await open_in_path(file), std::move(args));
+	else
+		co_return execv(co_await find_in_path(file), std::move(args));
 }
 
 } // namespace nihil

@@ -11,11 +11,9 @@
 // (See accompanying file LICENSE or http://www.boost.org/LICENSE_1_0.txt)
 ///////////////////////////////////////////////////////////////////////////////
 
-module;
-
-#include <ranges>
-
 export module nihil.generator;
+
+import nihil.std;
 
 export import :coroutine_traits;
 export import :elements_of;

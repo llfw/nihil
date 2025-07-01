@@ -4,13 +4,10 @@
 
 module;
 
-#include <expected>
-#include <functional>
-#include <string>
-
 export module nihil.cli:command;
 
 import nihil.error;
+import nihil.std;
 import :command_node;
 
 namespace nihil {
@@ -40,7 +37,6 @@ export struct command final : command_node {
 		-> std::expected<int, error> override;
 
 private:
-	std::string_view	m_path;
 	std::string_view	m_usage;
 	command_function_t	m_handler;
 };

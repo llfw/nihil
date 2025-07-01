@@ -1,0 +1,35 @@
+// This source code is released into the public domain.
+module;
+
+#include <cerrno>
+
+export module nihil.util:save_errno;
+
+// save_errno: save the current value of errno and restore it when we're destroyed.
+// this allows wrappers around C functions that use errno to preserve the caller's
+// errno value.
+
+namespace nihil {
+
+export struct save_errno final
+{
+	save_errno() : m_errno(errno) {}
+
+	~save_errno()
+	{
+		errno = m_errno;
+	}
+
+	// Not copyable
+	save_errno(const save_errno&) = delete;
+	auto operator=(const save_errno&) -> save_errno & = delete;
+
+	// Not movable
+	save_errno(save_errno&&) = delete;
+	auto operator=(save_errno&&) -> save_errno & = delete;
+
+private:
+	int	m_errno;
+};
+
+} // namespace nihil

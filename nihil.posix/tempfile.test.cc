@@ -1,11 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <filesystem>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.posix;
 
 TEST_CASE("posix.tempfile: create", "[nihil][nihil.posix]")

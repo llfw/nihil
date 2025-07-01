@@ -1,24 +1,15 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-/*
- * The configuration store.  There should only be one of these.
- */
-
-#include <coroutine>
-#include <expected>
-#include <string>
-#include <map>
-
+// This source code is released into the public domain.
 export module nihil.config:store;
 
+// The configuration store.  There should only be one of these.
+
+import nihil.std;
+import nihil.error;
 import nihil.generator;
-import :option;
 
 namespace nihil::config {
+
+export struct option;
 
 struct store final {
 	/*
@@ -57,8 +48,8 @@ struct store final {
 	// Not movable or copyable.
 	store(store const &) = delete;
 	store(store &&) = delete;
-	store& operator=(store const &) = delete;
-	store& operator=(store &&) = delete;
+	auto operator=(store const &) -> store & = delete;
+	auto operator=(store &&) -> store & = delete;
 
 private:
 	store();

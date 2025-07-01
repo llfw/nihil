@@ -1,17 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <coroutine>
-#include <expected>
-#include <filesystem>
-#include <format>
-#include <map>
-
+// This source code is released into the public domain.
 module nihil.config;
 
+import nihil.std;
 import nihil.error;
 import nihil.generator;
 import nihil.monad;

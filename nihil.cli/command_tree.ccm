@@ -1,17 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <map>
-#include <memory>
-#include <optional>
-#include <ranges>
-#include <vector>
-
+// This source code is released into the public domain.
 export module nihil.cli:command_tree;
 
+import nihil.std;
 import :command;
 
 namespace nihil {

@@ -1,19 +1,15 @@
 // This source code is released into the public domain.
 module;
 
-#include <expected>
-#include <filesystem>
-#include <optional>
-#include <ranges>
-
-#include <paths.h>
-#include <unistd.h>
+#include <unistd.h> // access()
 
 export module nihil.posix:find_in_path;
 
+import nihil.std;
 import nihil.error;
 import :fd;
 import :getenv;
+import :paths;
 
 namespace nihil {
 
@@ -28,7 +24,7 @@ export [[nodiscard]] auto find_in_path(std::filesystem::path const &file, std::s
 		auto ret = ::access(file.string().c_str(), X_OK);
 		if (ret == 0)
 			return {std::move(file)};
-		return std::unexpected(error(std::errc(errno)));
+		return std::unexpected(error(sys_error()));
 	};
 
 	// Absolute pathname skips the search.
@@ -59,7 +55,7 @@ export [[nodiscard]] auto find_in_path(std::filesystem::path const &file, std::s
 export [[nodiscard]] auto
 find_in_path(std::filesystem::path const &file) -> std::expected<std::filesystem::path, error>
 {
-	auto const path = getenv("PATH").value_or(_PATH_DEFPATH); // NOLINT
+	auto const path = getenv("PATH").value_or(std::string(paths::defpath)); // NOLINT
 	return find_in_path(file, path);
 }
 

@@ -1,6 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.uuid STATIC)
+target_link_libraries(nihil.uuid PRIVATE nihil.std)
 target_sources(nihil.uuid
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	uuid.ccm

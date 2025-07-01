@@ -1,90 +1,118 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <cassert>
-#include <cstdint>
-#include <cstdlib>
-#include <expected>
-#include <format>
-#include <string>
 
 #include <ucl.h>
 
 export module nihil.ucl:boolean;
 
+import nihil.std;
+import nihil.core;
 import :object;
 
 namespace nihil::ucl {
 
-export struct boolean final : object {
+export struct boolean final : object
+{
 	using contained_type = bool;
 
-	inline static constexpr object_type ucl_type = object_type::boolean;
+	static constexpr object_type ucl_type = object_type::boolean;
 
-	/*
-	 * Create a boolean holding the value false.  Throws std::system_error
-	 * on failure.
-	 */
-	boolean();
+	// Create a boolean holding the value false.  Throws std::system_error
+	// on failure.
+	boolean()
+		: boolean(false)
+	{
+	}
 
-	/*
-	 * Create a boolean holding a specific value.  Throws std::system_error
-	 * on failure.
-	 */
-	explicit boolean(bool);
+	// Create a boolean holding a specific value.  Throws std::system_error
+	// on failure.
+	explicit boolean(bool const value)
+		: object(noref, [&] {
+			auto *uobj = ::ucl_object_frombool(value);
+			if (uobj == nullptr)
+				throw std::system_error(std::make_error_code(sys_error()));
+			return uobj;
+		}())
+	{
+	}
 
-	/*
-	 * Create a new boolean from a UCL object.  Throws type_mismatch
-	 * on failure.
-	 */
-	boolean(ref_t, ::ucl_object_t const *uobj);
-	boolean(noref_t, ::ucl_object_t *uobj);
+	// Create a new boolean from a UCL object.  Throws type_mismatch
+	// on failure.
+
+	boolean(ref_t, ::ucl_object_t const *uobj)
+		: object(nihil::ucl::ref, ensure_ucl_type(uobj, boolean::ucl_type))
+	{
+	}
+
+	boolean(noref_t, ::ucl_object_t *uobj)
+		: object(nihil::ucl::noref, ensure_ucl_type(uobj, boolean::ucl_type))
+	{
+	}
 
 	// Return this object's value.
-	auto value(this boolean const &self) -> contained_type;
+	auto value(this boolean const &self) -> contained_type
+	{
+		auto        v = contained_type{};
+		auto const *uobj = self.get_ucl_object();
+
+		if (::ucl_object_toboolean_safe(uobj, &v))
+			return v;
+
+		throw std::runtime_error("ucl_object_toboolean_safe failed");
+	}
+
+private:
+	// Comparison operators.
+	[[nodiscard]] friend auto operator==(boolean const &a, boolean const &b) -> bool
+	{
+		return a.value() == b.value();
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(boolean const &a, boolean const &b) -> std::strong_ordering
+	{
+		return static_cast<int>(a.value()) <=> static_cast<int>(b.value());
+	}
+
+	[[nodiscard]] friend auto operator==(boolean const &a, contained_type const b) -> bool
+	{
+		return a.value() == b;
+	}
+
+	[[nodiscard]] friend auto
+	operator<=>(boolean const &a, contained_type const b) -> std::strong_ordering
+	{
+		return static_cast<int>(a.value()) <=> static_cast<int>(b);
+	}
 };
 
-/*
- * Boolean constructors.  These return an error instead of throwing.
- */
-
+// Boolean constructors.  This returns an error instead of throwing.
 export [[nodiscard]] auto
-make_boolean(boolean::contained_type = false) -> std::expected<boolean, error>;
-
-/*
- * Comparison operators.
- */
-
-export auto operator== (boolean const &a, boolean const &b) -> bool;
-export auto operator== (boolean const &a, boolean::contained_type b) -> bool;
-export auto operator<=> (boolean const &a, boolean const &b)
-	-> std::strong_ordering;
-export auto operator<=> (boolean const &a, boolean::contained_type b)
-	-> std::strong_ordering;
+make_boolean(boolean::contained_type const value = false) -> std::expected<boolean, error>
+{
+	if (auto *uobj = ::ucl_object_frombool(value); uobj == nullptr)
+		return error(errc::failed_to_create_object, error(sys_error()));
+	else
+		return boolean(noref, uobj);
+}
 
 } // namespace nihil::ucl
 
-/*
- * std::formatter for a boolean.  This provides the same format operations
- * as std::formatter<bool>.
- */
-export template<>
+// std::formatter for a boolean.  This provides the same format operations
+// as std::formatter<bool>.
+export template <>
 struct std::formatter<nihil::ucl::boolean, char>
 {
 	std::formatter<bool> base_formatter;
 
-	template<class ParseContext>
-	constexpr ParseContext::iterator parse(ParseContext& ctx)
+	template <class ParseContext>
+	constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator
 	{
 		return base_formatter.parse(ctx);
 	}
 
-	template<class FmtContext>
-	FmtContext::iterator format(nihil::ucl::boolean const &o,
-				    FmtContext& ctx) const
+	template <class FmtContext>
+	auto format(nihil::ucl::boolean const &o, FmtContext &ctx) const -> FmtContext::iterator
 	{
 		return base_formatter.format(o.value(), ctx);
 	}

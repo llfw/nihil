@@ -1,0 +1,13 @@
+// This source code is released into the public domain.
+module;
+
+#include "nihil.hh"
+
+export module nihil.core:features;
+
+namespace nihil::features {
+
+export inline constexpr bool fexecve = NIHIL_HAVE_FEXECVE;
+export inline constexpr bool getenv_r = NIHIL_HAVE_GETENV_R;
+
+} // namespace nihil::features

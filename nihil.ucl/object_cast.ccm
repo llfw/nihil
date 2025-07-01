@@ -1,17 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
+// This source code is released into the public domain.
 module;
-
-#include <coroutine>
-#include <cstdlib>
-#include <expected>
 
 #include <ucl.h>
 
 export module nihil.ucl:object_cast;
 
+import nihil.std;
 import nihil.monad;
 import :type;
 import :object;
@@ -19,10 +13,9 @@ import :array;
 
 namespace nihil::ucl {
 
-/*
- * Ensure a UCL object is convertible to another type.  Throws type_mismatch
- * if not.
- */
+//
+// Ensure a UCL object is convertible to another type.
+//
 
 // Implementation for basic types.
 template<datatype To>
@@ -80,7 +73,7 @@ struct convert_check<array<T>>
 export template<datatype To>
 auto object_cast(object const &from) -> std::expected<To, type_mismatch>
 {
-	auto uobj = from.get_ucl_object();
+	auto const *uobj = from.get_ucl_object();
 
 	co_await convert_check<To>{}.check(uobj);
 	co_return To(nihil::ucl::ref, uobj);

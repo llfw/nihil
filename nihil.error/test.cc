@@ -1,13 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <cerrno>
-#include <cstring>
-#include <system_error>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.error;
 
 TEST_CASE("error: invariants", "[nihil]")
@@ -27,9 +22,9 @@ TEST_CASE("error: construct from string", "[nihil]")
 	using namespace nihil;
 
 	auto e = error("an error");
-	REQUIRE(e.str() == to_string(e));
-	REQUIRE(to_string(e) == "an error");
-	REQUIRE(std::format("{}", e) == to_string(e));
+	REQUIRE(e.full_str() == "an error");
+	REQUIRE(e.this_str() == e.full_str());
+	REQUIRE(std::format("{}", e) == e.full_str());
 }
 
 TEST_CASE("error: construct from std::error_condition", "[nihil]")
@@ -46,9 +41,9 @@ TEST_CASE("error: construct from std::error_condition", "[nihil]")
 	REQUIRE(e == std::errc::invalid_argument);
 	REQUIRE(e != std::errc::no_such_file_or_directory);
 
-	REQUIRE(e.str() == to_string(e));
-	REQUIRE(to_string(e) == std::strerror(EINVAL));
-	REQUIRE(std::format("{}", e) == to_string(e));
+	REQUIRE(e.full_str() == std::strerror(EINVAL));
+	REQUIRE(e.this_str() == e.full_str());
+	REQUIRE(std::format("{}", e) == e.full_str());
 }
 
 TEST_CASE("error: construct from std::errc", "[nihil]")
@@ -64,9 +59,9 @@ TEST_CASE("error: construct from std::errc", "[nihil]")
 	REQUIRE(e == std::errc::invalid_argument);
 	REQUIRE(e != std::errc::no_such_file_or_directory);
 
-	REQUIRE(e.str() == to_string(e));
-	REQUIRE(to_string(e) == std::strerror(EINVAL));
-	REQUIRE(std::format("{}", e) == to_string(e));
+	REQUIRE(e.full_str() == std::strerror(EINVAL));
+	REQUIRE(e.this_str() == e.full_str());
+	REQUIRE(std::format("{}", e) == e.full_str());
 }
 
 TEST_CASE("error: compound error", "[nihil]")
@@ -82,10 +77,10 @@ TEST_CASE("error: compound error", "[nihil]")
 	REQUIRE(e.condition().has_value() == false);
 
 	REQUIRE(*e.cause() == std::errc::no_such_file_or_directory);
-	REQUIRE(e.str() == "cannot open file");
-	REQUIRE(to_string(e) == ("cannot open file: "s +
-				 std::strerror(ENOENT)));
-	REQUIRE(std::format("{}", e) == to_string(e));
+
+	REQUIRE(e.full_str() == ("cannot open file: "s + std::strerror(ENOENT)));
+	REQUIRE(e.this_str() == "cannot open file");
+	REQUIRE(std::format("{}", e) == e.full_str());
 }
 
 TEST_CASE("error: operator== with strings", "[nihil]")

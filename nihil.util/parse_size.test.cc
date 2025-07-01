@@ -1,12 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <cstdint>
-#include <system_error>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.core;
 import nihil.error;
 import nihil.util;

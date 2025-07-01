@@ -1,16 +1,14 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <concepts>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
+import nihil.std;
 import nihil.ucl;
 
 //NOLINTBEGIN(bugprone-unchecked-optional-access)
 
+namespace {
 TEST_CASE("ucl: map: invariants", "[ucl]")
 {
 	using namespace nihil::ucl;
@@ -43,9 +41,9 @@ TEST_CASE("ucl: map: construct from initializer_list", "[ucl]")
 	using namespace std::literals;
 
 	auto map = nihil::ucl::map<integer>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
 	REQUIRE(str(map.type()) == "object");
 	REQUIRE(map["1"] == 1);
@@ -58,11 +56,11 @@ TEST_CASE("ucl: map: construct from range", "[ucl]")
 	using namespace std::literals;
 
 	auto vec = std::vector<std::pair<std::string_view, integer>>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
-	auto map = nihil::ucl::map<integer>(std::from_range, vec);
+	auto map = nihil::ucl::map<integer>(vec);
 
 	REQUIRE(str(map.type()) == "object");
 	REQUIRE(map["1"] == 1);
@@ -75,9 +73,9 @@ TEST_CASE("ucl: map: construct from iterator pair", "[ucl]")
 	using namespace std::literals;
 
 	auto vec = std::vector<std::pair<std::string_view, integer>>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
 	auto map = nihil::ucl::map<integer>(std::ranges::begin(vec),
 					    std::ranges::end(vec));
@@ -107,9 +105,9 @@ TEST_CASE("ucl: map: find", "[ucl]")
 	using namespace std::literals;
 
 	auto map = nihil::ucl::map<integer>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
 	auto obj = map.find("42");
 	REQUIRE(obj.value() == 42);
@@ -124,11 +122,11 @@ TEST_CASE("ucl: map: iterate", "[ucl]")
 	using namespace std::literals;
 
 	auto map = nihil::ucl::map<integer>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
-	auto i = 0u;
+	auto i = 0U;
 
 	for (auto [key, value] : map) {
 		if (key == "1")
@@ -155,9 +153,9 @@ TEST_CASE("ucl: map: remove", "[uc]")
 	using namespace nihil::ucl;
 
 	auto map = nihil::ucl::map<integer>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
 	REQUIRE(map.find("42") != std::nullopt);
 	REQUIRE(map.remove("42") == true);
@@ -173,9 +171,9 @@ TEST_CASE("ucl: map: pop", "[uc]")
 	using namespace nihil::ucl;
 
 	auto map = nihil::ucl::map<integer>{
-		{"1"sv, integer(1)},
-		{"42"sv, integer(42)},
-	};
+			{"1"sv, integer(1)},
+			{"42"sv, integer(42)},
+		};
 
 	REQUIRE(map.find("42") != std::nullopt);
 
@@ -188,5 +186,7 @@ TEST_CASE("ucl: map: pop", "[uc]")
 	obj = map.pop("42");
 	REQUIRE(!obj);
 }
+
+} // anonymous namespace
 
 //NOLINTEND(bugprone-unchecked-optional-access)

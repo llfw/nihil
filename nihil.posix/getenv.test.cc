@@ -1,18 +1,14 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <ranges>
-#include <string>
-#include <system_error>
+// This source code is released into the public domain.
 
 #include <unistd.h>
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.error;
 import nihil.posix;
 
+namespace {
 TEST_CASE("getenv: existing value", "[getenv]")
 {
 	auto constexpr *name = "NIHIL_TEST_VAR";
@@ -48,3 +44,5 @@ TEST_CASE("getenv: long value")
 	REQUIRE(s);
 	REQUIRE(*s == value);
 }
+
+} // anonymous namespace

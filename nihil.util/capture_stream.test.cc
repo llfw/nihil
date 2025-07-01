@@ -1,13 +1,11 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <iostream>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.util;
 
+namespace {
 TEST_CASE("nihil.util: capture", "[nihil][nihil.util]")
 {
 	SECTION("std::cout with release()") {
@@ -42,3 +40,5 @@ TEST_CASE("nihil.util: capture", "[nihil][nihil.util]")
 		REQUIRE(cap.str() == "1+1=2\n");
 	}
 }
+
+} // anonymous namespace

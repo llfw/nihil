@@ -1,6 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.guard STATIC)
+target_link_libraries(nihil.guard PRIVATE nihil.std)
 target_sources(nihil.guard
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	guard.ccm

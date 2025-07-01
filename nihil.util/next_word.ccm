@@ -1,44 +1,27 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <algorithm>
-#include <locale>
-#include <ranges>
-#include <string>
-#include <utility>
-
+// This source code is released into the public domain.
 export module nihil.util:next_word;
 
 import :skipws;
 
 namespace nihil {
 
-/*
- * Return the next word from a string_view.  Skips leading whitespace, so
- * calling this repeatedly will return each word from the string.
- */
-
-export template<typename Char> [[nodiscard]]
-auto next_word(std::basic_string_view<Char> text,
-	       std::locale const &locale = std::locale())
-	-> std::pair<std::basic_string_view<Char>,
-		     std::basic_string_view<Char>>
+// Return the next word from a string_view.  Skips leading whitespace, so
+// calling this repeatedly will return each word from the string.
+export template <typename Char>
+[[nodiscard]]
+auto next_word(std::basic_string_view<Char> text, std::locale const &locale = std::locale())
+	-> std::pair<std::basic_string_view<Char>, std::basic_string_view<Char>>
 {
 	text = skipws(text, locale);
 
 	auto is_space = ctype_is(std::ctype_base::space, locale);
 	auto split_pos = std::ranges::find_if(text, is_space);
 
-	return {{std::ranges::begin(text), split_pos},
-		{split_pos, std::ranges::end(text)}};
+	return {{std::ranges::begin(text), split_pos}, {split_pos, std::ranges::end(text)}};
 }
 
-export template<typename Char>
-auto next_word(std::basic_string_view<Char> *text,
-	       std::locale const &locale = std::locale())
+export template <typename Char>
+auto next_word(std::basic_string_view<Char> *text, std::locale const &locale = std::locale())
 	-> std::basic_string_view<Char>
 {
 	auto [word, rest] = next_word(*text, locale);

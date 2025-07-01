@@ -1,15 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <memory>
-#include <ranges>
-#include <string>
-#include <vector>
-
+// This source code is released into the public domain.
 export module nihil.posix:argv;
+
+import nihil.std;
 
 namespace nihil {
 

@@ -1,15 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <cstdio>
-#include <exception>
-#include <memory>
-#include <vector>
-
+// This source code is released into the public domain.
 module nihil.cli;
+
+import nihil.std;
 
 namespace nihil {
 
@@ -22,11 +14,11 @@ try {
 	static auto commands = std::vector<std::shared_ptr<command_node>>();
 	return commands;
 } catch (std::exception const &exc) {
-	std::printf("%s\n", exc.what());
-	std::exit(1);
+	std::println(std::cerr, "{}", exc.what());
+	std::exit(1); // NOLINT
 } catch (...) {
-	std::printf("get_registered_commands(): unknown error\n");
-	std::exit(1);
+	std::println(std::cerr, "get_registered_commands(): unknown error\n");
+	std::exit(1); // NOLINT
 }
 
 /*
@@ -39,11 +31,11 @@ try {
 	auto &commands = get_registry();
 	commands.emplace_back(cmd, null_deleter);
 } catch (std::exception const &exc) {
-	std::printf("%s\n", exc.what());
-	std::exit(1);
+	std::println(std::cerr, "{}", exc.what());
+	std::exit(1); // NOLINT
 } catch (...) {
-	std::printf("get_registered_commands(): unknown error\n");
-	std::exit(1);
+	std::println(std::cerr, "get_registered_commands(): unknown error\n");
+	std::exit(1); // NOLINT
 }
 
 /*

@@ -7,6 +7,7 @@ Checks: >
     -bugprone-reserved-identifier,
     -bugprone-easily-swappable-parameters,
   cert-*,
+    -cert-dcl58-cpp,
   concurrency-*,
   cppcoreguidelines-*,
     -cppcoreguidelines-avoid-do-while,

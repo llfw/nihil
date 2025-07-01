@@ -22,15 +22,9 @@
  * IN THE SOFTWARE.
  */
 
-module;
-
-#include <coroutine>
-#include <exception>
-#include <expected>
-#include <optional>
-#include <utility>
-
 export module nihil.monad;
+
+import nihil.std;
 
 namespace nihil {
 
@@ -228,8 +222,7 @@ struct expected_promise<void, E> : expected_promise_base<void, E> {
 		self.data->emplace(std::move(err));
 	}
 
-	void return_value(this expected_promise &self,
-			  std::expected<void, E> o)
+	void return_value(this expected_promise &self, std::expected<void, E> o)
 	{
 		self.data->emplace(std::move(o));
 	}

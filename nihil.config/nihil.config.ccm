@@ -1,9 +1,4 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
+// This source code is released into the public domain.
 export module nihil.config;
 
 export import :option;

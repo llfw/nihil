@@ -14,15 +14,10 @@
 module;
 
 #include <cassert>
-#include <coroutine>
-#include <exception>
-#include <memory>
-#include <ranges>
-#include <type_traits>
-#include <utility>
 
 export module nihil.generator:generator;
 
+import nihil.std;
 import :byte_allocator;
 import :coroutine_traits;
 import :elements_of;

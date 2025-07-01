@@ -1,6 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.flagset STATIC)
+target_link_libraries(nihil.flagset PRIVATE nihil.std)
 target_sources(nihil.flagset
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	flagset.ccm

@@ -1,17 +1,7 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <iostream>
-#include <memory>
-#include <print>
-#include <ranges>
-#include <string>
-#include <vector>
-
+// This source code is released into the public domain.
 module nihil.cli;
+
+import nihil.std;
 
 namespace nihil {
 
@@ -64,7 +54,7 @@ auto command_tree_node::get_or_create_child(this command_tree_node &self,
 	-> command_tree_node *
 {
 	// Return the existing child, if there is one.
-	if (auto ptr = self.get_child(child); ptr != nullptr)
+	if (auto *ptr = self.get_child(child); ptr != nullptr)
 		return ptr;
 
 	// Insert a new child.
@@ -135,11 +125,11 @@ auto command_tree::insert(this command_tree &self,
 auto command_tree::find(this command_tree const &self, int &argc, char **&argv)
 	-> command_tree_node const *
 {
-	auto *this_node = &self.m_root_node;
+	auto const *this_node = &self.m_root_node;
 
 	// Iterate until we don't find a child command, then return that node.
 	while (argv[0] != nullptr) {
-		auto *next_node = this_node->get_child(argv[0]);
+		auto const *next_node = this_node->get_child(argv[0]);
 
 		if (next_node == nullptr)
 			return this_node;

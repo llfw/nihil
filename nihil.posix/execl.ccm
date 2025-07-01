@@ -1,40 +1,25 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <expected>
-#include <string>
-
-#include "nihil.hh"
-
+// This source code is released into the public domain.
 export module nihil.posix:execl;
 
+import nihil.std;
 import nihil.error;
 import :argv;
 import :execv;
-import :fexecv;
+import :fd;
 
 namespace nihil {
 
-/*
- * execl: equivalent to (f)execv, except the arguments are passed as a
- * variadic pack of string-like objects.
- */
+// execl: equivalent to execv, except the arguments are passed as a
+// variadic pack of string-like objects.
 
-export [[nodiscard]] auto execl(std::string_view path, auto &&...args) -> execv
+export [[nodiscard]] auto execl(std::filesystem::path path, auto &&...args) -> execv
 {
-	return execv(path, argv({std::string_view(args)...}));
+	return execv(std::move(path), argv({std::string_view(args)...}));
 }
 
-#ifdef NIHIL_HAVE_FEXECVE
-
-export [[nodiscard]] auto execl(fd &&executable, auto &&...args) -> fexecv
+export [[nodiscard]] auto execl(fd &&executable, auto &&...args) -> execv
 {
-	return fexecv(std::move(executable), argv({std::string_view(args)...}));
+	return execv(std::move(executable), argv({std::string_view(args)...}));
 }
-
-#endif // NIHIL_HAVE_FEXECVE
 
 } // namespace nihil

@@ -1,6 +1,7 @@
 # This source code is released into the public domain.
 
 add_library(nihil.generator STATIC)
+target_link_libraries(nihil.generator PRIVATE nihil.std)
 target_sources(nihil.generator
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.generator.ccm

@@ -1,26 +1,20 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <concepts>
-#include <format>
-#include <sstream>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.flagset;
 
 namespace {
-
-struct test_tag{};
+struct test_tag
+{
+};
 using testflags = nihil::flagset<unsigned, test_tag>;
 
 constexpr auto zero = testflags::bit<0>();
 constexpr auto one = testflags::bit<1>();
 constexpr auto two = testflags::bit<2>();
 constexpr auto twelve = testflags::bit<12>();
-
-}
 
 TEST_CASE("flagset: invariant", "[nihil]")
 {
@@ -45,17 +39,17 @@ TEST_CASE("flagset: mask<>", "[nihil]")
 
 TEST_CASE("flagset: constructor", "[nihil]")
 {
-	SECTION("default construct") {
+	SECTION ("default construct") {
 		auto flags = testflags();
 		REQUIRE(flags.value() == 0);
 	}
 
-	SECTION("construct from int") {
+	SECTION ("construct from int") {
 		auto flags = testflags::from_int(one.value() | zero.value());
 		REQUIRE(flags == (one | zero));
 	}
 
-	SECTION("copy construct") {
+	SECTION ("copy construct") {
 		auto flags = one;
 		auto flags2(flags);
 		REQUIRE(flags == flags2);
@@ -64,46 +58,46 @@ TEST_CASE("flagset: constructor", "[nihil]")
 
 TEST_CASE("flagset: operators", "[nihil]")
 {
-	SECTION("operator|") {
+	SECTION ("operator|") {
 		REQUIRE((zero | one).value() == 0x3);
 	}
 
-	SECTION("operator|=") {
+	SECTION ("operator|=") {
 		auto flags = zero;
 		flags |= one;
 		REQUIRE(flags.value() == 0x3);
 	}
 
-	SECTION("operator&") {
+	SECTION ("operator&") {
 		auto flags = zero | one;
 
 		REQUIRE((flags & zero) == zero);
 	}
 
-	SECTION("operator&=") {
+	SECTION ("operator&=") {
 		auto flags = zero | one | two;
 		REQUIRE(flags.value() == 0x7);
 		flags &= (zero | one);
 		REQUIRE(flags.value() == 0x3);
 	}
 
-	SECTION("operator^") {
+	SECTION ("operator^") {
 		auto flags = zero | one;
 		REQUIRE((flags ^ (one | two)) == (zero | two));
 	}
 
-	SECTION("operator^=") {
+	SECTION ("operator^=") {
 		auto flags = zero | one;
 		flags ^= (one | two);
 		REQUIRE(flags == (zero | two));
 	}
 
-	SECTION("operator~") {
+	SECTION ("operator~") {
 		auto flags = ~zero;
 		REQUIRE(flags.value() == ~static_cast<unsigned>(1));
 	}
 
-	SECTION("operator==") {
+	SECTION ("operator==") {
 		auto flags = zero;
 		REQUIRE(flags == zero);
 		REQUIRE(flags != one);
@@ -133,7 +127,7 @@ TEST_CASE("flagset: format", "[nihil]")
 
 TEST_CASE("flagset: ostream operator<<", "[nihil]")
 {
-	auto write = [] (testflags flags) -> std::string {
+	auto write = [](testflags flags) -> std::string {
 		auto strm = std::ostringstream();
 		strm << flags;
 		return strm.str();
@@ -147,3 +141,4 @@ TEST_CASE("flagset: ostream operator<<", "[nihil]")
 	REQUIRE(write(twelve) == "<12>");
 	REQUIRE(write(twelve | one) == "<12,1>");
 }
+} // anonymous namespace

@@ -1,28 +1,29 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <string>
-#include <system_error>
-
+// This source code is released into the public domain.
 export module nihil.core:errc;
+
+import nihil.std;
 
 namespace nihil {
 
-export enum struct errc {
+export enum struct errc : std::uint8_t {
 	no_error = 0,
 
-	/*
-	 * nihil.command
-	 */
+	//
+	// nihil.command
+	//
 
 	incomplete_command,
 
-	/*
-	 * nihil.util
-	 */
+	//
+	// nihil.ucl
+	//
+
+	failed_to_create_object,
+	type_mismatch,
+
+	//
+	// nihil.util
+	//
 
 	// Empty string is not allowed.
 	empty_string,
@@ -36,9 +37,5 @@ export [[nodiscard]] auto make_error_condition(errc ec) -> std::error_condition;
 
 } // namespace nihil
 
-namespace std {
-
-export template<>
-struct is_error_condition_enum<nihil::errc> : true_type {};
-
-} // namespace std
+template<>
+struct std::is_error_condition_enum<nihil::errc> : std::true_type {};

@@ -2,7 +2,14 @@
 
 add_library(nihil.posix STATIC)
 target_link_libraries(nihil.posix PRIVATE
-	nihil.core nihil.error nihil.flagset nihil.guard nihil.monad)
+	nihil.std
+	nihil.core
+	nihil.error
+	nihil.flagset
+	nihil.guard
+	nihil.monad
+	nihil.util
+)
 
 target_sources(nihil.posix
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
@@ -17,18 +24,19 @@ target_sources(nihil.posix
 	execvp.ccm
 	executor.ccm
 	fd.ccm
-	fexecv.ccm
-	fexecvp.ccm
 	find_in_path.ccm
 	getenv.ccm
 	open.ccm
 	open_in_path.ccm
+	paths.ccm
 	process.ccm
 	read_file.ccm
 	rename.ccm
 	spawn.ccm
 	stat.ccm
 	tempfile.ccm
+	unistd.ccm
+	unlink.ccm
 	write_file.ccm
 )
 

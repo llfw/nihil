@@ -1,53 +1,38 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <algorithm>
-#include <cstdlib>
-#include <format>
-#include <ranges>
-#include <iterator>
-#include <vector>
-
+// This source code is released into the public domain.
 export module nihil.util:tabulate;
 
+import nihil.std;
 import nihil.error;
 import :ctype;
 
 namespace nihil {
 
-/*
- * tabulate: format the given range in an ASCII table and write the output
- * to the given output iterator.  The range's values will be converted to
- * strings as if by std::format.
- *
- * tabulate is implemented by copying the range; this allows it to work on
- * input/forward ranges at the cost of slightly increased memory use.
- *
- * The table spec is a string consisting of zero or more field formats,
- * formatted as {flags:fieldname}; both flags and fieldname are optional.
- * If there are fewer field formats than fields, the remaining fields
- * are formatted as if by {:}.
- *
- * The following flags are supported:
- *
- * 	<	left-align this column (default)
- * 	>	right-align this column
- */
+// tabulate: format the given range in an ASCII table and write the output
+// to the given output iterator.  The range's values will be converted to
+// strings as if by std::format.
+//
+// tabulate is implemented by copying the range; this allows it to work on
+// input/forward ranges at the cost of slightly increased memory use.
+//
+// The table spec is a string consisting of zero or more field formats,
+// formatted as {flags:fieldname}; both flags and fieldname are optional.
+// If there are fewer field formats than fields, the remaining fields
+// are formatted as if by {:}.
+//
+// The following flags are supported:
+//
+// 	<	left-align this column (default)
+// 	>	right-align this column
 
 // Exception thrown when a table spec is invalid.
 export struct table_spec_error : error {
-	table_spec_error(std::string_view what)
+	explicit table_spec_error(std::string_view what)
 		: error(what)
 	{
 	}
 };
 
-/*
- * The specification for a single field.
- */
+// The specification for a single field.
 template<typename Char>
 struct field_spec {
 	enum align_t { left, right };

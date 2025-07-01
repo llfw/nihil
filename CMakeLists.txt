@@ -41,11 +41,15 @@ add_compile_options(-Wextra)
 add_compile_options(-Werror)
 add_compile_options(-Wpedantic)
 
+# Enable libc++ hardening
+add_compile_definitions(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+
 if(NIHIL_TESTS)
 	add_subdirectory(contrib/catch2)
 	enable_testing()
 endif()
 
+add_subdirectory(nihil.std)
 add_subdirectory(nihil.cli)
 add_subdirectory(nihil.core)
 add_subdirectory(nihil.error)

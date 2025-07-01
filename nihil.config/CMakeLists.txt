@@ -2,6 +2,7 @@
 
 add_library(nihil.config STATIC)
 target_link_libraries(nihil.config PRIVATE
+	nihil.std
 	nihil.error
 	nihil.generator
 	nihil.posix
@@ -19,13 +20,21 @@ target_sources(nihil.config
 
 	PRIVATE
 	option.cc
-	read.cc
 	store.cc
-	string.cc
-	write.cc
 )
 
 if(NIHIL_TESTS)
-	add_subdirectory(tests)
+	add_executable(nihil.config.test
+		string.test.cc
+	)
+
+	target_link_libraries(nihil.config.test PRIVATE
+		nihil.config
+		Catch2::Catch2WithMain)
+
+	include(CTest)
+	include(Catch)
+	catch_discover_tests(nihil.config.test)
+
 	enable_testing()
 endif()

@@ -1,18 +1,12 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <concepts>
-#include <list>
-#include <sstream>
-#include <string>
-#include <vector>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 #include <ucl.h>
 
+import nihil.std;
 import nihil.ucl;
 
+namespace {
 TEST_CASE("ucl: string: invariants", "[ucl]")
 {
 	using namespace nihil::ucl;
@@ -127,23 +121,23 @@ TEST_CASE("ucl: string: construct from UCL object", "[ucl]")
 	using namespace nihil::ucl;
 
 	SECTION("ref, correct type") {
-		auto uobj = ::ucl_object_fromstring("testing");
+		auto *uobj = ::ucl_object_fromstring("testing");
 
-		auto s = string(ref, uobj);
+		auto const s = string(ref, uobj);
 		REQUIRE(s == "testing");
 
 		::ucl_object_unref(uobj);
 	}
 
 	SECTION("noref, correct type") {
-		auto uobj = ::ucl_object_fromstring("testing");
+		auto *uobj = ::ucl_object_fromstring("testing");
 
-		auto s = string(noref, uobj);
+		auto const s = string(noref, uobj);
 		REQUIRE(s == "testing");
 	}
 
 	SECTION("ref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(string(ref, uobj), type_mismatch);
 
@@ -151,7 +145,7 @@ TEST_CASE("ucl: string: construct from UCL object", "[ucl]")
 	}
 
 	SECTION("noref, wrong type") {
-		auto uobj = ::ucl_object_frombool(true);
+		auto *uobj = ::ucl_object_frombool(true);
 
 		REQUIRE_THROWS_AS(string(noref, uobj), type_mismatch);
 
@@ -165,53 +159,53 @@ TEST_CASE("ucl: string: make_string", "[ucl]")
 	using namespace std::literals;
 
 	SECTION("empty string") {
-		auto str = make_string().value();
+		auto const str = make_string().value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "");
 	}
 
 	SECTION("from string literal") {
-		auto str = make_string("testing").value();
+		auto const str = make_string("testing").value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from std::string") {
-		auto str = make_string("testing"s).value();
+		auto const str = make_string("testing"s).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from std::string_view") {
-		auto str = make_string("testing"sv).value();
+		auto const str = make_string("testing"sv).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from contiguous range") {
-		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
-		auto str = make_string(s).value();
+		auto const s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto const str = make_string(s).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from non-contiguous range") {
-		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
-		auto str = make_string(s).value();
+		auto const s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto const str = make_string(s).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from contiguous iterator pair") {
-		auto s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
-		auto str = make_string(s.begin(), s.end()).value();
+		auto const s = std::vector{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto const str = make_string(s.begin(), s.end()).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
 
 	SECTION("from non-contiguous iterator pair") {
-		auto s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
-		auto str = make_string(s.begin(), s.end()).value();
+		auto const s = std::list{'t', 'e', 's', 't', 'i', 'n', 'g'};
+		auto const str = make_string(s.begin(), s.end()).value();
 		REQUIRE(str.type() == object_type::string);
 		REQUIRE(str == "testing");
 	}
@@ -234,22 +228,19 @@ TEST_CASE("ucl: string: value()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto s = string("te\"st");
-	REQUIRE(s.value() == "te\"st");
+	auto const s = string(R"(te"st)");
+	REQUIRE(s.value() == R"(te"st)");
 }
 
 TEST_CASE("ucl: string: key()", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto err = parse("a_string = \"test\"");
-	REQUIRE(err);
+	auto obj = parse(R"(a_string = "test")").value();
+	REQUIRE(object_cast<string>(obj["a_string"]).value().key() == "a_string");
 
-	auto obj = *err;
-	REQUIRE(object_cast<string>(obj["a_string"])->key() == "a_string");
-
-	auto s = string("test");
-	REQUIRE(s.key() == "");
+	auto const s = string("test");
+	REQUIRE(s.key().empty() == true);
 }
 
 TEST_CASE("ucl: string: size", "[ucl]")
@@ -280,7 +271,7 @@ TEST_CASE("ucl: string: iterate", "[ucl]")
 
 		auto end = str.end();
 		static_assert(std::sentinel_for<decltype(end),
-			      			decltype(begin)>);
+						      decltype(begin)>);
 
 		REQUIRE(*begin == 't');
 		++begin;
@@ -339,7 +330,7 @@ TEST_CASE("ucl: string: parse", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto obj = parse("value = \"te\\\"st\"").value();
+	auto obj = parse(R"(value = "te\"st")").value();
 
 	auto v = obj["value"];
 	REQUIRE(v.key() == "value");
@@ -350,7 +341,7 @@ TEST_CASE("ucl: string: emit", "[ucl]")
 {
 	using namespace nihil::ucl;
 
-	auto ucl = parse("str = \"te\\\"st\";").value();
+	auto ucl = parse(R"(str = "te\"st";)").value();
 
 	auto output = std::string();
 	emit(ucl, emitter::configuration, std::back_inserter(output));
@@ -371,7 +362,7 @@ TEST_CASE("ucl: string: format", "[ucl]")
 	}
 
 	SECTION("parsed string") {
-		auto obj = parse("string = \"te\\\"st\";").value();
+		auto obj = parse(R"(string = "te\"st";)").value();
 		auto s = object_cast<string>(obj["string"]).value();
 
 		auto str = std::format("{}", s);
@@ -399,7 +390,7 @@ TEST_CASE("ucl: string: print to ostream", "[ucl]")
 	}
 
 	SECTION("parsed string") {
-		auto obj = parse("string = \"te\\\"st\";").value();
+		auto obj = parse(R"(string = "te\"st";)").value();
 		auto s = object_cast<string>(obj["string"]).value();
 
 		auto strm = std::ostringstream();
@@ -413,3 +404,4 @@ TEST_CASE("ucl: string: print to ostream", "[ucl]")
 		REQUIRE(str == "     te\"st");
 	}
 }
+} // anonymous namespace

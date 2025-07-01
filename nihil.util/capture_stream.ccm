@@ -1,20 +1,13 @@
-/*
- * This source code is released into the public domain.
- */
-
-module;
-
-#include <iostream>
-
+// This source code is released into the public domain.
 export module nihil.util:capture_stream;
+
+import nihil.std;
 
 namespace nihil {
 
-/*
- * Capture output written to a stream and redirect it to an internal string
- * buffer.  Call .str() to get the data written.  Call .release() to stop
- * capturing (or simply delete the capture_stream object).
- */
+// Capture output written to a stream and redirect it to an internal string
+// buffer.  Call .str() to get the data written.  Call .release() to stop
+// capturing (or simply delete the capture_stream object).
 export template<typename Char, typename Traits>
 struct capture_stream {
 	capture_stream(std::basic_ostream<Char, Traits> &stream)

@@ -1,12 +1,8 @@
-/*
- * This source code is released into the public domain.
- */
-
-#include <string>
-#include <variant>
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
+import nihil.std;
 import nihil.match;
 
 TEST_CASE("match", "[nihil]")

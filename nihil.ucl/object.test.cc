@@ -1,11 +1,10 @@
-/*
- * This source code is released into the public domain.
- */
+// This source code is released into the public domain.
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <ucl.h>
 
+import nihil.std;
 import nihil.ucl;
 
 TEST_CASE("ucl object: get_ucl_object", "[ucl]")

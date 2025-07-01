@@ -1,17 +1,17 @@
 // This source code is released into the public domain.
 module;
 
-#include <expected>
-#include <filesystem>
-#include <string>
-
-#include <unistd.h>
+#include <unistd.h> // execv()
 
 export module nihil.posix:execv;
 
+import nihil.std;
 import nihil.error;
+import nihil.match;
+import nihil.util;
 import :argv;
 import :executor;
+import :fd;
 
 namespace nihil {
 
@@ -20,11 +20,18 @@ export struct execv final
 {
 	using tag = exec_tag;
 
+	// Construct an execv from a filename.
 	execv(std::filesystem::path path, argv &&args) noexcept
-		: m_path(std::move(path))
+		: m_executable(std::move(path))
 		, m_args(std::move(args))
 	{
 	}
+
+	// Construct an execv from a file descriptor
+	execv(fd &&executable, argv &&argv) noexcept
+		: m_executable(std::move(executable))
+		, m_args(std::move(argv))
+	{}
 
 	~execv() = default;
 
@@ -39,12 +46,30 @@ export struct execv final
 	// Perform the execv().  This only returns on failure.
 	[[nodiscard]] auto exec(this execv &self) -> std::expected<void, error>
 	{
-		::execv(self.m_path.string().c_str(), self.m_args.data());
-		return std::unexpected(error("execve failed", error(std::errc(errno))));
+		auto guard = save_errno();
+
+		return self.m_executable | match {
+			[&] (std::filesystem::path const &path) {
+				::execv(path.string().c_str(), self.m_args.data());
+				return std::unexpected(error("execve failed", error(sys_error())));
+			},
+
+			[&] (fd const &file) {
+#if NIHIL_HAVE_FEXECVE == 1
+				::fexecv(file.get(), self.m_args.data());
+				return std::unexpected(error("execve failed", error(sys_error())));
+#else
+				std::ignore = file;
+				return std::unexpected(error(std::errc::function_not_supported));
+#endif
+			}
+		};
 	}
 
 private:
-	std::filesystem::path m_path;
+	// The thing we will execute.
+	std::variant<std::filesystem::path, fd> m_executable;
+	// Arguments to pass to the thing.
 	argv m_args;
 };
 
