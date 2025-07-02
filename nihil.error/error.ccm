@@ -32,6 +32,81 @@ namespace nihil {
 // Things which can be errors.
 using error_t = std::variant<std::monostate, std::string, std::error_code, std::error_condition>;
 
+// A proxy class used when constructing errors.  This has implicit constructors from various types,
+// which means we don't have to handle every possible combination of types in error itself.
+export struct error_proxy
+{
+	// Construct from...
+
+	// ... a string_view
+	error_proxy(std::string_view const what) // NOLINT
+		: m_error(std::string(what))
+	{
+	}
+
+	// ... an std::string; so we can move the string into place if it's an rvalue.
+	error_proxy(auto &&what) // NOLINT
+	requires (std::same_as<std::remove_cvref_t<decltype(what)>, std::string>)
+		: m_error(std::forward<decltype(what)>(what))
+	{
+	}
+
+	// ... a C string
+	error_proxy(char const *what) // NOLINT
+		: m_error(std::string(what))
+	{
+	}
+
+	// ... an std::error_code
+	error_proxy(std::error_code const what) // NOLINT
+		: m_error(what)
+	{
+	}
+
+	// ... an std::error_condition
+	error_proxy(std::error_condition const what) // NOLINT
+		: m_error(what)
+	{
+	}
+
+	// ... an error code enum
+	template <typename T>
+	requires(std::is_error_code_enum<T>::value)
+	error_proxy(T what) // NOLINT
+		: m_error(make_error_code(what))
+	{
+	}
+
+	// ... an error condition enum
+	template <typename T>
+	requires(std::is_error_condition_enum<T>::value)
+	error_proxy(T what) // NOLINT
+		: m_error(make_error_condition(what))
+	{
+	}
+
+	// Not copyable.
+	error_proxy(error_proxy const &) = delete;
+	auto operator=(error_proxy const &) -> error_proxy & = delete;
+
+	// Not movable.
+	error_proxy(error_proxy &&) = delete;
+	auto operator=(error_proxy &&) -> error_proxy & = delete;
+
+	~error_proxy() = default;
+
+	// Let error extract the error_t.
+	[[nodiscard]] auto error() && -> error_t &&
+	{
+		return std::move(m_error);
+	}
+
+private:
+	// The error.
+	error_t m_error;
+};
+
+// The error class.
 export struct error : std::exception
 {
 	// Create an empty error, representing success.
@@ -40,79 +115,24 @@ export struct error : std::exception
 	// Destroy an error.
 	~error() override = default;
 
-	// Create an error from a freeform string.
-	explicit error(std::string_view what)
-		: m_error(std::string(what))
+	// Create an error from an error proxy.
+	explicit error(error_proxy &&proxy)
+		: m_error(std::move(std::move(proxy).error()))
 	{
 	}
 
-	// Create an error from a freeform string and a cause.
-	error(std::string_view what, error cause)
-		: m_error(std::string(what))
+	// Create an error from an error proxy and an error cause.
+	error(error_proxy &&proxy, error cause)
+		: m_error(std::move(std::move(proxy).error()))
 		, m_cause(std::make_shared<error>(std::move(cause)))
 	{
 	}
 
-	// Create an error from a freeform string and an error code enum cause.
-	template <typename Cause>
-	requires(std::is_error_code_enum<Cause>::value ||
-	         std::is_error_condition_enum<Cause>::value)
-	error(std::string_view what, Cause &&cause)
-		: error(what, error(std::forward<Cause>(cause)))
-	{
-	}
-
-	// Create an error from an std::error_condition.
-	explicit error(std::error_condition what)
-		: m_error(what)
-	{
-	}
-
-	// Create an error from an std::error_condition and a cause.
-	error(std::error_condition what, error cause)
-		: m_error(what)
+	// Create an error from an error proxy and an error_proxy cause.
+	// For example, error("cannot open file", std::errc::permission_denied).
+	error(error_proxy &&proxy, error_proxy &&cause)
+		: m_error(std::move(std::move(proxy).error()))
 		, m_cause(std::make_shared<error>(std::move(cause)))
-	{
-	}
-
-	// Create an error from an std::error_code.
-	explicit error(std::error_code what)
-		: m_error(what)
-	{
-	}
-
-	// Create an error from an std::error_code and a cause.
-	error(std::error_code what, error cause)
-		: m_error(what)
-		, m_cause(std::make_shared<error>(std::move(cause)))
-	{
-	}
-
-	// Create an error from an std::error_code enum.
-	explicit error(auto errc)
-	requires(std::is_error_code_enum<decltype(errc)>::value)
-	: error(make_error_code(errc))
-	{
-	}
-
-	// Create an error from an std::error_code enum and a cause/
-	error(auto errc, error cause)
-	requires(std::is_error_code_enum<decltype(errc)>::value)
-		: error(make_error_code(errc), std::move(cause))
-	{
-	}
-
-	// Create an error from an std::error_condition enum.
-	explicit error(auto errc)
-	requires(std::is_error_condition_enum<decltype(errc)>::value)
-		: error(make_error_condition(errc))
-	{
-	}
-
-	// Create an error from an std::error_condition enum and a cause.
-	error(auto errc, error cause)
-	requires(std::is_error_condition_enum<decltype(errc)>::value)
-		: error(make_error_condition(errc), std::move(cause))
 	{
 	}
 
@@ -178,7 +198,7 @@ export struct error : std::exception
 	[[nodiscard]] auto code(this error const &self) -> std::optional<std::error_code>
 	{
 		auto const *code = std::get_if<std::error_code>(&self.m_error);
-		if (code)
+		if (code != nullptr)
 			return {*code};
 		return {};
 	}
@@ -187,7 +207,7 @@ export struct error : std::exception
 	[[nodiscard]] auto condition(this error const &self) -> std::optional<std::error_condition>
 	{
 		auto const *condition = std::get_if<std::error_condition>(&self.m_error);
-		if (condition)
+		if (condition != nullptr)
 			return {*condition};
 		return {};
 	}
@@ -202,7 +222,7 @@ export struct error : std::exception
 		return m_what->c_str();
 	}
 
-	// Allow error to be implicitly converted to std::expectde and std::unexpected, to make using it
+	// Allow error to be implicitly converted to std::expected and std::unexpected, to make using it
 	// with std::expected easier.
 
 	template<typename T>
@@ -228,6 +248,16 @@ export struct error : std::exception
 	}
 
 private:
+	// This error.
+	error_t m_error = make_error_code(std::errc());
+
+	// The cause of this error, if any.
+	std::shared_ptr<error> m_cause;
+
+	// For std::exception::what(), we need to keep the string valid
+	// until we're destroyed.
+	mutable std::optional<std::string> m_what;
+
 	// Equality comparison.
 	[[nodiscard]] friend auto operator==(error const &lhs, error const &rhs) -> bool
 	{
@@ -251,22 +281,6 @@ private:
 		return lhs.condition() == rhs;
 	}
 
-	// Print an error to a stream.
-	friend auto operator<<(std::ostream &strm, error const &e) -> std::ostream &
-	{
-		return strm << e.full_str();
-	}
-
-	// This error.
-	error_t m_error = make_error_code(std::errc());
-
-	// The cause of this error, if any.
-	std::shared_ptr<error> m_cause;
-
-	// For std::exception::what(), we need to keep the string valid
-	// until we're destroyed.
-	mutable std::optional<std::string> m_what;
-
 	// Compare an error to an std::error_code enum.
 	[[nodiscard]] friend auto operator==(error const &lhs, auto rhs) -> bool
 	requires(std::is_error_code_enum<decltype(rhs)>::value)
@@ -279,6 +293,12 @@ private:
 	requires(std::is_error_condition_enum<decltype(rhs)>::value)
 	{
 		return lhs.condition() == rhs;
+	}
+
+	// Print an error to a stream.
+	friend auto operator<<(std::ostream &strm, error const &e) -> std::ostream &
+	{
+		return strm << e.full_str();
 	}
 };
 

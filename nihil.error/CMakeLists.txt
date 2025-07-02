@@ -12,10 +12,10 @@ if(NIHIL_TESTS)
 	enable_testing()
 
 	add_executable(nihil.error.test
-		test.cc)
+		error.test.cc)
 
 	target_link_libraries(nihil.error.test PRIVATE
-		nihil.error
+		nihil.std nihil.core nihil.error
 		Catch2::Catch2WithMain
 	)
 
