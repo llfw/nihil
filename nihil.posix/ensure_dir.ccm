@@ -2,13 +2,11 @@
 export module nihil.posix:ensure_dir;
 
 import nihil.std;
-import nihil.error;
+import nihil.util;
 
 namespace nihil {
 
-/*
- * Create the given directory and any parent directories.
- */
+// Create the given directory and any parent directories.
 export [[nodiscard]] auto
 ensure_dir(std::filesystem::path const &dir) -> std::expected<void, error>
 {

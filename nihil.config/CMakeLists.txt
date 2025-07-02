@@ -3,7 +3,6 @@
 add_library(nihil.config STATIC)
 target_link_libraries(nihil.config PRIVATE
 	nihil.std
-	nihil.error
 	nihil.generator
 	nihil.posix
 	nihil.ucl

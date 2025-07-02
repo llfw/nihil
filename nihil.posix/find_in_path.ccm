@@ -6,7 +6,7 @@ module;
 export module nihil.posix:find_in_path;
 
 import nihil.std;
-import nihil.error;
+import nihil.util;
 import :fd;
 import :getenv;
 import :paths;

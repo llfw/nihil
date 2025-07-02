@@ -2,7 +2,6 @@
 module nihil.config;
 
 import nihil.std;
-import nihil.error;
 import nihil.generator;
 import nihil.util;
 

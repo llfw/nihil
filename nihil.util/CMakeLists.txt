@@ -5,7 +5,6 @@ add_library(nihil.util STATIC)
 target_link_libraries(nihil.util PRIVATE
 	nihil.std
 	nihil.core
-	nihil.error
 )
 
 target_sources(nihil.util
@@ -15,13 +14,16 @@ target_sources(nihil.util
 	capture_stream.ccm
 	construct.ccm
 	ctype.ccm
+	error.ccm
 	flagset.ccm
 	guard.ccm
+	match.ccm
 	monad.ccm
 	parse_size.ccm
 	next_word.ccm
 	save_errno.ccm
 	skipws.ccm
+	sys_error.ccm
 	tabulate.ccm
 	uuid.ccm
 )
@@ -32,8 +34,10 @@ if(NIHIL_TESTS)
 	add_executable(nihil.util.test
 		capture_stream.test.cc
 		ctype.test.cc
+		error.test.cc
 		flagset.test.cc
 		guard.test.cc
+		match.test.cc
 		monad.test.cc
 		parse_size.test.cc
 		next_word.test.cc

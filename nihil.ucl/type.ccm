@@ -6,7 +6,7 @@ module;
 export module nihil.ucl:type;
 
 import nihil.std;
-import nihil.error;
+import nihil.util;
 
 namespace nihil::ucl {
 

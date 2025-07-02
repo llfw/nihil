@@ -12,7 +12,6 @@ export module nihil.cli:command;
 
 import nihil.std;
 import nihil.core;
-import nihil.error;
 import :usage_error;
 
 namespace nihil {

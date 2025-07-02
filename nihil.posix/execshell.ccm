@@ -2,7 +2,6 @@
 export module nihil.posix:execshell;
 
 import nihil.std;
-import nihil.error;
 import :execv;
 import :execl;
 

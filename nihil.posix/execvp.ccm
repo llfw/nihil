@@ -3,7 +3,6 @@ export module nihil.posix:execvp;
 
 import nihil.std;
 import nihil.core;
-import nihil.error;
 import nihil.util;
 import :argv;
 import :execv;

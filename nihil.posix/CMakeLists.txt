@@ -4,7 +4,6 @@ add_library(nihil.posix STATIC)
 target_link_libraries(nihil.posix PRIVATE
 	nihil.std
 	nihil.core
-	nihil.error
 	nihil.util
 )
 
@@ -59,7 +58,6 @@ if(NIHIL_TESTS)
 
 	target_link_libraries(nihil.posix.test PRIVATE
 		nihil.std
-		nihil.error
 		nihil.posix
 		nihil.util
 		Catch2::Catch2WithMain

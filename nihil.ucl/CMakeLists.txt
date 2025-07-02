@@ -7,7 +7,6 @@ target_link_libraries(nihil.ucl PRIVATE
 	nihil.std
 	nihil.core
 	nihil.util
-	nihil.error
 )
 
 target_sources(nihil.ucl
@@ -47,6 +46,7 @@ if(NIHIL_TESTS)
 
 	target_link_libraries(nihil.ucl.test PRIVATE
 		nihil.std
+		nihil.util
 		nihil.ucl
 		Catch2::Catch2WithMain)
 

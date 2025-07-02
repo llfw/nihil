@@ -4,8 +4,8 @@ export module nihil.config:store;
 // The configuration store.  There should only be one of these.
 
 import nihil.std;
-import nihil.error;
 import nihil.generator;
+import nihil.util;
 
 namespace nihil::config {
 

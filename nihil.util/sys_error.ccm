@@ -3,7 +3,7 @@ module;
 
 #include <cerrno>
 
-export module nihil.error:sys_error;
+export module nihil.util:sys_error;
 
 import nihil.std;
 
@@ -12,7 +12,7 @@ namespace nihil {
 // Allow access to errno without having to include <cerrno>.
 export [[nodiscard]] auto sys_error() -> std::errc
 {
-	return static_cast<std::errc>(errno);
+	return static_cast<std::errc>(errno); // NOLINT
 }
 
 } // namespace nihil

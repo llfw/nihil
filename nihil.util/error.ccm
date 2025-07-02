@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.error;
+export module nihil.util:error;
 
 // error: a type representing an error.
 //
@@ -23,9 +23,8 @@ export module nihil.error;
 // error will make it easier to distinguish errors when catching them.
 
 import nihil.std;
-import nihil.match;
 
-export import :sys_error;
+import :match;
 
 namespace nihil {
 

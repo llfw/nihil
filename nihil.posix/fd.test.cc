@@ -6,8 +6,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.error;
 import nihil.posix;
+import nihil.util;
 
 using namespace std::literals;
 

@@ -2,8 +2,9 @@
 export module nihil.util:tabulate;
 
 import nihil.std;
-import nihil.error;
+
 import :ctype;
+import :error;
 
 namespace nihil {
 

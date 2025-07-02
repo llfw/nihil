@@ -2,7 +2,6 @@
 export module nihil.posix:write_file;
 
 import nihil.std;
-import nihil.error;
 import nihil.util;
 import :fd;
 import :open;

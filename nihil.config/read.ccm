@@ -2,7 +2,6 @@
 export module nihil.config:read;
 
 import nihil.std;
-import nihil.error;
 import nihil.posix;
 import nihil.ucl;
 import nihil.util;

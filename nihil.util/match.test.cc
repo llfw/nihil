@@ -3,8 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.match;
+import nihil.util;
 
+namespace {
 TEST_CASE("match", "[nihil]")
 {
 	using namespace nihil;
@@ -28,3 +29,4 @@ TEST_CASE("match", "[nihil]")
 
 	REQUIRE(s == "string");
 }
+} // anonymous namespace

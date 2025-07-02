@@ -1,7 +1,7 @@
 // This source code is released into the public domain.
 export module nihil.posix:read_file;
 
-import nihil.error;
+import nihil.std;
 import nihil.util;
 import :fd;
 import :open;

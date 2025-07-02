@@ -4,7 +4,7 @@
 
 import nihil.std;
 import nihil.core;
-import nihil.error;
+import nihil.util;
 
 namespace {
 inline constexpr auto *test_tags = "[nihil][nihil.error]";
