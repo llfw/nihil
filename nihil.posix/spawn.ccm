@@ -3,7 +3,8 @@ export module nihil.posix:spawn;
 
 // spawn(): fork and execute a child process.
 
-import nihil.monad;
+import nihil.std;
+import nihil.util;
 import :argv;
 import :executor;
 import :fd;

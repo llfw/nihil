@@ -2,7 +2,7 @@
 export module nihil.config:string;
 
 import nihil.std;
-import nihil.monad;
+import nihil.util;
 import nihil.ucl;
 import :option;
 

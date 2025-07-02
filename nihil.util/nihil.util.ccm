@@ -6,6 +6,7 @@ export import :construct;
 export import :ctype;
 export import :flagset;
 export import :guard;
+export import :monad;
 export import :parse_size;
 export import :next_word;
 export import :save_errno;

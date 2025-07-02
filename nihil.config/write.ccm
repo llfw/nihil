@@ -3,9 +3,9 @@ export module nihil.config:write;
 
 import nihil.std;
 import nihil.error;
-import nihil.monad;
 import nihil.posix;
 import nihil.ucl;
+import nihil.util;
 import :option;
 import :store;
 

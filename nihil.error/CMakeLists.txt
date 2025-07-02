@@ -15,7 +15,9 @@ if(NIHIL_TESTS)
 		error.test.cc)
 
 	target_link_libraries(nihil.error.test PRIVATE
-		nihil.std nihil.core nihil.error
+		nihil.std
+		nihil.core
+		nihil.error
 		Catch2::Catch2WithMain
 	)
 

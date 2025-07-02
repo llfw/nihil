@@ -3,7 +3,12 @@
 pkg_check_modules(LIBUCL REQUIRED libucl)
 
 add_library(nihil.ucl STATIC)
-target_link_libraries(nihil.ucl PRIVATE nihil.std nihil.core nihil.error nihil.monad)
+target_link_libraries(nihil.ucl PRIVATE
+	nihil.std
+	nihil.core
+	nihil.util
+	nihil.error
+)
 
 target_sources(nihil.ucl
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
@@ -40,7 +45,10 @@ if(NIHIL_TESTS)
 		string.test.cc
 	)
 
-	target_link_libraries(nihil.ucl.test PRIVATE nihil.ucl Catch2::Catch2WithMain)
+	target_link_libraries(nihil.ucl.test PRIVATE
+		nihil.std
+		nihil.ucl
+		Catch2::Catch2WithMain)
 
 	include(CTest)
 	include(Catch)

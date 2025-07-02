@@ -4,9 +4,9 @@ export module nihil.util:parse_size;
 import nihil.std;
 import nihil.core;
 import nihil.error;
-import nihil.monad;
 
 import :ctype;
+import :monad;
 
 namespace nihil {
 

@@ -4,7 +4,7 @@ add_library(nihil.cli STATIC)
 target_link_libraries(nihil.cli PRIVATE
 	nihil.std
 	nihil.generator
-	nihil.posix;
+	nihil.posix
 	nihil.util
 )
 target_sources(nihil.cli
@@ -30,6 +30,7 @@ if(NIHIL_TESTS)
 		dispatch_command.test.cc
 	)
 	target_link_libraries(nihil.cli.test PRIVATE
+		nihil.std
 		nihil.cli
 		Catch2::Catch2WithMain
 	)

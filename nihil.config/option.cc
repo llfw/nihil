@@ -3,8 +3,8 @@ module nihil.config;
 
 import nihil.std;
 import nihil.error;
-import nihil.monad;
 import nihil.ucl;
+import nihil.util;
 
 namespace nihil::config {
 

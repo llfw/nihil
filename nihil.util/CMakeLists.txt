@@ -5,7 +5,6 @@ target_link_libraries(nihil.util PRIVATE
 	nihil.std
 	nihil.core
 	nihil.error
-	nihil.monad
 )
 target_sources(nihil.util
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
@@ -16,6 +15,7 @@ target_sources(nihil.util
 	ctype.ccm
 	flagset.ccm
 	guard.ccm
+	monad.ccm
 	parse_size.ccm
 	next_word.ccm
 	save_errno.ccm
@@ -31,13 +31,14 @@ if(NIHIL_TESTS)
 		ctype.test.cc
 		flagset.test.cc
 		guard.test.cc
+		monad.test.cc
 		parse_size.test.cc
 		next_word.test.cc
 		skipws.test.cc
 		tabulate.test.cc
 	)
 	target_link_libraries(nihil.util.test PRIVATE
-		nihil.util
+		nihil.std nihil.util
 		Catch2::Catch2WithMain
 	)
 

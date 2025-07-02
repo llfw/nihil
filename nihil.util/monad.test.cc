@@ -4,8 +4,9 @@
 
 import nihil.std;
 import nihil.error;
-import nihil.monad;
+import nihil.util;
 
+namespace {
 TEST_CASE("monad: co_await std::optional<> with value", "[nihil]")
 {
 	auto get_value = [] -> std::optional<int> {
@@ -62,3 +63,4 @@ TEST_CASE("monad: co_await std::expected<> with error", "[nihil]")
 	REQUIRE(!o);
 	REQUIRE(o.error() == "error");
 }
+} // anonymous namespace

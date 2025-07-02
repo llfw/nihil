@@ -22,7 +22,7 @@
  * IN THE SOFTWARE.
  */
 
-export module nihil.monad;
+export module nihil.util:monad;
 
 import nihil.std;
 
