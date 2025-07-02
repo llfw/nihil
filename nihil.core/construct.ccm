@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:construct;
+export module nihil.core:construct;
 
 import nihil.std;
 

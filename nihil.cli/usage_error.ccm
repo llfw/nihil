@@ -2,7 +2,7 @@
 export module nihil.cli:usage_error;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 namespace nihil {
 

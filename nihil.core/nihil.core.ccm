@@ -1,5 +1,20 @@
 // This source code is released into the public domain.
 export module nihil.core;
 
+export import :capture_stream;
+export import :construct;
+export import :ctype;
 export import :errc;
+export import :error;
 export import :features;
+export import :flagset;
+export import :guard;
+export import :match;
+export import :monad;
+export import :next_word;
+export import :parse_size;
+export import :save_errno;
+export import :skipws;
+export import :sys_error;
+export import :tabulate;
+export import :uuid;

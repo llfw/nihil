@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:capture_stream;
+export module nihil.core:capture_stream;
 
 import nihil.std;
 

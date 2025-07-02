@@ -8,7 +8,7 @@ export module nihil.posix:unlink;
 // unlink: simple wrapper around ::unlink()
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 namespace nihil {
 

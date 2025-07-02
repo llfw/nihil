@@ -6,7 +6,7 @@ module;
 export module nihil.posix:unistd;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 // Symbols from unistd.h that might be useful.
 

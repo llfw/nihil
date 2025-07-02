@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:flagset;
+export module nihil.core:flagset;
 
 /*
  * flagset: a type-safe flags type.

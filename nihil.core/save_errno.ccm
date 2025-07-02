@@ -3,7 +3,7 @@ module;
 
 #include <cerrno>
 
-export module nihil.util:save_errno;
+export module nihil.core:save_errno;
 
 // save_errno: save the current value of errno and restore it when we're destroyed.
 // this allows wrappers around C functions that use errno to preserve the caller's

@@ -2,7 +2,8 @@
 export module nihil.posix:read_file;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
+
 import :fd;
 import :open;
 

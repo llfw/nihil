@@ -6,7 +6,7 @@
 
 import nihil.std;
 import nihil.cli;
-import nihil.util;
+import nihil.core;
 
 namespace {
 

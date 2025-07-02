@@ -6,7 +6,8 @@ module;
 export module nihil.ucl:object_cast;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
+
 import :type;
 import :object;
 import :array;

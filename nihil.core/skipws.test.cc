@@ -3,8 +3,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
+namespace {
 TEST_CASE("skipws: basic", "[skipws]")
 {
 	using namespace std::literals;
@@ -44,3 +45,4 @@ TEST_CASE("skipws: locale", "[skipws]")
 	REQUIRE(nihil::skipws(L"\u2003foo"sv) == L"\u2003foo");
 	REQUIRE(nihil::skipws(L"\u2003foo"sv, std::locale("C.UTF-8")) == L"foo");
 }
+} // anonymous namespace

@@ -9,7 +9,7 @@ module;
 export module nihil.posix:getenv;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 namespace nihil {
 

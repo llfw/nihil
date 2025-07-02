@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:tabulate;
+export module nihil.core:tabulate;
 
 import nihil.std;
 

@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:guard;
+export module nihil.core:guard;
 
 import nihil.std;
 

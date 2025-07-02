@@ -3,8 +3,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
+import nihil.core;
 import nihil.posix;
-import nihil.util;
 
 namespace {
 

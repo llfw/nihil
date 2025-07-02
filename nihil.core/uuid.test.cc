@@ -25,7 +25,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 

@@ -7,7 +7,7 @@ module;
 export module nihil.posix:fd;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 namespace nihil {
 

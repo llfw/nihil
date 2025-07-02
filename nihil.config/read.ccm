@@ -2,9 +2,10 @@
 export module nihil.config:read;
 
 import nihil.std;
+import nihil.core;
 import nihil.posix;
 import nihil.ucl;
-import nihil.util;
+
 import :option;
 import :store;
 

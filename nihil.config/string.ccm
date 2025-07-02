@@ -2,8 +2,9 @@
 export module nihil.config:string;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 import nihil.ucl;
+
 import :option;
 
 namespace nihil::config {

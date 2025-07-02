@@ -1,5 +1,5 @@
 // This source code is released into the public domain.
-export module nihil.util:match;
+export module nihil.core:match;
 
 import nihil.std;
 

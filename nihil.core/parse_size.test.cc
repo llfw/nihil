@@ -4,7 +4,6 @@
 
 import nihil.std;
 import nihil.core;
-import nihil.util;
 
 namespace {
 TEST_CASE("parse_size: empty value", "[nihil]")

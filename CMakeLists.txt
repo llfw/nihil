@@ -66,7 +66,6 @@ add_subdirectory(nihil.cli)
 add_subdirectory(nihil.core)
 add_subdirectory(nihil.generator)
 add_subdirectory(nihil.posix)
-add_subdirectory(nihil.util)
 
 if(NIHIL_UCL)
 	add_subdirectory(nihil.ucl)

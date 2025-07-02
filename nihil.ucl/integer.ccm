@@ -7,7 +7,7 @@ export module nihil.ucl:integer;
 
 import nihil.std;
 import nihil.core;
-import nihil.util;
+
 import :object;
 import :type;
 

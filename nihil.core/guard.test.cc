@@ -2,7 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-import nihil.util;
+import nihil.core;
 
 TEST_CASE("guard: basic", "[guard]") {
 	int n = 0;

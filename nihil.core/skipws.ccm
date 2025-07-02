@@ -1,6 +1,7 @@
 // This source code is released into the public domain.
-export module nihil.util:skipws;
+export module nihil.core:skipws;
 
+import nihil.std;
 import :ctype;
 
 namespace nihil {

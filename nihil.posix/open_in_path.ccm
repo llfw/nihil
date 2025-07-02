@@ -2,7 +2,8 @@
 export module nihil.posix:open_in_path;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
+
 import :fd;
 import :getenv;
 import :open;

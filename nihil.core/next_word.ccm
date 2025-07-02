@@ -1,6 +1,9 @@
 // This source code is released into the public domain.
-export module nihil.util:next_word;
+export module nihil.core:next_word;
 
+import nihil.std;
+
+import :ctype;
 import :skipws;
 
 namespace nihil {

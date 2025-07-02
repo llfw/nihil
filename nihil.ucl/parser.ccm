@@ -6,7 +6,8 @@ module;
 export module nihil.ucl:parser;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
+
 import :object;
 import :map;
 

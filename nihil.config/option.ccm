@@ -2,7 +2,7 @@
 export module nihil.config:option;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 import nihil.ucl;
 
 namespace nihil::config {

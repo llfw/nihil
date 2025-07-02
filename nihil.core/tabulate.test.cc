@@ -3,11 +3,12 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 
 using namespace std::literals;
 using namespace nihil;
 
+namespace {
 TEST_CASE("tabulate: basic", "[tabulate]")
 {
 	auto input = std::vector{
@@ -68,3 +69,4 @@ TEST_CASE("tabulate: align", "[tabulate]")
 "a longvalue         s\n"
 "a s         longvalue\n");
 }
+} // anonymous namespace

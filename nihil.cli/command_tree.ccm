@@ -3,7 +3,8 @@ export module nihil.cli:command_tree;
 
 import nihil.std;
 import nihil.generator;
-import nihil.util;
+import nihil.core;
+
 import :command;
 import :registry;
 

@@ -10,7 +10,7 @@ extern char **environ; // NOLINT
 export module nihil.posix:execv;
 
 import nihil.std;
-import nihil.util;
+import nihil.core;
 import :argv;
 import :executor;
 import :fd;

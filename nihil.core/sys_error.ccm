@@ -3,7 +3,7 @@ module;
 
 #include <cerrno>
 
-export module nihil.util:sys_error;
+export module nihil.core:sys_error;
 
 import nihil.std;
 

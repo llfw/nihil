@@ -5,7 +5,7 @@ export module nihil.config:store;
 
 import nihil.std;
 import nihil.generator;
-import nihil.util;
+import nihil.core;
 
 namespace nihil::config {
 

@@ -1,10 +1,10 @@
 // This source code is released into the public domain.
-export module nihil.util:parse_size;
+export module nihil.core:parse_size;
 
 import nihil.std;
-import nihil.core;
 
 import :ctype;
+import :errc;
 import :error;
 import :monad;
 

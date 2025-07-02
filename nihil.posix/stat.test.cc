@@ -1,8 +1,8 @@
 // This source code is released into the public domain.
 
 import nihil.std;
+import nihil.core;
 import nihil.posix;
-import nihil.util;
 
 #include <sys/stat.h>
 
