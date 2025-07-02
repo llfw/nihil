@@ -69,7 +69,6 @@ add_subdirectory(nihil.generator)
 add_subdirectory(nihil.match)
 add_subdirectory(nihil.posix)
 add_subdirectory(nihil.util)
-add_subdirectory(nihil.uuid)
 
 if(NIHIL_UCL)
 	add_subdirectory(nihil.ucl)

@@ -1,11 +1,13 @@
 # This source code is released into the public domain.
 
 add_library(nihil.util STATIC)
+
 target_link_libraries(nihil.util PRIVATE
 	nihil.std
 	nihil.core
 	nihil.error
 )
+
 target_sources(nihil.util
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.util.ccm
@@ -21,6 +23,7 @@ target_sources(nihil.util
 	save_errno.ccm
 	skipws.ccm
 	tabulate.ccm
+	uuid.ccm
 )
 
 if(NIHIL_TESTS)
@@ -36,9 +39,13 @@ if(NIHIL_TESTS)
 		next_word.test.cc
 		skipws.test.cc
 		tabulate.test.cc
+		uuid.test.cc
 	)
+
 	target_link_libraries(nihil.util.test PRIVATE
-		nihil.std nihil.util
+		nihil.std
+		nihil.core
+		nihil.util
 		Catch2::Catch2WithMain
 	)
 

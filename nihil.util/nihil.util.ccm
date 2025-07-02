@@ -12,3 +12,4 @@ export import :next_word;
 export import :save_errno;
 export import :skipws;
 export import :tabulate;
+export import :uuid;
