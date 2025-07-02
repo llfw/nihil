@@ -46,7 +46,7 @@ export struct error_proxy
 
 	// ... an std::string; so we can move the string into place if it's an rvalue.
 	error_proxy(auto &&what) // NOLINT
-	requires (std::same_as<std::remove_cvref_t<decltype(what)>, std::string>)
+	requires(std::same_as<std::remove_cvref_t<decltype(what)>, std::string>)
 		: m_error(std::forward<decltype(what)>(what))
 	{
 	}
@@ -222,8 +222,8 @@ export struct error : std::exception
 		return m_what->c_str();
 	}
 
-	// Allow error to be implicitly converted to std::expected and std::unexpected, to make using it
-	// with std::expected easier.
+	// Allow error to be implicitly converted to std::expected and std::unexpected, to make
+	// using it with std::expected easier.
 
 	template<typename T>
 	operator std::expected<T, error> () && // NOLINT

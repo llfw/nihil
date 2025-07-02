@@ -14,6 +14,7 @@ target_sources(nihil.util
 	capture_stream.ccm
 	construct.ccm
 	ctype.ccm
+	guard.ccm
 	parse_size.ccm
 	next_word.ccm
 	save_errno.ccm
@@ -27,6 +28,7 @@ if(NIHIL_TESTS)
 	add_executable(nihil.util.test
 		capture_stream.test.cc
 		ctype.test.cc
+		guard.test.cc
 		parse_size.test.cc
 		next_word.test.cc
 		skipws.test.cc
