@@ -64,7 +64,6 @@ endif()
 add_subdirectory(nihil.std)
 add_subdirectory(nihil.cli)
 add_subdirectory(nihil.core)
-add_subdirectory(nihil.generator)
 add_subdirectory(nihil.posix)
 
 if(NIHIL_UCL)

@@ -5,7 +5,6 @@ add_library(nihil.cli STATIC)
 target_link_libraries(nihil.cli PRIVATE
 	nihil.std
 	nihil.core
-	nihil.generator
 	nihil.posix
 )
 

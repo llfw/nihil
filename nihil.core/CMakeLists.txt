@@ -14,6 +14,7 @@ target_sources(nihil.core
 	error.ccm
 	features.ccm
 	flagset.ccm
+	generator.ccm
 	guard.ccm
 	match.ccm
 	monad.ccm
@@ -25,3 +26,31 @@ target_sources(nihil.core
 	tabulate.ccm
 	uuid.ccm
 )
+
+if (NIHIL_TESTS)
+	add_executable(nihil.core.test
+		capture_stream.test.cc
+		ctype.test.cc
+		error.test.cc
+		flagset.test.cc
+		generator.test.cc
+		guard.test.cc
+		match.test.cc
+		monad.test.cc
+		next_word.test.cc
+		parse_size.test.cc
+		skipws.test.cc
+		tabulate.test.cc
+	)
+
+	target_link_libraries(nihil.core.test PRIVATE
+		nihil.std
+		nihil.core
+		Catch2::Catch2WithMain)
+
+	include(CTest)
+	include(Catch)
+	catch_discover_tests(nihil.core.test)
+
+	enable_testing()
+endif ()

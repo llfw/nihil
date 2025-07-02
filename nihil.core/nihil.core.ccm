@@ -8,6 +8,7 @@ export import :errc;
 export import :error;
 export import :features;
 export import :flagset;
+export import :generator;
 export import :guard;
 export import :match;
 export import :monad;

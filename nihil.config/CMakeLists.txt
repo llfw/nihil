@@ -1,12 +1,14 @@
 # This source code is released into the public domain.
 
 add_library(nihil.config STATIC)
+
 target_link_libraries(nihil.config PRIVATE
 	nihil.std
-	nihil.generator
+	nihil.core
 	nihil.posix
 	nihil.ucl
 )
+
 target_sources(nihil.config
 	PUBLIC FILE_SET modules TYPE CXX_MODULES FILES
 	nihil.config.ccm
@@ -28,6 +30,8 @@ if(NIHIL_TESTS)
 	)
 
 	target_link_libraries(nihil.config.test PRIVATE
+		nihil.std
+		nihil.core
 		nihil.config
 		Catch2::Catch2WithMain)
 

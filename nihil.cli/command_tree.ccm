@@ -2,7 +2,6 @@
 export module nihil.cli:command_tree;
 
 import nihil.std;
-import nihil.generator;
 import nihil.core;
 
 import :command;
@@ -103,7 +102,8 @@ struct command_tree_node final
 	{
 		for (auto &&node : self.m_children | std::views::values) {
 			co_yield node;
-			co_yield elements_of(node.all_children());
+			for (auto &&child : node.all_children())
+				co_yield child;
 		}
 	}
 

@@ -3,7 +3,6 @@ module nihil.config;
 
 import nihil.std;
 import nihil.core;
-import nihil.generator;
 
 namespace nihil::config {
 
