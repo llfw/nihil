@@ -41,6 +41,7 @@ if (NIHIL_TESTS)
 		parse_size.test.cc
 		skipws.test.cc
 		tabulate.test.cc
+		uuid.test.cc
 	)
 
 	target_link_libraries(nihil.core.test PRIVATE
