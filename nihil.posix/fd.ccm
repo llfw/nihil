@@ -7,9 +7,9 @@ module;
 export module nihil.posix:fd;
 
 import nihil.std;
-import nihil.flagset;
 import nihil.error;
 import nihil.monad;
+import nihil.util;
 
 namespace nihil {
 

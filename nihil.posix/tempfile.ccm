@@ -3,7 +3,7 @@ export module nihil.posix:tempfile;
 
 import nihil.std;
 import nihil.error;
-import nihil.flagset;
+import nihil.util;
 import :fd;
 import :getenv;
 import :open;

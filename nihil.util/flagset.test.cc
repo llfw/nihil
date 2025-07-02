@@ -3,7 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 import nihil.std;
-import nihil.flagset;
+import nihil.util;
 
 namespace {
 struct test_tag

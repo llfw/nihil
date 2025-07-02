@@ -5,7 +5,6 @@ target_link_libraries(nihil.posix PRIVATE
 	nihil.std
 	nihil.core
 	nihil.error
-	nihil.flagset
 	nihil.monad
 	nihil.util
 )

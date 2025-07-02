@@ -225,7 +225,7 @@ export struct error : std::exception
 	// Allow error to be implicitly converted to std::expected and std::unexpected, to make
 	// using it with std::expected easier.
 
-	template<typename T>
+	template <typename T>
 	operator std::expected<T, error> () && // NOLINT
 	{
 		return std::unexpected{std::move(*this)};
