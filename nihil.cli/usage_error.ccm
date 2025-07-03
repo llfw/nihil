@@ -8,7 +8,7 @@ namespace nihil {
 
 // Exception thrown to indicate invalid command-line arguments.
 export struct usage_error : error {
-	explicit usage_error(std::string_view what) : error(what) {}
+	explicit usage_error(std::string_view const what) : error(what) {}
 };
 
 } // namespace nihil

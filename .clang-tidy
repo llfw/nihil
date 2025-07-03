@@ -19,6 +19,7 @@ Checks: >
     -hicpp-named-parameter,
     -hicpp-vararg,
   misc-*,
+    -misc-non-private-member-variables-in-classes,
   modernize-*,
   readability-*,
     -readability-braces-around-statements,

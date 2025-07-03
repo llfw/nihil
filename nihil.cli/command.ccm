@@ -20,6 +20,7 @@ export struct command;
 
 // registry.ccm
 auto register_command(command *cmd) noexcept -> void;
+auto unregister_command(command *cmd) noexcept -> void;
 
 // A command.  If constructed with a handler, this is a "real" command which can be invoked.
 // Otherwise, it's a stub command that has children in the command tree.
@@ -60,7 +61,10 @@ export struct command final
 	command(command &&) = delete;
 	auto operator=(command &&) -> command & = delete;
 
-	~command() = default;
+	~command()
+	{
+		unregister_command(this);
+	}
 
 	// Return the full path for this command.
 	[[nodiscard]] auto path(this command const &self) noexcept -> std::string_view

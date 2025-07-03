@@ -1,0 +1,523 @@
+// This source code is released into the public domain.
+export module nihil.cli:parse_flags;
+
+// parse_flags: command-line option processing.
+
+import nihil.std;
+import nihil.core;
+import :usage_error;
+
+namespace nihil::cli {
+
+// The name of an option: either a short flag, or a long flag, or both, or
+// if this is an argument, then neither.
+export struct flag_name
+{
+	// All constructors are implicit to simplify usage of nihil::cli::option().
+
+	flag_name() = default;
+
+	flag_name(char short_flag)
+		: m_short_flag(short_flag)
+	{
+	}
+
+	flag_name(std::string_view long_flag)
+		: m_long_flag(long_flag)
+	{
+	}
+
+	flag_name(char short_flag, std::string_view long_flag)
+		: m_short_flag(short_flag)
+		, m_long_flag(long_flag)
+	{
+	}
+
+	[[nodiscard]] auto short_flag(this flag_name const &self) -> std::optional<char> const &
+	{
+		return self.m_short_flag;
+	}
+
+	[[nodiscard]] auto
+	long_flag(this flag_name const &self) -> std::optional<std::string> const &
+	{
+		return self.m_long_flag;
+	}
+
+	// If an option has neither a short nor long name, then it's an argument.
+	[[nodiscard]] auto is_argument(this flag_name const &self) -> bool
+	{
+		return !self.m_short_flag.has_value() && !self.m_long_flag.has_value();
+	}
+
+	// Return this flag as a human-readable string.
+	[[nodiscard]] auto str(this flag_name const &self) -> std::string
+	{
+		auto const &s = self.short_flag();
+		auto const &l = self.long_flag();
+		if (s && l)
+			return std::format("-{}|--{}", *s, *l);
+		else if (s)
+			return std::format("-{}", *s);
+		else if (l)
+			return std::format("--{}", *l);
+		else
+			return {};
+	}
+
+private:
+	std::optional<char>        m_short_flag;
+	std::optional<std::string> m_long_flag;
+};
+
+// Base class for type-specific flags.
+template <typename Flags>
+struct option_base
+{
+	// Create an option that doesn't take an argument.
+	explicit option_base(flag_name name)
+		: m_name(name)
+	{
+	}
+
+	// Create an option that takes one argument.
+	explicit option_base(flag_name name, std::string_view argument_name)
+		: m_name(name)
+		, m_argument_name(argument_name)
+	{
+	}
+
+	option_base(option_base const &) = default;
+	auto operator=(option_base const &) -> option_base & = default;
+	option_base(option_base &&) = default;
+	auto operator=(option_base &&) -> option_base & = default;
+
+	virtual ~option_base() = default;
+
+	[[nodiscard]] auto name(this option_base const &self) -> flag_name const &
+	{
+		return self.m_name;
+	}
+
+	[[nodiscard]] auto
+	argument_name(this option_base const &self) -> std::optional<std::string> const &
+	{
+		return self.m_argument_name;
+	}
+
+	[[nodiscard]] auto has_argument(this option_base const &self) -> bool
+	{
+		return self.m_argument_name.has_value();
+	}
+
+	// If parse() is overridden, provide a default parse(arg) that returns an
+	// unexpected argument error.
+	[[nodiscard]] virtual auto parse(Flags *, std::string_view) -> std::expected<void, error>
+	{
+		return error(
+			std::format("option -{} does not take an argument", *m_name.short_flag()));
+	}
+
+	// If parse(arg) is overridden, provide a default parse() that returns a
+	// missing argument error.
+	[[nodiscard]] virtual auto parse(Flags *) -> std::expected<void, error>
+	{
+		return error(std::format("option -{} requires an argument", *m_name.short_flag()));
+	}
+
+	[[nodiscard]] virtual auto required() -> bool
+	{
+		return true;
+	}
+
+private:
+	flag_name                  m_name;
+	std::optional<std::string> m_argument_name;
+};
+
+// Type-specific flags.
+
+export template <typename Flags, typename Flag>
+struct option;
+
+// Boolean option.  This can only be present (or not) and has no value.
+export template <typename Flags>
+struct option<Flags, bool> final : option_base<Flags>
+{
+	option(flag_name name, bool Flags::*ptr)
+		: option_base<Flags>(name)
+		, m_ptr(ptr)
+	{
+	}
+
+	// Parse a boolean argument.
+	[[nodiscard]] auto parse(Flags *instance) -> std::expected<void, error> override
+	{
+		instance->*m_ptr = true;
+		return {};
+	}
+
+private:
+	bool Flags::*m_ptr = nullptr;
+};
+
+// String option
+export template <typename Flags>
+struct option<Flags, std::string> final : option_base<Flags>
+{
+	// Create a string flag.
+	option(flag_name name, std::string_view argument_name, std::string Flags::*ptr)
+		: option_base<Flags>(name, argument_name)
+		, m_ptr(ptr)
+	{
+	}
+
+	// Create a string argument..
+	option(std::string_view argument_name, std::string Flags::*ptr)
+		: option_base<Flags>(flag_name(), argument_name)
+		, m_ptr(ptr)
+	{
+	}
+
+	[[nodiscard]] auto
+	parse(Flags *instance, std::string_view arg) -> std::expected<void, error> override
+	{
+		instance->*m_ptr = arg;
+		return {};
+	}
+
+private:
+	std::string Flags::*m_ptr = nullptr;
+};
+
+// Integer option.  Don't match char here, because even though that might be useful for
+// [u]int8_t, it's confusing when passed an actual char.  We exclude both signed and
+// unsigned char to avoid different behaviour based on whether char is signed.
+export template <typename Flags, std::integral Integer>
+requires(!std::same_as<std::make_signed<Integer>, char>)
+struct option<Flags, Integer> final : option_base<Flags>
+{
+	// Create a string flag.
+	option(flag_name name, std::string_view argument_name, Integer Flags::*ptr)
+		: option_base<Flags>(name, argument_name)
+		, m_ptr(ptr)
+	{
+	}
+
+	// Create a string argument..
+	option(std::string_view argument_name, Integer Flags::*ptr)
+		: option_base<Flags>(flag_name(), argument_name)
+		, m_ptr(ptr)
+	{
+	}
+
+	[[nodiscard]] auto
+	parse(Flags *instance, std::string_view arg) -> std::expected<void, error> override
+	{
+		// If we wanted to be locale-independent, we could use std::from_chars here.
+		// However, users probably expect numbers to be parsed using their locale.
+
+		skipws(&arg);
+		if (arg.empty())
+			return error("expected an integer");
+
+		if (std::is_unsigned_v<Integer> && arg[0] == '-')
+			return error("expected a non-negative integer");
+
+		auto strm = std::istringstream(arg);
+		auto i = std::conditional_t<std::is_signed_v<Integer>, std::intmax_t,
+		                            std::uintmax_t>{};
+
+		if (!(strm >> i))
+			return error("expected an integer");
+
+		if (std::cmp_greater(i, std::numeric_limits<Integer>::max()))
+			return error("value too large");
+		if (std::cmp_less(i, std::numeric_limits<Integer>::min()))
+			return error("value too small");
+
+		instance->*m_ptr = i;
+		return {};
+	}
+
+private:
+	Integer Flags::*m_ptr = nullptr;
+};
+
+// Optional argument
+export template <typename Flags, typename Base>
+struct option<Flags, std::optional<Base>> final : option_base<Flags>
+{
+	option(flag_name name, std::string_view argument_name, std::optional<Base> Flags::*ptr)
+		: option_base<Flags>(name, argument_name)
+		, m_ptr(ptr)
+		, m_base(name, argument_name, &proxy::m_base_value)
+	{
+	}
+
+	option(std::string_view argument_name, std::optional<Base> Flags::*ptr)
+		: option_base<Flags>(flag_name(), argument_name)
+		, m_ptr(ptr)
+		, m_base(argument_name, &proxy::m_base_value)
+	{
+	}
+
+	[[nodiscard]] auto required() -> bool override
+	{
+		return false;
+	}
+
+	[[nodiscard]] auto
+	parse(Flags *instance, std::string_view arg) -> std::expected<void, error> override
+	{
+		auto p = proxy{};
+		auto ret = m_base.parse(&p, arg);
+		if (ret)
+			instance->*m_ptr = p.m_base_value;
+		return ret;
+	}
+
+private:
+	struct proxy
+	{
+		Base m_base_value;
+	};
+	std::optional<Base> Flags::*m_ptr;
+	option<proxy, Base>         m_base;
+};
+
+export template <typename Flags, typename T>
+option(char, T Flags::*) -> option<Flags, T>;
+
+export template <typename Flags, typename T>
+option(T Flags::*) -> option<Flags, T>;
+
+export template <typename Flags, typename Argname, typename T>
+option(char, Argname, T Flags::*) -> option<Flags, T>;
+
+export template <typename Flags, typename Argname, typename T>
+option(Argname, T Flags::*) -> option<Flags, T>;
+
+// Flags parser.  This is constructed from a list of flags.
+export template <typename Flags>
+struct options final
+{
+	// Create a new flag set from a list of flags.
+	explicit options(auto &&...args)
+	{
+		(this->add_flag(args), ...);
+	}
+
+	// Fetch an option by its letter.
+	[[nodiscard]] auto option(this options const &self, char c)
+		-> std::optional<std::shared_ptr<option_base<Flags>>>
+	{
+		auto it = self.m_short_flags.find(c);
+		if (it != self.m_short_flags.end())
+			return it->second;
+		return {};
+	}
+
+	// Fetch all options.
+	[[nodiscard]] auto all_options(this options const &self)
+	{
+		return self.m_all_flags | std::views::all;
+	}
+
+	// Fetch all arguments.
+	[[nodiscard]] auto arguments(this options const &self)
+	{
+		return self.m_arguments | std::views::all;
+	}
+
+private:
+	// All flags we understand, used for generating usage.
+	std::vector<std::shared_ptr<option_base<Flags>>> m_all_flags;
+	// Flags which have a short option.
+	std::map<char, std::shared_ptr<option_base<Flags>>> m_short_flags;
+	// Flags which have a long option.
+	std::map<std::string, std::shared_ptr<option_base<Flags>>> m_long_flags;
+	// Options which are arguments rather than flags.
+	std::vector<std::shared_ptr<option_base<Flags>>> m_arguments;
+
+	template <typename T>
+	auto add_flag(this options &self, cli::option<Flags, T> flag_) -> void
+	{
+		auto  fptr = std::make_shared<cli::option<Flags, T>>(std::move(flag_));
+		auto &name = fptr->name();
+
+		if (name.is_argument()) {
+			self.m_arguments.emplace_back(std::move(fptr));
+			return;
+		}
+
+		self.m_all_flags.emplace_back(fptr);
+
+		if (auto short_flag = name.short_flag(); short_flag.has_value())
+			self.m_short_flags.emplace(std::pair{*short_flag, fptr});
+
+		if (auto long_flag = name.long_flag(); long_flag.has_value())
+			self.m_long_flags.emplace(std::pair{*long_flag, fptr});
+	}
+};
+
+// Return a POSIX usage statement for the provided options.
+export template <typename Flags>
+[[nodiscard]] auto posix_usage(options<Flags> const &opts) -> std::string
+{
+	auto bits = std::deque<std::string>();
+	// bits[0] is for boolean short flags.
+	bits.emplace_back();
+
+	for (auto &&opt : opts.all_options()) {
+		auto &arg_name = opt->argument_name();
+		auto  name = opt->name();
+		auto s = name.short_flag();
+		auto l = name.long_flag();
+		if (!s && !l)
+			continue;
+
+		if (!arg_name.has_value()) {
+			if (s && !l)
+				bits[0] += *s;
+			else if (s && l)
+				bits.emplace_back(std::format("[-{}|--{}]", *s, *l));
+			else if (l)
+				bits.emplace_back(std::format("[--{}]", *l));
+		} else {
+			if (opt->required())
+				bits.emplace_back(std::format("{} <{}>", name.str(), *arg_name));
+			else
+				bits.emplace_back(std::format("[{} <{}>]", name.str(), *arg_name));
+		}
+	}
+
+	// Format boolean options properly, or remove them if there aren't any.
+	if (bits[0].empty())
+		bits.erase(bits.begin());
+	else
+		bits[0] = std::format("[-{}]", bits[0]);
+
+	// No join_with in LLVM yet.
+	auto ret = std::string();
+	for (auto &&bit : bits) {
+		if (!ret.empty())
+			ret += " ";
+		ret += bit;
+	}
+	return ret;
+}
+
+// Parse the provided argument vector in the POSIX style.
+export template <typename Flags>
+[[nodiscard]] auto posix_parse(options<Flags> const &self, std::ranges::range auto &&argv)
+	-> std::expected<Flags, error>
+{
+	auto ret = Flags();
+
+	auto first = std::ranges::begin(argv);
+	auto last = std::ranges::end(argv);
+
+	while (first != last) {
+		auto arg1 = std::string_view(*first);
+
+		// A flag should start with a '-'; if not, we're done.
+		if (arg1.empty())
+			break;
+		if (arg1[0] != '-')
+			break;
+		// A '-' by itself is an argument, not a flag.
+		if (arg1.size() == 1)
+			break;
+		// The special flag '--' terminates parsing.
+		if (arg1[1] == '-') {
+			++first;
+			break;
+		}
+
+		// Now we have a '-' followed by one or more flags.
+		arg1 = arg1.substr(1);
+
+		while (!arg1.empty()) {
+			auto opt = self.option(arg1[0]);
+			if (!opt)
+				return error(std::format("-{}: unknown option", arg1[0]));
+
+			// Eat this option.
+			arg1 = arg1.substr(1);
+
+			// If this option doesn't take an argument, parse it and continue.
+			if (!(*opt)->has_argument()) {
+				if (auto perr = (*opt)->parse(&ret); !perr)
+					return error(std::format("{}: {}", (*opt)->name().str(),
+					                         perr.error()));
+				continue;
+			}
+
+			// Otherwise, extract the argument, which could be the rest of this
+			// string (if there is any), or the next string.
+			auto arg = arg1;
+			if (arg.empty()) {
+				++first;
+				if (first == last)
+					return error(
+						std::format("{}: argument required",
+					                    (*opt)->name().str()));
+				arg = std::string_view(*first);
+			}
+
+			if (auto perr = (*opt)->parse(&ret, arg); !perr)
+				return error(
+					std::format("{}: {}", (*opt)->name().str(), perr.error()));
+
+			// Move to the next string in the vector.
+			break;
+		}
+
+		++first;
+	}
+
+	// Everything remaining should be arguments.
+	auto args = self.arguments();
+	auto argument_it = std::ranges::begin(args);
+
+	while (first != last) {
+		// We ran out of arguments but still have args left.
+		if (argument_it == args.end())
+			return error("too many arguments");
+
+		if (auto aerr = (*argument_it)->parse(&ret, *first); !aerr)
+			return std::unexpected(aerr.error());
+
+		++argument_it;
+		++first;
+	}
+
+	// We ran out of args but still have arguments left.  See if they're required.
+	// This doesn't handle optional arguments followed by required arguments, but
+	// it's not clear if that's useful.
+	if (argument_it != std::ranges::end(args) && (*argument_it)->required())
+		return error("not enough arguments");
+
+	return ret;
+}
+
+// Parse the provided (argc, argv) pair in the POSIX style.  This follows the behaviour
+// of getopt(), i.e. argv[0] is assumed to be the program name.  However, unlike getopt
+// the input parameters are not modified.
+export template <typename Flags>
+[[nodiscard]] auto posix_parse(options<Flags> const &flags, int argc, char *const argv[])
+	-> std::expected<Flags, error>
+{
+	// It's unusual, but possible, for main() to be invoked with no arguments
+	// at all.  Handle that case by providing an empty vector; otherwise, skip
+	// the first argument.
+	if (argc > 0) {
+		--argc;
+		++argv;
+	}
+
+	return posix_parse(flags, std::span(argv, argc));
+}
+
+} // namespace nihil::cli

@@ -4,5 +4,6 @@ export module nihil.cli;
 export import :command;
 export import :command_tree;
 export import :dispatch_command;
+export import :parse_flags;
 export import :registry;
 export import :usage_error;

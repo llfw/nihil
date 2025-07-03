@@ -15,6 +15,7 @@ target_sources(nihil.cli
 	command.ccm
 	command_tree.ccm
 	dispatch_command.ccm
+	parse_flags.ccm
 	registry.ccm
 	usage_error.ccm
 
@@ -29,6 +30,7 @@ if(NIHIL_TESTS)
 		command.test.cc
 		command_tree.test.cc
 		dispatch_command.test.cc
+		parse_flags.test.cc
 	)
 
 	target_link_libraries(nihil.cli.test PRIVATE

@@ -31,4 +31,18 @@ auto register_command(command *cmd) noexcept -> void
 	get_registry().emplace_back(cmd, null_deleter);
 }
 
+// Unregister a command.  This is not very efficient, but it shouldn't usually be called
+// except during testing.
+auto unregister_command(command *cmd) noexcept -> void
+{
+	auto &registry = get_registry();
+
+	auto it = std::ranges::find_if(registry, [=] (auto c) -> bool {
+		return c.get() == cmd;
+	});
+
+	if (it != std::ranges::end(registry))
+		registry.erase(it);
+}
+
 } // namespace nihil

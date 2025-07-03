@@ -18,6 +18,7 @@ module;
 #include <compare>
 #include <concepts>
 #include <coroutine>
+#include <deque>
 #include <exception>
 #include <expected>
 #include <filesystem>
@@ -158,10 +159,12 @@ using std::int8_t;
 using std::int16_t;
 using std::int32_t;
 using std::int64_t;
+using std::intmax_t;
 using std::uint8_t;
 using std::uint16_t;
 using std::uint32_t;
 using std::uint64_t;
+using std::uintmax_t;
 
 // <cstdlib>
 using std::exit;
@@ -175,6 +178,9 @@ using std::rename;
 
 // <cstring>
 using std::strerror;
+
+// <deque>
+using std::deque;
 
 // <exception>
 using std::current_exception;
@@ -248,6 +254,7 @@ using std::ostream_iterator;
 using std::initializer_list;
 
 // <iterator>
+using std::advance;
 using std::back_insert_iterator;
 using std::back_inserter;
 using std::input_iterator;
@@ -361,6 +368,7 @@ using std::ranges::operator|;
 using std::ranges::to;
 
 namespace views {
+using std::ranges::views::all;
 using std::ranges::views::drop;
 using std::ranges::views::split;
 using std::ranges::views::take_while;
@@ -420,7 +428,9 @@ using std::make_error_condition;
 using std::system_error;
 
 // <type_traits>
+using std::add_pointer;
 using std::add_pointer_t;
+using std::conditional;
 using std::conditional_t;
 using std::false_type;
 using std::invoke_result;
@@ -450,6 +460,12 @@ using std::is_reference;
 using std::is_reference_v;
 using std::is_same;
 using std::is_same_v;
+using std::is_signed;
+using std::is_signed_v;
+using std::is_unsigned;
+using std::is_unsigned_v;
+using std::make_signed;
+using std::make_unsigned;
 using std::remove_const_t;
 using std::remove_cv_t;
 using std::remove_cvref_t;
